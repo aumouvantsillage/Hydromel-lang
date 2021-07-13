@@ -2,6 +2,7 @@
 
 (require
   syntax/parse/define
+  racket/stxparam
   "signal.rkt"
   (for-syntax
     (only-in racket empty identity in-syntax match)
@@ -13,7 +14,6 @@
   module
   interface
   component
-  design-unit-field-ctor
   constant
   local-signal
   assignment
@@ -90,75 +90,98 @@
      ['module-begin #'(provide spec ...)]
      [_             #'(begin)])])
 
+(define-syntax (parameter stx)
+  (raise-syntax-error #f "should be used inside an interface or component" stx))
+
 ; Generate a struct type and a constructor function from an interface.
-(define-syntax-parser interface
-  [:stx/interface
-   #:with ctor-name        (channel-ctor-name #'name)
-   #:with (param-name ...) (design-unit-parameter-names (attribute param))
-   #:with (field-name ...) (design-unit-field-names     (attribute body))
-   #:with (field-stx ...)  (design-unit-field-syntaxes  (attribute body))
-   #:with (alias-stx ...)  (design-unit-aliases         (attribute body))
-   #`(begin
-       (provide* (struct-out name) ctor-name)
-       (struct name (field-name ...) #:transparent)
-       (define (ctor-name param-name ...)
-         (name (design-unit-field-ctor field-stx) ...))
-       #,@(for/list ([i (in-list (attribute alias-stx))])
-            (define/syntax-parse a:stx/alias i)
-            ; For each alias, create an accessor in the current interface.
-            (define acc-name (accessor-name #'name #'a.name))
-            #`(begin
-                (provide* #,acc-name)
-                (define (#,acc-name x)
-                  ; Call the original accessor for the aliased field in the target interface...
-                  (#,(accessor-name #'a.intf-name #'a.name)
-                    ; ... with the result of the accessor for the spliced composite port in the current interface.
-                    (#,(accessor-name #'name #'a.port-name) x))))))])
+(define-simple-macro (interface name body ...)
+  #:with ctor-name        (channel-ctor-name #'name)
+  #:with (param-name ...) (design-unit-parameter-names (attribute body))
+  #:with (field-name ...) (design-unit-field-names     (attribute body))
+  #:with (field-stx ...)  (design-unit-field-syntaxes  (attribute body))
+  #:with (alias-stx ...)  (design-unit-aliases         (attribute body))
+  (begin
+    (provide* (struct-out name) ctor-name)
+    (struct name (field-name ...) #:transparent)
+    (define (ctor-name param-name ...)
+      (name field-stx ...))
+    (alias-accessor name alias-stx) ...))
+
+(define-simple-macro (alias-accessor parent-intf-name (alias alias-name port-name alias-intf-name))
+  #:with port-acc-name (accessor-name #'parent-intf-name #'port-name)
+  #:with orig-acc-name (accessor-name #'alias-intf-name  #'alias-name)
+  #:with acc-name      (accessor-name #'parent-intf-name #'alias-name)
+  (begin
+    (provide* acc-name)
+    (define (acc-name x)
+      (orig-acc-name (port-acc-name x)))))
+
+; Inside a component, this parameter becomes true when expanding statements.
+; This is useful for constructs that are expanded twice, as fields and as statements.
+(define-syntax-parameter as-statement #f)
 
 ; From a component, generate the same output as for an interface,
 ; and a function with the body of the component.
-(define-syntax-parser component
-  [:stx/component
+(define-simple-macro (component name body ...)
    #:with inst-ctor-name   (instance-ctor-name #'name)
    #:with chan-ctor-name   (channel-ctor-name  #'name)
-   #:with (param-name ...) (design-unit-parameter-names (attribute param))
+   #:with (param-name ...) (design-unit-parameter-names (attribute body))
+   #:with (field-name ...) (design-unit-field-names     (attribute body))
    #:with (stmt ...)       (design-unit-statements      (attribute body))
-   #`(begin
-       (interface name param ... body ...)
-       (provide* inst-ctor-name)
-       (define (inst-ctor-name param-name ...)
-         (define chan (chan-ctor-name param-name ...))
-         #,@(for/list ([i (in-list (design-unit-field-names (attribute body)))])
-              (define acc (accessor-name #'name i))
-              #`(define #,i (#,acc chan)))
-         stmt ...
-         chan))])
+   #:with (field-acc-name ...) (for/list ([fname (in-list (attribute field-name))])
+                                 (accessor-name #'name fname))
+   (begin
+     (interface name body ...)
+     (provide* inst-ctor-name)
+     (define (inst-ctor-name param-name ...)
+       (define self (chan-ctor-name param-name ...))
+       (define field-name (field-acc-name self)) ...
+       (syntax-parameterize ([as-statement #t])
+         stmt ...)
+       self)))
 
 ; Data port initialization in a channel constructor.
-(define-syntax (design-unit-field-ctor stx)
-  (syntax-parse stx
-    [(_ :stx/data-port)    #'(box #f)]
-    [(_ :stx/local-signal) #'(box #f)]
-    [(_ :stx/composite-port)
-     #:with m (or (attribute mult) #'1)
-     #:with chan-ctor-name (channel-ctor-name #'intf-name)
-     #'(let ([ctor (λ (z) (chan-ctor-name arg ...))])
-         (if (> m 1)
-           (build-vector m ctor)
-           (ctor #f)))]
-    [(_ :stx/instance)
-     #:with m (or (attribute mult) #'1)
-     #:with inst-ctor-name (instance-ctor-name #'comp-name)
-     #'(let ([ctor (λ (z) (inst-ctor-name arg ...))])
-         (if (> m 1)
-           (build-vector m ctor)
-           (ctor #f)))]))
+(define-simple-macro (data-port _ ...)
+  (box #f))
 
+(define-syntax-parser local-signal
+  [(local-signal name expr)
+   (if (syntax-parameter-value #'as-statement)
+     ; Local signal assignment in a component body.
+     #'(set-box! name expr)
+     ; Local signal initialization in a channel constructor.
+     #'(box #f))])
+
+(define-syntax (multiplicity stx)
+  (raise-syntax-error #f "should be used inside a composite port declaration" stx))
+
+(define-syntax (splice stx)
+  (raise-syntax-error #f "should be used inside a composite port declaration" stx))
+
+(define-syntax (flip stx)
+  (raise-syntax-error #f "should be used inside a composite port declaration" stx))
+
+; Composite port initialization in a channel constructor.
+(define-simple-macro (composite-port _ (~optional (multiplicity mult)) (~or (~literal splice) (~literal flip)) ... intf-name arg ...)
+  #:with m (or (attribute mult) #'1)
+  #:with chan-ctor-name (channel-ctor-name #'intf-name)
+  (let ([ctor (λ (z) (chan-ctor-name arg ...))])
+    (if (> m 1)
+      (build-vector m ctor)
+      (ctor #f))))
+
+; Instance initialization in a channel constructor.
+(define-simple-macro (instance _ (~optional ((~literal multiplicity) mult)) comp-name arg ...)
+  #:with m (or (attribute mult) #'1)
+  #:with inst-ctor-name (instance-ctor-name #'comp-name)
+  (let ([ctor (λ (z) (inst-ctor-name arg ...))])
+    (if (> m 1)
+      (build-vector m ctor)
+      (ctor #f))))
+
+; TODO: constant as field
 (define-simple-macro (constant name expr)
   (define name expr))
-
-(define-simple-macro (local-signal name expr)
-  (set-box! name expr))
 
 (define-simple-macro (alias name port-name intf-name)
   (define name (field-expr (name-expr port-name) name intf-name)))
@@ -179,10 +202,9 @@
 ; After type checking, a field expression contains the name
 ; of the interface or record type where the field is declared.
 ; A field expression expands to a field access in a struct instance.
-(define-syntax-parser field-expr
-  [:stx/field-expr
-   #:with acc (accessor-name #'type-name #'field-name)
-   #'(acc expr)])
+(define-simple-macro (field-expr expr field-name type-name)
+  #:with acc (accessor-name #'type-name #'field-name)
+  (acc expr))
 
 ; An indexed expression expands to a chain of vector accesses.
 (define-syntax-parser indexed-expr
@@ -194,16 +216,15 @@
 (define-simple-macro (call-expr fn-name arg ...)
   (fn-name arg ...))
 
+(define-syntax (when-clause stx)
+  (raise-syntax-error #f "should be used inside a register expression" stx))
+
 (define-syntax-parser register-expr
-  #:datum-literals [when-clause]
-  [(register-expr i d)
-   #'(register i d)]
-  [(register-expr i (when-clause r) d)
-   #'(register/r i r d)]
-  [(register-expr i d (when-clause e))
-   #'(register/e i e d)]
-  [(register-expr i (when-clause r) d (when-clause e))
-   #'(register/re i r e d)])
+  #:literals [when-clause]
+  [(register-expr i d)                                 #'(register    i     d)]
+  [(register-expr i (when-clause r) d)                 #'(register/r  i r   d)]
+  [(register-expr i d (when-clause e))                 #'(register/e  i   e d)]
+  [(register-expr i (when-clause r) d (when-clause e)) #'(register/re i r e d)])
 
 ; A signal expression is a wrapper element added by the typechecker
 ; to identify an expression that refers to a port or local signal
