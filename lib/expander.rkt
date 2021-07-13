@@ -5,13 +5,10 @@
   racket/stxparam
   "signal.rkt"
   (for-syntax
-    (only-in racket empty identity in-syntax match)
     racket/syntax
-    syntax/parse/define
-    (prefix-in stx/ "syntax.rkt")))
+    syntax/stx))
 
 (provide
-  module
   interface
   component
   constant
@@ -38,70 +35,46 @@
   (define (accessor-name sname fname)
     (format-id fname "~a-~a" sname fname))
 
-  ; This macro can be used to implement map, filter, or a combination of both,
-  ; on a list syntax object.
-  ;
-  ; It defines a function that parses the elements of a list syntax object.
-  ; The body is composed of parse options and clauses supported by syntax-parse.
-  ; Elements that do not match any syntax pattern are filtered out.
-  (define-simple-macro (define/map-syntax name body ...)
-    (define (name lst)
-      (filter identity
-        (for/list ([i (in-list (or lst empty))])
-          (syntax-parse i
-            body ... [_ #f])))))
+  (define (stx-filter stx-lst id-lst)
+    (for/list ([it (in-list stx-lst)]
+               #:when (member (syntax-e (stx-car it)) id-lst))
+      it))
 
-  ; Return the list of ports and signals in the given syntax object.
-  (define/map-syntax design-unit-field-syntaxes
-    [:stx/data-port      this-syntax]
-    [:stx/composite-port this-syntax]
-    [:stx/local-signal   this-syntax]
-    [:stx/instance       this-syntax])
+  ; Return the list of ports, signals and instances in the given syntax object.
+  (define (design-unit-fields stx-lst)
+    (stx-filter stx-lst '(data-port composite-port local-signal instance)))
 
-  ; Return the list of port and signal names in the given syntax object.
-  (define/map-syntax design-unit-field-names
-    [:stx/data-port      #'name]
-    [:stx/composite-port #'name]
-    [:stx/local-signal   #'name]
-    [:stx/instance       #'name])
+  ; Return the list of statements in the given syntax object.
+  (define (design-unit-statements stx-lst)
+    (stx-filter stx-lst '(constant local-signal alias assignment)))
 
-  (define/map-syntax design-unit-statements
-    [:stx/constant     this-syntax]
-    [:stx/local-signal this-syntax]
-    [:stx/alias        this-syntax]
-    [:stx/assignment   this-syntax])
-
-  (define/map-syntax design-unit-aliases
-    [:stx/alias this-syntax])
+  ; Return the list of aliases in the given syntax object.
+  (define (design-unit-aliases stx-lst)
+    (stx-filter stx-lst '(alias)))
 
   ; Return the list of parameter names in the given syntax object.
-  (define/map-syntax design-unit-parameter-names
-    [:stx/parameter #'name]))
+  (define (design-unit-parameter-names stx-lst)
+    (define/syntax-parse ((parameter name _ ...) ...) (stx-filter stx-lst '(parameter)))
+    (attribute name))
 
-; Generate a module.
-(define-simple-macro (module body ...)
-  (begin body ...))
+  ; Return the list of port and signal names in the given syntax object.
+  (define (design-unit-field-names stx-lst)
+    (define/syntax-parse ((_ name _ ...) ...) (design-unit-fields stx-lst))
+    (attribute name)))
 
-; Generate a provide clause only in a module context.
-(define-syntax-parser provide*
-  [(provide* spec ...)
-   (match (syntax-local-context)
-     ['module       #'(provide spec ...)]
-     ['module-begin #'(provide spec ...)]
-     [_             #'(begin)])])
 
-(define-syntax (parameter stx)
-  (raise-syntax-error #f "should be used inside an interface or component" stx))
-
-; Generate a struct type and a constructor function from an interface.
+; An interface expands to:
+; - a struct type,
+; - a constructor function,
+; - an accessor function for each alias (field of a spliced interface).
 (define-simple-macro (interface name body ...)
-  #:with ctor-name        (channel-ctor-name #'name)
+  #:with ctor-name        (channel-ctor-name           #'name)
   #:with (param-name ...) (design-unit-parameter-names (attribute body))
   #:with (field-name ...) (design-unit-field-names     (attribute body))
-  #:with (field-stx ...)  (design-unit-field-syntaxes  (attribute body))
+  #:with (field-stx ...)  (design-unit-fields          (attribute body))
   #:with (alias-stx ...)  (design-unit-aliases         (attribute body))
   (begin
-    (provide* (struct-out name) ctor-name)
+    (provide (struct-out name) ctor-name)
     (struct name (field-name ...) #:transparent)
     (define (ctor-name param-name ...)
       (name field-stx ...))
@@ -112,7 +85,7 @@
   #:with orig-acc-name (accessor-name #'alias-intf-name  #'alias-name)
   #:with acc-name      (accessor-name #'parent-intf-name #'alias-name)
   (begin
-    (provide* acc-name)
+    (provide acc-name)
     (define (acc-name x)
       (orig-acc-name (port-acc-name x)))))
 
@@ -120,11 +93,12 @@
 ; This is useful for constructs that are expanded twice, as fields and as statements.
 (define-syntax-parameter as-statement #f)
 
-; From a component, generate the same output as for an interface,
-; and a function with the body of the component.
+; A component expands to:
+; - the same output as for an interface
+; - a function with the body of the component.
 (define-simple-macro (component name body ...)
-   #:with inst-ctor-name   (instance-ctor-name #'name)
-   #:with chan-ctor-name   (channel-ctor-name  #'name)
+   #:with inst-ctor-name   (instance-ctor-name          #'name)
+   #:with chan-ctor-name   (channel-ctor-name           #'name)
    #:with (param-name ...) (design-unit-parameter-names (attribute body))
    #:with (field-name ...) (design-unit-field-names     (attribute body))
    #:with (stmt ...)       (design-unit-statements      (attribute body))
@@ -132,7 +106,7 @@
                                  (accessor-name #'name fname))
    (begin
      (interface name body ...)
-     (provide* inst-ctor-name)
+     (provide inst-ctor-name)
      (define (inst-ctor-name param-name ...)
        (define self (chan-ctor-name param-name ...))
        (define field-name (field-acc-name self)) ...
@@ -140,28 +114,38 @@
          stmt ...)
        self)))
 
-; Data port initialization in a channel constructor.
+; Parameters are expanded in macros interface and component.
+(define-syntax (parameter stx)
+  (raise-syntax-error #f "should be used inside an interface or component" stx))
+
+; In a channel constructor, a data port expands to an empty box.
 (define-simple-macro (data-port _ ...)
   (box #f))
 
+; A local signal expands to an assignment or an empty box, depending
+; on whether it is treated as a statement or as a declaration.
 (define-syntax-parser local-signal
   [(local-signal name expr)
    (if (syntax-parameter-value #'as-statement)
      ; Local signal assignment in a component body.
-     #'(set-box! name expr)
+     #'(assignment name expr)
      ; Local signal initialization in a channel constructor.
      #'(box #f))])
 
+; Multiplicity indications are processed in macros composite-port and instance.
 (define-syntax (multiplicity stx)
   (raise-syntax-error #f "should be used inside a composite port declaration" stx))
 
+; Splice mode indication is processed in macro composite-port.
 (define-syntax (splice stx)
   (raise-syntax-error #f "should be used inside a composite port declaration" stx))
 
+; Flip mode indication is processed in macro composite-port.
 (define-syntax (flip stx)
   (raise-syntax-error #f "should be used inside a composite port declaration" stx))
 
-; Composite port initialization in a channel constructor.
+; A composite port expands to a constructor call for the corresponding interface.
+; If the multiplicity is greater than 1, a vector of channels is created.
 (define-simple-macro (composite-port _ (~optional (multiplicity mult)) (~or (~literal splice) (~literal flip)) ... intf-name arg ...)
   #:with m (or (attribute mult) #'1)
   #:with chan-ctor-name (channel-ctor-name #'intf-name)
@@ -170,7 +154,8 @@
       (build-vector m ctor)
       (ctor #f))))
 
-; Instance initialization in a channel constructor.
+; An instance expands to a constructor call for the corresponding interface.
+; If the multiplicity is greater than 1, a vector of channels is created.
 (define-simple-macro (instance _ (~optional ((~literal multiplicity) mult)) comp-name arg ...)
   #:with m (or (attribute mult) #'1)
   #:with inst-ctor-name (instance-ctor-name #'comp-name)
@@ -179,10 +164,13 @@
       (build-vector m ctor)
       (ctor #f))))
 
-; TODO: constant as field
+; A constant expands to a variable definition.
+; TODO: define constants as fields in interfaces and components.
 (define-simple-macro (constant name expr)
   (define name expr))
 
+; An alias expands to a variable that receives the result of the accessor
+; for the target port.
 (define-simple-macro (alias name port-name intf-name)
   (define name (field-expr (name-expr port-name) name intf-name)))
 
@@ -191,15 +179,15 @@
 (define-simple-macro (assignment target expr)
   (set-box! target expr))
 
-; Expand a literal expression to its value.
+; A literal expression expands to its value.
 (define-simple-macro (literal-expr value)
   value)
 
-; A name expression refers to a variable in the current scope.
+; A name expression expands to the corresponding variable name in the current scope.
 (define-simple-macro (name-expr name)
   name)
 
-; After type checking, a field expression contains the name
+; After semantic checking, a field expression contains the name
 ; of the interface or record type where the field is declared.
 ; A field expression expands to a field access in a struct instance.
 (define-simple-macro (field-expr expr field-name type-name)
@@ -213,9 +201,11 @@
   [(indexed-expr expr)
    #'expr])
 
+; A call expression expands to a Racket function call.
 (define-simple-macro (call-expr fn-name arg ...)
   (fn-name arg ...))
 
+; When clauses are processed in macro register-expr.
 (define-syntax (when-clause stx)
   (raise-syntax-error #f "should be used inside a register expression" stx))
 
@@ -226,16 +216,17 @@
   [(register-expr i d (when-clause e))                 #'(register/e  i   e d)]
   [(register-expr i (when-clause r) d (when-clause e)) #'(register/re i r e d)])
 
-; A signal expression is a wrapper element added by the typechecker
-; to identify an expression that refers to a port or local signal
-; for reading.
+; A signal expression is a wrapper element added by the semantic checker to
+; identify an expression that refers to a port or local signal for reading.
+; It expands to a deferred signal read.
 (define-simple-macro (signal-expr expr)
   (signal-defer (unbox expr)))
 
+; A static expression wraps a constant into a signal.
 (define-simple-macro (static-expr expr)
   (signal expr))
 
-; A lift expression is a wrapper element added by the typechecker
+; A lift expression is a wrapper element added by the semantic checker
 ; when an expression depends on some signal values.
 ; name ... is a list of signal names that are needed to compute expr.
 (define-syntax-parser lift-expr
