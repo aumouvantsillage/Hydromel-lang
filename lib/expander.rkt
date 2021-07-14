@@ -73,7 +73,7 @@
 ; - a struct type,
 ; - a constructor function,
 ; - an accessor function for each alias (field of a spliced interface).
-(define-simple-macro (interface name body ...)
+(define-syntax-parse-rule (interface name body ...)
   #:with struct-name      (generate-temporary          #'name)
   #:with struct-ctor-name (generate-temporary          #'name)
   #:with ctor-name        (channel-ctor-name           #'name)
@@ -91,7 +91,7 @@
       (struct-ctor-name field-stx ...))
     (alias-accessor name alias-stx) ...))
 
-(define-simple-macro (alias-accessor parent-intf-name (alias alias-name port-name alias-intf-name))
+(define-syntax-parse-rule (alias-accessor parent-intf-name (alias alias-name port-name alias-intf-name))
   #:with port-acc-name (accessor-name #'parent-intf-name #'port-name)
   #:with orig-acc-name (accessor-name #'alias-intf-name  #'alias-name)
   #:with acc-name      (accessor-name #'parent-intf-name #'alias-name)
@@ -107,7 +107,7 @@
 ; A component expands to:
 ; - the same output as for an interface
 ; - a function with the body of the component.
-(define-simple-macro (component name body ...)
+(define-syntax-parse-rule (component name body ...)
    #:with inst-ctor-name   (instance-ctor-name          #'name)
    #:with chan-ctor-name   (channel-ctor-name           #'name)
    #:with (param-name ...) (design-unit-parameter-names (attribute body))
@@ -130,7 +130,7 @@
   (raise-syntax-error #f "should be used inside an interface or component" stx))
 
 ; In a channel constructor, a data port expands to an empty box.
-(define-simple-macro (data-port _ ...)
+(define-syntax-parse-rule (data-port _ ...)
   (box #f))
 
 ; A local signal expands to an assignment or an empty box, depending
@@ -157,7 +157,7 @@
 
 ; A composite port expands to a constructor call for the corresponding interface.
 ; If the multiplicity is greater than 1, a vector of channels is created.
-(define-simple-macro (composite-port _ (~optional (multiplicity mult)) (~or (~literal splice) (~literal flip)) ... intf-name arg ...)
+(define-syntax-parse-rule (composite-port _ (~optional (multiplicity mult)) (~or (~literal splice) (~literal flip)) ... intf-name arg ...)
   #:with m (or (attribute mult) #'1)
   #:with chan-ctor-name (channel-ctor-name #'intf-name)
   (let ([ctor (λ (z) (chan-ctor-name arg ...))])
@@ -167,7 +167,7 @@
 
 ; An instance expands to a constructor call for the corresponding interface.
 ; If the multiplicity is greater than 1, a vector of channels is created.
-(define-simple-macro (instance _ (~optional ((~literal multiplicity) mult)) comp-name arg ...)
+(define-syntax-parse-rule (instance _ (~optional ((~literal multiplicity) mult)) comp-name arg ...)
   #:with m (or (attribute mult) #'1)
   #:with inst-ctor-name (instance-ctor-name #'comp-name)
   (let ([ctor (λ (z) (inst-ctor-name arg ...))])
@@ -177,31 +177,31 @@
 
 ; A constant expands to a variable definition.
 ; TODO: define constants as fields in interfaces and components.
-(define-simple-macro (constant name expr)
+(define-syntax-parse-rule (constant name expr)
   (define name expr))
 
 ; An alias expands to a variable that receives the result of the accessor
 ; for the target port.
-(define-simple-macro (alias name port-name intf-name)
+(define-syntax-parse-rule (alias name port-name intf-name)
   (define name (field-expr (name-expr port-name) name intf-name)))
 
 ; An assignment fills the target port's box with the signal
 ; from the right-hand side.
-(define-simple-macro (assignment target expr)
+(define-syntax-parse-rule (assignment target expr)
   (set-box! target expr))
 
 ; A literal expression expands to its value.
-(define-simple-macro (literal-expr value)
+(define-syntax-parse-rule (literal-expr value)
   value)
 
 ; A name expression expands to the corresponding variable name in the current scope.
-(define-simple-macro (name-expr name)
+(define-syntax-parse-rule (name-expr name)
   name)
 
 ; After semantic checking, a field expression contains the name
 ; of the interface or record type where the field is declared.
 ; A field expression expands to a field access in a struct instance.
-(define-simple-macro (field-expr expr field-name type-name)
+(define-syntax-parse-rule (field-expr expr field-name type-name)
   #:with acc (accessor-name #'type-name #'field-name)
   (acc expr))
 
@@ -213,7 +213,7 @@
    #'expr])
 
 ; A call expression expands to a Racket function call.
-(define-simple-macro (call-expr fn-name arg ...)
+(define-syntax-parse-rule (call-expr fn-name arg ...)
   (fn-name arg ...))
 
 ; When clauses are processed in macro register-expr.
@@ -230,11 +230,11 @@
 ; A signal expression is a wrapper element added by the semantic checker to
 ; identify an expression that refers to a port or local signal for reading.
 ; It expands to a deferred signal read.
-(define-simple-macro (signal-expr expr)
+(define-syntax-parse-rule (signal-expr expr)
   (signal-defer (unbox expr)))
 
 ; A static expression wraps a constant into a signal.
-(define-simple-macro (static-expr expr)
+(define-syntax-parse-rule (static-expr expr)
   (signal expr))
 
 ; A lift expression is a wrapper element added by the semantic checker
@@ -419,10 +419,10 @@
     [(port-ref* x f:identifier i ...) #'(port-ref* (f x) i ...)]
     [(port-ref* x n:number i ...)     #'(port-ref* (vector-ref x n) i ...)])
 
-  (define-simple-macro (port-ref path ...)
+  (define-syntax-parse-rule (port-ref path ...)
     (unbox (port-ref* path ...)))
 
-  (define-simple-macro (port-set! (path ...) value)
+  (define-syntax-parse-rule (port-set! (path ...) value)
     (set-box! (port-ref* path ...) value))
 
   (define .+ (signal-lift +))
