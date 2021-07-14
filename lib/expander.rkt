@@ -9,8 +9,12 @@
     syntax/stx))
 
 (provide
+  use
   interface
   component
+  parameter
+  data-port
+  composite-port
   constant
   local-signal
   assignment
@@ -62,22 +66,29 @@
     (define/syntax-parse ((_ name _ ...) ...) (design-unit-fields stx-lst))
     (attribute name)))
 
+(define-syntax (use stx)
+  (raise-syntax-error #f "should not be used outside of begin-tiny-hdl" stx))
 
 ; An interface expands to:
 ; - a struct type,
 ; - a constructor function,
 ; - an accessor function for each alias (field of a spliced interface).
 (define-simple-macro (interface name body ...)
+  #:with struct-name      (generate-temporary          #'name)
+  #:with struct-ctor-name (generate-temporary          #'name)
   #:with ctor-name        (channel-ctor-name           #'name)
   #:with (param-name ...) (design-unit-parameter-names (attribute body))
   #:with (field-name ...) (design-unit-field-names     (attribute body))
   #:with (field-stx ...)  (design-unit-fields          (attribute body))
   #:with (alias-stx ...)  (design-unit-aliases         (attribute body))
   (begin
-    (provide (struct-out name) ctor-name)
-    (struct name (field-name ...) #:transparent)
+    (provide (struct-out struct-name) ctor-name)
+    (struct name (field-name ...)
+      #:transparent
+      #:name             struct-name
+      #:constructor-name struct-ctor-name)
     (define (ctor-name param-name ...)
-      (name field-stx ...))
+      (struct-ctor-name field-stx ...))
     (alias-accessor name alias-stx) ...))
 
 (define-simple-macro (alias-accessor parent-intf-name (alias alias-name port-name alias-intf-name))
@@ -211,10 +222,10 @@
 
 (define-syntax-parser register-expr
   #:literals [when-clause]
-  [(register-expr i d)                                 #'(register    i     d)]
-  [(register-expr i (when-clause r) d)                 #'(register/r  i r   d)]
-  [(register-expr i d (when-clause e))                 #'(register/e  i   e d)]
-  [(register-expr i (when-clause r) d (when-clause e)) #'(register/re i r e d)])
+  [(_ i d)                                 #'(register    i     d)]
+  [(_ i (when-clause r) d)                 #'(register/r  i r   d)]
+  [(_ i d (when-clause e))                 #'(register/e  i   e d)]
+  [(_ i (when-clause r) d (when-clause e)) #'(register/re i r e d)])
 
 ; A signal expression is a wrapper element added by the semantic checker to
 ; identify an expression that refers to a port or local signal for reading.
@@ -234,16 +245,17 @@
   ; Lift a signal expression. Since the expression returns a signal,
   ; we must lift signal-first to avoid created a signal of signals.
   ; This is typically used when indexed-expr contains signals as indices.
-  [(lift-expr binding ...+ (signal-expr expr))
+  [(_ binding ...+ (signal-expr expr))
    #'(lift-expr binding ... (signal-first (signal-expr expr)))]
   ; Lift any expression that computes values from values.
   ; expr must not contain elements of type signal-expr.
-  [(lift-expr (name sexpr) ...+ expr)
+  [(_ (name sexpr) ...+ expr)
    #'(for/signal ([name sexpr] ...) expr)])
 
 
 (module+ test
-  (require rackunit
+  (require
+    rackunit
     "signal.rkt")
 
   (interface I0
@@ -415,28 +427,6 @@
 
   (define .+ (signal-lift +))
   (define .* (signal-lift *))
-
-  (test-case "Interface with data ports is mapped to channel struct"
-    (define i (I0 10 20))
-    (check-eq? (I0-x i) 10)
-    (check-eq? (I0-y i) 20))
-
-  (test-case "Component with data ports is mapped to channel struct"
-    (define c (C0 10 20))
-    (check-eq? (C0-x c) 10)
-    (check-eq? (C0-y c) 20))
-
-  (test-case "Interface with composite ports is mapped to channel struct"
-    (define j (I1 (I0 10 20) 30))
-    (check-eq? (I0-x (I1-i j)) 10)
-    (check-eq? (I0-y (I1-i j)) 20)
-    (check-eq? (I1-z j) 30))
-
-  (test-case "Component with composite ports is mapped to channel struct"
-    (define c (C1 (I0 10 20) 30))
-    (check-eq? (I0-x (C1-i c)) 10)
-    (check-eq? (I0-y (C1-i c)) 20)
-    (check-eq? (C1-z c) 30))
 
   (test-case "Can construct a channel for an interface with simple ports"
     (define i (make-channel-I0 30))
