@@ -15,8 +15,12 @@
   parameter
   data-port
   composite-port
+  multiplicity
+  flip
+  splice
   constant
   local-signal
+  instance
   assignment
   literal-expr
   alias
@@ -25,6 +29,7 @@
   indexed-expr
   call-expr
   register-expr
+  when-clause
   signal-expr
   static-expr
   lift-expr)
