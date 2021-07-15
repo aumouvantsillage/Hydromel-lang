@@ -221,21 +221,12 @@
 
       [_ (thunk stx)]))
 
-  ; Returns a port with the same properties as p, with flipped mode.
-  (define (flip-port p)
-    (match p
-      [(meta/data-port      name mode)
-       (meta/data-port      name (if (eq? 'in mode) 'out 'in))]
-      [(meta/composite-port name intf-name flip?       splice?)
-       (meta/composite-port name intf-name (not flip?) splice?)]
-      [_ p]))
-
   ; Returns a list of ports in interface intf after splicing.
   (define (splice-interface intf flip?)
     (flatten
       (for/list ([p (in-dict-values (meta/design-unit-ports intf))])
         (cons
-          (if flip? (flip-port p) p)
+          (if flip? (meta/flip-port p) p)
           (if (and (meta/composite-port? p) (meta/composite-port-splice? p))
             (~> p
                 (meta/composite-port-intf-name)
@@ -255,6 +246,13 @@
           (define alias-name (bind! (meta/port-name q) q))
           #`(alias #,alias-name #,port-name #,intf-name)))))
 
+  ; Check whether stx is an expression with a static value.
+  ; Returns true when stx is:
+  ; - a literal expression,
+  ; - a name expression that refers to a constant,
+  ; - a field expression whose left-hand side has a static value,
+  ; - an indexed expression whose left-hand side and indices have static values,
+  ; - a call whose arguments have static values.
   (define (static-value? stx)
     (syntax-parse stx
       [s:stx/literal-expr #t]
@@ -289,10 +287,12 @@
          [_ (raise-syntax-error #f "Expression not suitable for field access" stx)])]
 
       [s:stx/indexed-expr
+       ; For an indexed expression, the metadata are those of the left-hand side.
        (resolve #'s.expr)]
 
-      [_ stx]))
+      [_ #f]))
 
+  ; Check an expression that appears in the left-hand side of an assignment.
   (define (check-assignment-target stx)
     (define (check p name thunk)
       (unless (meta/data-port? p)
@@ -306,7 +306,7 @@
        ; - a data port of the current component, with the out mode,
        ; - a data port in a spliced composite port, with the out mode if not flipped,
        ;   or with the in mode if flipped.
-       ; Function decorate-spliced takes care of flipping the mode in spliced
+       ; Function splice-interface takes care of flipping the mode in spliced
        ; composite ports when needed, so we only need to check the out mode here:
        (check (lookup #'s.name)
               #'s.name
@@ -321,9 +321,8 @@
           ; The field name must refer to a data port with the out mode when the
           ; composite port is not flipped, or with the in mode when the composite
           ; port is flipped.
-          ; Function decorate-spliced takes care of flipping the mode if the
-          ; field name belongs to a spliced composite port.
-          ; TODO tests for flipped and spliced cases
+          ; Function design-unit-ref takes care of flipping the mode if the
+          ; field name belongs to a flipped spliced composite port.
           (check (meta/design-unit-ref (lookup intf-name meta/interface?) #'s.field-name)
                  #'s.field-name
                  (λ (p) (xor flip? (eq? 'out (meta/data-port-mode p)))))]
@@ -332,16 +331,20 @@
           ; If the lhs maps to an instance, look up the given field name
           ; in the target component.
           ; The field name must refer to a data port with the in mode.
-          ; Function decorate-spliced takes care of flipping the mode if the
-          ; field name belongs to a spliced composite port.
-          ; TODO tests for flipped and spliced cases
+          ; Function design-unit-ref takes care of flipping the mode if the
+          ; field name belongs to a flipped spliced composite port.
           (check (meta/design-unit-ref (lookup comp-name meta/component?) #'s.field-name)
                  #'s.field-name
                  (λ (p) (eq? 'in (meta/data-port-mode p))))])]
 
-      [_
-       (raise-syntax-error #f "Expression not suitable as assignment target" stx)]))
+      [_ (raise-syntax-error #f "Expression not suitable as assignment target" stx)]))
 
+  ; Check an expression that constitutes the right-hand side of an assignment.
+  ; This includes:
+  ; - the expression assigned to a local signal,
+  ; - the update clause of a register expression,
+  ; - the when clauses of a register expression.
+  ; Returns an expression wrapped in lift-expr, static-expr, or signal-expr.
   (define (check-assigned-expr stx)
     (syntax-parse (lift-if-needed stx)
       [s:stx/lift-expr
@@ -530,9 +533,23 @@
       (composite-port i splice I0)
       (assignment (name-expr y) (name-expr x)))
 
+    (component C27
+      (data-port x in (name-expr integer))
+      (data-port y out (name-expr integer))
+      (instance c C14)
+      (assignment (field-expr (name-expr c) x) (name-expr x))
+      (assignment (name-expr y) (field-expr (name-expr c) y)))
+
     (component C24
       (composite-port i splice flip I0)
       (assignment (name-expr x) (name-expr y)))
+
+    (component C28
+      (data-port x in (name-expr integer))
+      (data-port y out (name-expr integer))
+      (instance c C24)
+      (assignment (field-expr (name-expr c) y) (name-expr x))
+      (assignment (name-expr y) (field-expr (name-expr c) x)))
 
     (component C15
       (composite-port j splice I1)

@@ -12,15 +12,20 @@
   (dict-ref ports (syntax-e name)
     (thunk
       ; If not found, look into each spliced composite port.
-      ; Do not raise an error if not found.
       (define port (for/fold ([res #f])
                              ([p (in-list (dict-values ports))]
                               #:when (and (composite-port? p) (composite-port-splice? p))
                               #:break res)
-                     (~> p
-                         (composite-port-intf-name)
-                         (lookup interface?)
-                         (design-unit-ref name #f))))
+                     ; Find a port with the given name in the interface
+                     ; of composite port p.
+                     (define q (~> p
+                                 (composite-port-intf-name)
+                                 (lookup interface?)
+                                 (design-unit-ref name #f)))
+                     ; If a port was found and p is flipped, then flip q.
+                     (if (and q (composite-port-flip? p))
+                       (flip-port q)
+                       q)))
       ; In strict mode, raise an error if no port was found at this point.
       (when (and strict? (not port))
         (raise-syntax-error #f "No port with this name" name))
@@ -33,6 +38,15 @@
 (struct port (name))
 (struct data-port      port (mode))
 (struct composite-port port (intf-name flip? splice?))
+
+; Returns a port with the same properties as p, but with flipped mode.
+(define (flip-port p)
+  (match p
+    [(data-port      name mode)
+     (data-port      name (if (eq? 'in mode) 'out 'in))]
+    [(composite-port name intf-name flip?       splice?)
+     (composite-port name intf-name (not flip?) splice?)]
+    [_ p]))
 
 (struct constant ())
 (struct parameter ())
