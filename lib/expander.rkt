@@ -42,7 +42,7 @@
     (format-id name "make-instance-~a" name))
 
   (define (accessor-name sname fname)
-    (format-id fname "~a-~a" sname fname))
+    (format-id sname "~a-~a" sname fname))
 
   (define (stx-filter stx-lst id-lst)
     (for/list ([it (in-list stx-lst)]
@@ -79,8 +79,8 @@
 ; - a constructor function,
 ; - an accessor function for each alias (field of a spliced interface).
 (define-syntax-parse-rule (interface name body ...)
-  #:with struct-name      (generate-temporary          #'name)
-  #:with struct-ctor-name (generate-temporary          #'name)
+  #:with struct-name      (generate-temporary          (format-id #'name "hdrml:struct:~a" #'name))
+  #:with struct-ctor-name (generate-temporary          (format-id #'name "hdrml:ctor:~a"   #'name))
   #:with ctor-name        (channel-ctor-name           #'name)
   #:with (param-name ...) (design-unit-parameter-names (attribute body))
   #:with (field-name ...) (design-unit-field-names     (attribute body))
@@ -92,9 +92,9 @@
       #:transparent
       #:name             struct-name
       #:constructor-name struct-ctor-name)
+    (alias-accessor name alias-stx) ...
     (define (ctor-name param-name ...)
-      (struct-ctor-name field-stx ...))
-    (alias-accessor name alias-stx) ...))
+      (struct-ctor-name field-stx ...))))
 
 (define-syntax-parse-rule (alias-accessor parent-intf-name (alias alias-name port-name alias-intf-name))
   #:with port-acc-name (accessor-name #'parent-intf-name #'port-name)

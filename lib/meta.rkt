@@ -1,39 +1,46 @@
 #lang racket
 
-(require syntax/id-table "scope.rkt")
+(require threading "scope.rkt")
 
 (provide (all-defined-out))
 
-(struct design-unit (public-fields))
+(struct design-unit ([ports #:mutable]))
 
-(define (design-unit-set-from-scope! unit name)
-  (dict-set! (design-unit-public-fields unit) (syntax-e name) (lookup name)))
-
-(define (design-unit-ref unit name)
-  (dict-ref (design-unit-public-fields unit) (syntax-e name)
-    (thunk (raise-syntax-error #f "No element with this name" name))))
+(define (design-unit-ref unit name [strict? #t])
+  (define ports (design-unit-ports unit))
+  ; Attempt to find a port with the given name in the current unit.
+  (dict-ref ports (syntax-e name)
+    (thunk
+      ; If not found, look into each spliced composite port.
+      ; Do not raise an error if not found.
+      (define port (for/fold ([res #f])
+                             ([p (in-list (dict-values ports))]
+                              #:when (and (composite-port? p) (composite-port-splice? p))
+                              #:break res)
+                     (~> p
+                         (composite-port-intf-name)
+                         (lookup interface?)
+                         (design-unit-ref name #f))))
+      ; In strict mode, raise an error if no port was found at this point.
+      (when (and strict? (not port))
+        (raise-syntax-error #f "No port with this name" name))
+      ; Return the port found.
+      port)))
 
 (struct interface design-unit ())
-
-(define (make-interface)
-  (interface (make-hash)))
-
 (struct component design-unit ())
 
-(define (make-component)
-  (component (make-hash)))
-
-(struct field (name))
+(struct port (name))
+(struct data-port      port (mode))
+(struct composite-port port (intf-name flip? splice?))
 
 (struct constant ())
-(struct parameter field ())
+(struct parameter ())
 
-(struct data-port field (mode))
 (struct local-signal ())
 
-(struct composite-port field (intf-name flip?))
 (struct instance (comp-name))
 
 (define (signal? item)
-  (or (data-port? item)
+  (or (data-port?    item)
       (local-signal? item)))

@@ -13,6 +13,11 @@
     #:literals [use]
     (pattern (use path:str)))
 
+  (define-syntax-class design-unit
+    #:attributes [name (body 1)]
+    (pattern :interface)
+    (pattern :component))
+
   (define-syntax-class interface
     #:literals [interface]
     (pattern (interface name body ...)))
