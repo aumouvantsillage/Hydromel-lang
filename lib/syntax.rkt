@@ -79,7 +79,7 @@
 
   (define-syntax-class register-expr
     #:literals [register-expr]
-    (pattern (register-expr init-expr (~optional init-cond:when-clause)
+    (pattern (register-expr init-expr   (~optional init-cond:when-clause)
                             update-expr (~optional update-cond:when-clause))))
 
   (define-syntax-class when-clause

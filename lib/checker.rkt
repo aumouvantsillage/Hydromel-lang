@@ -86,7 +86,6 @@
        (thunk #'(begin))]
 
       [s:stx/interface
-       (displayln (list "Interface " #'s.name))
        (define body^
          (parameterize ([current-design-unit (lookup #'s.name)])
            (with-scope
@@ -98,7 +97,6 @@
          #`(interface s.name #,@(check-all body^)))]
 
       [s:stx/component
-       (displayln (list "Component " #'s.name))
        (define body^
          (parameterize ([current-design-unit (lookup #'s.name)])
            (with-scope
@@ -200,11 +198,11 @@
                         (make-checker #'s.init-cond)
                         (thunk #f))
                       (make-checker #'s.update-expr)
-                      (if (attribute s.init-cond)
+                      (if (attribute s.update-cond)
                         (make-checker #'s.update-cond)
                         (thunk #f))))
        (thunk/in-scope
-         (define checked-args (check-all args))
+         (define checked-args (filter identity (check-all args)))
          (unless (static-value? (first checked-args))
            (raise-syntax-error #f "Non-static expression cannot be used as an initial register value" #'s.init-expr))
          #`(register-expr #,@checked-args))]
@@ -223,26 +221,39 @@
 
       [_ (thunk stx)]))
 
-  (define (flip m)
-    (match m
+  ; Returns a port with the same properties as p, with flipped mode.
+  (define (flip-port p)
+    (match p
       [(meta/data-port      name mode)
        (meta/data-port      name (if (eq? 'in mode) 'out 'in))]
       [(meta/composite-port name intf-name flip?       splice?)
        (meta/composite-port name intf-name (not flip?) splice?)]
-      [_ m]))
+      [_ p]))
 
+  ; Returns a list of ports in interface intf after splicing.
+  (define (splice-interface intf flip?)
+    (flatten
+      (for/list ([p (in-dict-values (meta/design-unit-ports intf))])
+        (cons
+          (if flip? (flip-port p) p)
+          (if (and (meta/composite-port? p) (meta/composite-port-splice? p))
+            (~> p
+                (meta/composite-port-intf-name)
+                (lookup meta/interface?)
+                (splice-interface (xor flip? (meta/composite-port-flip? p))))
+            empty)))))
+
+  ; Returns a list of aliases for the spliced composite ports in the current design unit.
   (define (create-aliases)
     (flatten
       (for/list ([p (in-dict-values (meta/design-unit-ports (current-design-unit)))]
                  #:when (and (meta/composite-port? p) (meta/composite-port-splice? p)))
         (define intf-name (meta/composite-port-intf-name p))
-        (define intf (lookup intf-name meta/interface?))
-        (for/list ([q (in-dict-values (meta/design-unit-ports intf))])
-          (define alias-name (bind! (meta/port-name q)
-                                    (if (meta/composite-port-flip? p) (flip q) q)))
-          (define target-port-name (meta/port-name p))
-          (displayln (list "Creating alias" alias-name target-port-name intf-name))
-          #`(alias #,alias-name #,target-port-name #,intf-name)))))
+        (define intf      (lookup intf-name meta/interface?))
+        (define port-name (meta/port-name p))
+        (for/list ([q (in-list (splice-interface intf (meta/composite-port-flip? p)))])
+          (define alias-name (bind! (meta/port-name q) q))
+          #`(alias #,alias-name #,port-name #,intf-name)))))
 
   (define (static-value? stx)
     (syntax-parse stx
@@ -542,54 +553,54 @@
 
     (component C17
       (composite-port j splice I3)
-      (assignment (name-expr y) (name-expr x)))))
+      (assignment (name-expr y) (name-expr x)))
 
-    ; (component C23
-    ;   (composite-port j splice flip I3)
-    ;   (assignment (name-expr x) (name-expr y)))
-    ;
-    ; (component C25
-    ;   (composite-port j splice I4)
-    ;   (assignment (name-expr x) (name-expr y)))
-    ;
-    ; (component C26
-    ;   (composite-port j splice flip I4)
-    ;   (assignment (name-expr y) (name-expr x)))
-    ;
-    ; (component C18
-    ;   (data-port x in (name-expr integer))
-    ;   (data-port y in (name-expr integer))
-    ;   (data-port z out (name-expr integer))
-    ;   (assignment (name-expr z) (call-expr if (call-expr > (name-expr x) (name-expr y))
-    ;                               (name-expr x)
-    ;                               (name-expr y))))
-    ;
-    ; (component C19
-    ;   (data-port x in (name-expr integer))
-    ;   (data-port y out (name-expr integer))
-    ;   (assignment (name-expr y) (register-expr (literal-expr 0) (name-expr x))))
-    ;
-    ; (component C20
-    ;   (data-port x in (name-expr integer))
-    ;   (data-port y in (name-expr integer))
-    ;   (data-port z out (name-expr integer))
-    ;   (assignment (name-expr z) (register-expr (literal-expr 0) (when-clause (name-expr x))
-    ;                                            (name-expr y))))
-    ;
-    ; (component C21
-    ;   (data-port x in (name-expr integer))
-    ;   (data-port y in (name-expr integer))
-    ;   (data-port z out (name-expr integer))
-    ;   (assignment (name-expr z) (register-expr (literal-expr 0)
-    ;                                            (name-expr y) (when-clause (name-expr x)))))
-    ;
-    ; (component C22
-    ;   (data-port x in (name-expr integer))
-    ;   (data-port y in (name-expr integer))
-    ;   (data-port z in (name-expr integer))
-    ;   (data-port u out (name-expr integer))
-    ;   (assignment (name-expr u) (register-expr (literal-expr 0) (when-clause (name-expr x))
-    ;                                            (name-expr z) (when-clause (name-expr y)))))))
+    (component C23
+      (composite-port j splice flip I3)
+      (assignment (name-expr x) (name-expr y)))
+
+    (component C25
+      (composite-port j splice I4)
+      (assignment (name-expr x) (name-expr y)))
+
+    (component C26
+      (composite-port j splice flip I4)
+      (assignment (name-expr y) (name-expr x)))
+
+    (component C18
+      (data-port x in (name-expr integer))
+      (data-port y in (name-expr integer))
+      (data-port z out (name-expr integer))
+      (assignment (name-expr z) (call-expr if (call-expr > (name-expr x) (name-expr y))
+                                  (name-expr x)
+                                  (name-expr y))))
+
+    (component C19
+      (data-port x in (name-expr integer))
+      (data-port y out (name-expr integer))
+      (assignment (name-expr y) (register-expr (literal-expr 0) (name-expr x))))
+
+    (component C20
+      (data-port x in (name-expr integer))
+      (data-port y in (name-expr integer))
+      (data-port z out (name-expr integer))
+      (assignment (name-expr z) (register-expr (literal-expr 0) (when-clause (name-expr x))
+                                               (name-expr y))))
+
+    (component C21
+      (data-port x in (name-expr integer))
+      (data-port y in (name-expr integer))
+      (data-port z out (name-expr integer))
+      (assignment (name-expr z) (register-expr (literal-expr 0)
+                                               (name-expr y) (when-clause (name-expr x)))))
+
+    (component C22
+      (data-port x in (name-expr integer))
+      (data-port y in (name-expr integer))
+      (data-port z in (name-expr integer))
+      (data-port u out (name-expr integer))
+      (assignment (name-expr u) (register-expr (literal-expr 0) (when-clause (name-expr x))
+                                               (name-expr z) (when-clause (name-expr y)))))))
 
     ; (define (check-sig-equal? t e n)
     ;   (check-equal? (signal-take t n) (signal-take e n)))
