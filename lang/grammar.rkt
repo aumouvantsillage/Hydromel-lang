@@ -10,7 +10,7 @@
 
 begin-hydromel: (use | interface | component)*
 
-use: /"use" STRING
+use: /"use" STRING (/"as" ID)?
 
 interface: /"interface" ID parameter-list? interface-item* /"end"
 
@@ -64,7 +64,7 @@ instance:
 @maybe-mult-expr:   mult-expr   | maybe-prefix-expr
 @maybe-prefix-expr: prefix-expr | simple-expr
 
-or-expr:     maybe-or-expr  "or" maybe-and-expr
+or-expr:     maybe-or-expr  ("or" | "xor") maybe-and-expr
 and-expr:    maybe-and-expr "and" maybe-rel-expr
 rel-expr:    maybe-rel-expr ("<" | ">" | "<=" | ">=" | "==" | "/=") maybe-add-expr
 add-expr:    maybe-add-expr ("+" | "-") maybe-mult-expr

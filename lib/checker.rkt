@@ -8,6 +8,7 @@
     racket
     threading
     racket/function
+    racket/syntax
     syntax/parse
     syntax/parse/define
     "scope.rkt"
@@ -23,7 +24,9 @@
 ; First pass: bind module-level elements and manage module imports.
 (define-syntax-parser compile-as-module-level-defs
   [(_ s:stx/use)
-   #'(require s.path)]
+   (if (attribute s.prefix)
+     #`(require (prefix-in #,(format-id #'s.prefix "~a::" #'s.prefix) s.path))
+     #'(require s.path))]
 
   [(_ s:stx/interface)
    #'(begin

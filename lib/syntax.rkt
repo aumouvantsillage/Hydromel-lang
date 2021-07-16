@@ -11,7 +11,7 @@
 (begin-for-syntax
   (define-syntax-class use
     #:literals [use]
-    (pattern (use path:str)))
+    (pattern (use path:str (~optional prefix))))
 
   (define-syntax-class design-unit
     #:attributes [name (body 1)]

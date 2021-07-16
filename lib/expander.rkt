@@ -127,7 +127,8 @@
        (define self (chan-ctor-name param-name ...))
        (define field-name (field-acc-name self)) ...
        (syntax-parameterize ([as-statement #t])
-         stmt ...)
+         ; (void) prevents errors when there is no statement.
+         stmt ... (void))
        self)))
 
 ; Parameters are expanded in macros interface and component.

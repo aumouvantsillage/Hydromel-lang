@@ -9,18 +9,21 @@
   (lexer-file-path path)
   (define hydromel-lexer
     (lexer-src-pos
-      [(:or "interface" "component" "end"
+      [(:or "use" "as"
+            "interface" "component" "end"
             "type" "port" "in" "out" "flip" "splice"
             "constant" "instance" "signal"
-            "or" "and" "not" ">=" "<=" "==" "/="
+            "or" "and" "not" "xor" ">=" "<=" "==" "/="
             "if" "then" "else"
             "register" "when"
             (char-set ".:,()[]=+-*/<>"))
        (token lexeme (string->symbol lexeme))]
-      [(:seq alphabetic (:* (:or alphabetic numeric)))
+      [(:seq alphabetic (:* (:or alphabetic numeric (char-set "_") "::")))
        (token 'ID (string->symbol lexeme))]
       [(:+ numeric)
        (token 'INT (string->number lexeme))]
+      [(from/to "\"" "\"")
+       (token 'STRING (trim-ends "\"" lexeme "\""))]
       [(from/stop-before "#" "\n")
        (token 'COMMENT lexeme #:skip? #t)]
       [whitespace
