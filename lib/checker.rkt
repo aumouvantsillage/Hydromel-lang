@@ -66,24 +66,7 @@
            #'(cons 'p.name (meta/composite-port #'p.intf-name flip splice))]
           [_ #f]))))
 
-  (define current-design-unit-name (make-parameter #f))
-
-  (define current-port-table (make-parameter (make-hash)))
-
-  (define (bind-port! name meta)
-    (define name^ (bind! name meta))
-    (define subtable (dict-ref (current-port-table) (current-design-unit-name)
-                       (thunk
-                         (define res (make-hash))
-                         (dict-set! (current-port-table) (current-design-unit-name) res)
-                         res)))
-    (dict-set! subtable (syntax-e name^) meta)
-    name^)
-
-  (define (port-ref unit-name port-name)
-    (~> (current-port-table)
-        (dict-ref (syntax-e unit-name))
-        (dict-ref (syntax-e port-name))))
+  (define current-design-unit (make-parameter #f))
 
   (define (check-all lst)
     (map (λ (f) (f)) lst))
@@ -105,7 +88,7 @@
 
       [s:stx/interface
        (define body^
-         (parameterize ([current-design-unit-name (syntax-e #'s.name)])
+         (parameterize ([current-design-unit (lookup #'s.name)])
            (with-scope
              (~>> (attribute s.body)
                   (create-aliases)
@@ -116,7 +99,7 @@
 
       [s:stx/component
        (define body^
-         (parameterize ([current-design-unit-name (syntax-e #'s.name)])
+         (parameterize ([current-design-unit (lookup #'s.name)])
            (with-scope
              (~>> (attribute s.body)
                   (create-aliases)
@@ -132,13 +115,13 @@
          #'(parameter name^ s.type))]
 
       [s:stx/data-port
-       #:with name^ (bind-port! #'s.name (meta/data-port (syntax-e #'s.mode)))
+       #:with name^ (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
        (thunk/in-scope
          ; TODO check type
          #'(data-port name^ s.mode s.type))]
 
       [s:stx/composite-port
-       #:with name^ (bind-port! #'s.name (meta/composite-port #'s.intf-name (attribute s.flip?) (attribute s.splice?)))
+       #:with name^ (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
        (define mult^ (make-checker (or (attribute s.mult) #'(literal-expr 1))))
        (define args (map make-checker (attribute s.arg)))
        (thunk/in-scope
@@ -240,14 +223,15 @@
       [_ (thunk stx)]))
 
   ; Returns a list of ports in interface intf after splicing.
-  (define (splice-interface intf-name flip?)
+  (define (splice-interface intf flip?)
     (apply append
-      (for/list ([(port-name p) (in-dict (dict-ref (current-port-table) (syntax-e intf-name)))])
+      (for/list ([(port-name p) (in-dict (meta/design-unit-ports intf))])
         (cons
           (cons port-name (if flip? (meta/flip-port p) p))
           (if (and (meta/composite-port? p) (meta/composite-port-splice? p))
             (~> p
                 (meta/composite-port-intf-name)
+                (lookup meta/interface?)
                 (splice-interface (xor flip? (meta/composite-port-flip? p))))
             empty)))))
 
@@ -258,7 +242,8 @@
         (cons stx
               (syntax-parse stx
                 [s:stx/composite-port #:when (attribute s.splice?)
-                 (for/list ([(port-name p) (in-dict (splice-interface #'s.intf-name (attribute s.flip?)))])
+                 (define intf (lookup #'s.intf-name meta/interface?))
+                 (for/list ([(port-name p) (in-dict (splice-interface intf (attribute s.flip?)))])
                    (define port-name^ (bind! (datum->syntax stx port-name) p))
                    #`(alias #,port-name^ s.name s.intf-name))]
                 [_ empty])))))
