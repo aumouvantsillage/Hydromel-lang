@@ -30,13 +30,13 @@
    #:with (p ...) (port-metadata (attribute s.body))
    #'(begin
        (provide s.name)
-       (define-syntax s.name (meta/interface (list p ...))))]
+       (define-syntax s.name (meta/make-interface (list p ...))))]
 
   [(_ s:stx/component)
    #:with (p ...) (port-metadata (attribute s.body))
    #'(begin
        (provide s.name)
-       (define-syntax s.name (meta/component (list p ...))))]
+       (define-syntax s.name (meta/make-component (list p ...))))]
 
   [_
    #'(begin)])
@@ -51,7 +51,9 @@
   (define (boolean->syntax b)
     (if b #'#t #'#f))
 
-  ; Second pass: fill the metadata of module-level elements.
+  ; First pass: fill the metadata of module-level elements.
+  ; Those metadata are constructed as syntax objects that will be inserted
+  ; into the result of compile-as-module-level-defs.
   (define (port-metadata lst)
     (filter identity
       (for/list ([stx (in-list lst)])

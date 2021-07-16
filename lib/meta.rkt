@@ -1,9 +1,14 @@
 #lang racket
 
-(require threading "scope.rkt")
+(require
+  threading
+  syntax/id-table
+  "scope.rkt")
 
 (provide (all-defined-out))
 
+; Common parent struct for all design units.
+; ports is a hash map whose keys are symbols and values are port metadata.
 (struct design-unit (ports))
 
 (define (design-unit-ref unit name [strict? #t])
@@ -34,6 +39,12 @@
 
 (struct interface design-unit ())
 (struct component design-unit ())
+
+(define (make-interface ports)
+  (interface (make-hash ports)))
+
+(define (make-component ports)
+  (component (make-hash ports)))
 
 (struct port ())
 (struct data-port      port (mode))
