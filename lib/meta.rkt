@@ -4,7 +4,7 @@
 
 (provide (all-defined-out))
 
-(struct design-unit ([ports #:mutable]))
+(struct design-unit (ports))
 
 (define (design-unit-ref unit name [strict? #t])
   (define ports (design-unit-ports unit))
@@ -35,17 +35,17 @@
 (struct interface design-unit ())
 (struct component design-unit ())
 
-(struct port (name))
+(struct port ())
 (struct data-port      port (mode))
 (struct composite-port port (intf-name flip? splice?))
 
 ; Returns a port with the same properties as p, but with flipped mode.
 (define (flip-port p)
   (match p
-    [(data-port      name mode)
-     (data-port      name (if (eq? 'in mode) 'out 'in))]
-    [(composite-port name intf-name flip?       splice?)
-     (composite-port name intf-name (not flip?) splice?)]
+    [(data-port      mode)
+     (data-port      (if (eq? 'in mode) 'out 'in))]
+    [(composite-port intf-name flip?       splice?)
+     (composite-port intf-name (not flip?) splice?)]
     [_ p]))
 
 (struct constant ())

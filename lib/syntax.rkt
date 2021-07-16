@@ -11,7 +11,7 @@
 (begin-for-syntax
   (define-syntax-class use
     #:literals [use]
-    (pattern (use path:str (~optional prefix))))
+    (pattern (use path:str)))
 
   (define-syntax-class design-unit
     #:attributes [name (body 1)]
@@ -96,10 +96,6 @@
     (pattern (if-expr arg ...)
       #:attr fn-name 'if)
     (pattern (call-expr fn-name arg ...)))
-
-  (define-syntax-class alias
-    #:literals [alias]
-    (pattern (alias name port-name intf-name)))
 
   (define-syntax-class lift-expr
     #:literals [lift-expr]

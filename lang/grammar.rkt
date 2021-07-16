@@ -10,7 +10,7 @@
 
 begin-hydromel: (use | interface | component)*
 
-use: /"use" STRING (/"as" ID)?
+use: /"use" STRING
 
 interface: /"interface" ID parameter-list? interface-item* /"end"
 

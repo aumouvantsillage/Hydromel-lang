@@ -1,0 +1,10 @@
+#lang hydromel
+
+component half_adder
+    port a : in  bit
+    port b : in  bit
+    port s : out bit
+    port c : out bit
+    c = a and b
+    s = a xor b
+end
