@@ -9,7 +9,8 @@
   (lexer-file-path path)
   (define hydromel-lexer
     (lexer-src-pos
-      [(:or "use" "interface" "component" "end"
+      [(:or "import" "as"
+            "interface" "component" "end"
             "type" "port" "in" "out" "flip" "splice"
             "constant" "instance" "signal"
             "or" "and" "not" "xor" ">=" "<=" "==" "/="

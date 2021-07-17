@@ -1,6 +1,6 @@
 #lang hydromel
 
-use "half_adder.hdrml"
+import "half_adder.hdrml" as ha
 
 component full_adder
     port a  : in  bit
@@ -8,10 +8,10 @@ component full_adder
     port ci : in  bit
     port s  : out bit
     port co : out bit
-    instance h1 = half_adder
+    instance h1 = ha::half_adder
     h1.a = a
     h1.b = b
-    instance h2 = half_adder
+    instance h2 = ha::half_adder
     h2.a = h1.s
     h2.b = ci
     s = h2.s

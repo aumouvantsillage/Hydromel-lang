@@ -9,7 +9,7 @@
     syntax/stx))
 
 (provide
-  use
+  import
   interface
   component
   parameter
@@ -36,10 +36,10 @@
 
 (begin-for-syntax
   (define (channel-ctor-name name)
-    (format-id name "make-channel-~a" name))
+    (format-id name "~a-make-channel" name))
 
   (define (instance-ctor-name name)
-    (format-id name "make-instance-~a" name))
+    (format-id name "~a-make-instance" name))
 
   (define (accessor-name sname fname)
     (format-id sname "~a-~a" sname fname))
@@ -71,7 +71,7 @@
     (define/syntax-parse ((_ name _ ...) ...) (design-unit-fields stx-lst))
     (attribute name)))
 
-(define-syntax (use stx)
+(define-syntax (import stx)
   (raise-syntax-error #f "should not be used outside of begin-tiny-hdl" stx))
 
 ; An interface expands to:
@@ -425,24 +425,24 @@
   (define .* (signal-lift *))
 
   (test-case "Can construct a channel for an interface with simple ports"
-    (define i (make-channel-I0 30))
+    (define i (I0-make-channel 30))
     (check-pred box? (I0-x i))
     (check-pred box? (I0-y i)))
 
   (test-case "Can construct a channel for a component with simple ports"
-    (define c (make-instance-C0 30))
+    (define c (C0-make-instance 30))
     (check-pred box? (C0-x c))
     (check-pred box? (C0-y c)))
 
   (test-case "Can construct a channel for an interface with composite ports and no parameters"
-    (define i3 (make-channel-I3))
+    (define i3 (I3-make-channel))
     (check-pred box? (I3-z i3))
     (check-pred I2? (I3-i i3))
     (check-pred box? (I2-x (I3-i i3)))
     (check-pred box? (I2-y (I3-i i3)))
     (check-pred box? (I3-u i3))
 
-    (define i4 (make-channel-I4))
+    (define i4 (I4-make-channel))
     (check-pred box? (I4-v i4))
     (check-pred I3? (I4-j i4))
     (check-pred box? (I3-z (I4-j i4)))
@@ -452,7 +452,7 @@
     (check-pred box? (I4-w i4)))
 
   (test-case "Can construct a channel for a component with composite ports and no parameters"
-    (define c (make-instance-C2))
+    (define c (C2-make-instance))
     (check-pred box? (C2-v c))
     (check-pred I3? (C2-j c))
     (check-pred box? (I3-z (C2-j c)))
@@ -462,40 +462,40 @@
     (check-pred box? (C2-w c)))
 
   (test-case "Can construct a channel for an interface with a vector port"
-    (define j (make-channel-I5))
+    (define j (I5-make-channel))
     (check-pred vector? (I5-i j))
     (check-eq? (vector-length (I5-i j)) 3)
     (for ([n (range 3)])
       (check-pred I2? (vector-ref (I5-i j) n))))
 
   (test-case "Can construct a channel for an interface with arguments"
-    (define j (make-channel-I6 5))
+    (define j (I6-make-channel 5))
     (check-pred vector? (I6-i j))
     (check-eq? (vector-length (I6-i j)) 5)
     (for ([n (range 5)])
       (check-pred I2? (vector-ref (I6-i j) n))))
 
   (test-case "Can construct a channel containing a composite port with arguments"
-    (define k (make-channel-I7 3))
+    (define k (I7-make-channel 3))
     (check-pred vector? (I6-i (I7-j k)))
     (check-eq? (vector-length (I6-i (I7-j k))) 3)
     (for ([n (range 3)])
       (check-pred I2? (vector-ref (I6-i (I7-j k)) n))))
 
   (test-case "Can assign a simple port to another simple port"
-    (define c (make-instance-C0 #f))
+    (define c (C0-make-instance #f))
     (define x (signal 23))
     (port-set! (c C0-x) x)
     (check-sig-equal? (port-ref c C0-y) x 5))
 
   (test-case "Can access simple ports in a composite port"
-    (define c (make-instance-C3))
+    (define c (C3-make-instance))
     (define x (signal 23))
     (port-set! (c C3-i I2-x) x)
     (check-sig-equal? (port-ref c C3-i I2-y) x 5))
 
   (test-case "Can access simple ports in a vector composite port with static indices"
-    (define c (make-instance-C4))
+    (define c (C4-make-instance))
     (define x0 (signal 10))
     (define x1 (signal 20))
     (define x2 (signal 30))
@@ -507,7 +507,7 @@
     (check-sig-equal? (port-ref c C4-i 2 I2-x) x2 5))
 
   (test-case "Can access simple ports in a vector composite port with dynamic indices"
-    (define c (make-instance-C5))
+    (define c (C5-make-instance))
     (define x0 (signal 10))
     (define x1 (signal 20))
     (define x2 (signal 30))
@@ -520,7 +520,7 @@
     (check-sig-equal? (port-ref c C5-z) z 5))
 
   (test-case "Can perform an operation between signals"
-    (define c (make-instance-C6))
+    (define c (C6-make-instance))
     (define x (list->signal (range 1  5  1)))
     (define y (list->signal (range 10 50 10)))
     (port-set! (c C6-x) x)
@@ -528,7 +528,7 @@
     (check-sig-equal? (port-ref c C6-z) (.+ x y) 5))
 
   (test-case "Can use local signals"
-    (define c (make-instance-C7))
+    (define c (C7-make-instance))
     (define x (list->signal (list 10 20 30 40 50)))
     (define y (signal 2))
     (define z (list->signal (list 1 2 3 4 5)))
@@ -540,13 +540,13 @@
     (check-sig-equal? (port-ref c C7-v) (.+ (.* x y) (.* z u)) 5))
 
   (test-case "Can instantiate a component"
-    (define c (make-instance-C9))
+    (define c (C9-make-instance))
     (define x (list->signal (list 10 20 30 40 50)))
     (port-set! (c C9-x) x)
     (check-sig-equal? (port-ref c C9-y) (.* x (signal 10)) 5))
 
   (test-case "Can instantiate a multiple component"
-    (define c (make-instance-C10))
+    (define c (C10-make-instance))
     (define x0 (list->signal (list 10 20 30 40 50)))
     (define x1 (list->signal (list 1 2 3 4 5)))
     (port-set! (c C10-x0) x0)
@@ -554,13 +554,13 @@
     (check-sig-equal? (port-ref c C10-y) (.* (.+ x0 x1) (signal 10)) 5))
 
   (test-case "Can register a signal"
-    (define c (make-instance-C11))
+    (define c (C11-make-instance))
     (define x (list->signal (list 10 20  30 40 50)))
     (port-set! (c C11-x) x)
     (check-sig-equal? (port-ref c C11-y) (register 0 x) 6))
 
   (test-case "Can register a signal with reset"
-    (define c (make-instance-C12))
+    (define c (C12-make-instance))
     (define x (list->signal (list #f #f  #f #t #f)))
     (define y (list->signal (list 10 20  30 40 50)))
     (port-set! (c C12-x) x)
@@ -568,7 +568,7 @@
     (check-sig-equal? (port-ref c C12-z) (register/r 0 x y) 6))
 
   (test-case "Can register a signal with enable"
-    (define c (make-instance-C13))
+    (define c (C13-make-instance))
     (define x (list->signal (list #f #t  #f #t #f)))
     (define y (list->signal (list 10 20  30 40 50)))
     (port-set! (c C13-x) x)
@@ -576,7 +576,7 @@
     (check-sig-equal? (port-ref c C13-z) (register/e 0 x y) 6))
 
   (test-case "Can register a signal with reset and enable"
-    (define c (make-instance-C14))
+    (define c (C14-make-instance))
     (define x (list->signal (list #f #t  #f #t #f)))
     (define y (list->signal (list #f #f  #t #f #f)))
     (define z (list->signal (list 10 20  30 40 50)))

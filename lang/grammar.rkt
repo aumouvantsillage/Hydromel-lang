@@ -8,9 +8,9 @@
 ;
 ; This will create an AST node of the form: (a (a-item ...))
 
-begin-hydromel: (use | interface | component)*
+begin-hydromel: (import | interface | component)*
 
-use: /"use" STRING
+import: /"import" STRING (/"as" ID)?
 
 interface: /"interface" ID parameter-list? interface-item* /"end"
 

@@ -5,7 +5,7 @@
   hydromel/lib/helpers
   "half_adder.hdrml")
 
-(define inst (make-instance-half_adder))
+(define inst (half_adder-make-instance))
 
 (port-set! (inst half_adder-a) (signal #f #f #t #t))
 (port-set! (inst half_adder-b) (signal #f #t #f #t))

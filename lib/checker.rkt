@@ -23,8 +23,11 @@
 
 ; First pass: bind module-level elements and manage module imports.
 (define-syntax-parser compile-as-module-level-defs
-  [(_ s:stx/use)
-   #'(require s.path)]
+  [(_ s:stx/import)
+   (if (attribute s.name)
+     (let ([prefix (format-id #'s.name "~a::" #'s.name)])
+       #`(require (prefix-in #,prefix s.path)))
+     #'(require s.path))]
 
   [(_ s:stx/interface)
    #:with (p ...) (port-metadata (attribute s.body))
@@ -83,7 +86,7 @@
          #`(begin
              #,@(check-all body^)))]
 
-      [s:stx/use
+      [s:stx/import
        (thunk #'(begin))]
 
       [s:stx/interface
@@ -629,19 +632,19 @@
     (define .* (signal-lift *))
 
     (test-case "Can label a simple signal expressions"
-      (define c (make-instance-C0))
+      (define c (C0-make-instance))
       (define x (signal 10))
       (port-set! (c C0-x) x)
       (check-sig-equal? (port-ref c C0-y) x 5))
 
     (test-case "Can resolve ports in field expressions"
-      (define c (make-instance-C1))
+      (define c (C1-make-instance))
       (define x (signal 10))
       (port-set! (c C1-i I0-x) x)
       (check-sig-equal? (port-ref c C1-i I0-y) x 5))
 
     (test-case "Can resolve ports in indexed expressions"
-      (define c (make-instance-C2))
+      (define c (C2-make-instance))
       (define x0 (signal 10))
       (define x1 (signal 20))
       (port-set! (c C2-i 0 I0-x) x0)
@@ -650,7 +653,7 @@
       (check-sig-equal? (port-ref c C2-i 1 I0-y) x1 5))
 
     (test-case "Can resolve ports in a hierarchy of expressions"
-      (define c (make-instance-C3))
+      (define c (C3-make-instance))
       (define x00 (signal 10))
       (define x01 (signal 20))
       (define x10 (signal 30))
@@ -665,19 +668,19 @@
       (check-sig-equal? (port-ref c C3-j 1 I1-i 1 I0-y) x11 5))
 
     (test-case "Can assign a literal to a signal"
-      (define c (make-instance-C4))
+      (define c (C4-make-instance))
       (check-sig-equal? (port-ref c C4-x) (signal 10) 5))
 
     (test-case "Can assign a constant to a signal"
-      (define c (make-instance-C5))
+      (define c (C5-make-instance))
       (check-sig-equal? (port-ref c C5-x) (signal 10) 5))
 
     (test-case "Can assign a static expression to a signal"
-      (define c (make-instance-C6))
+      (define c (C6-make-instance))
       (check-sig-equal? (port-ref c C6-x) (signal 11) 5))
 
     (test-case "Can lift an operation"
-      (define c (make-instance-C7))
+      (define c (C7-make-instance))
       (define x (list->signal (list 10 20 30)))
       (define y (list->signal (list 40 50 60)))
       (port-set! (c C7-x) x)
@@ -685,7 +688,7 @@
       (check-sig-equal? (port-ref c C7-z) (.+ x y) 5))
 
     (test-case "Can lift nested calls"
-      (define c (make-instance-C8))
+      (define c (C8-make-instance))
       (define x (list->signal (list 10 20 30 40 50)))
       (define y (signal 2))
       (define z (list->signal (list 1 2 3 4 5)))
@@ -697,7 +700,7 @@
       (check-sig-equal? (port-ref c C8-v) (.+ (.* x y) (.* z u)) 5))
 
     (test-case "Can use local signals"
-      (define c (make-instance-C9))
+      (define c (C9-make-instance))
       (define x (list->signal (list 10 20 30 40 50)))
       (define y (signal 2))
       (define z (list->signal (list 1 2 3 4 5)))
@@ -709,7 +712,7 @@
       (check-sig-equal? (port-ref c C9-v) (.+ (.* x y) (.* z u)) 5))
 
     (test-case "Can access simple ports in a vector composite port with dynamic indices"
-      (define c (make-instance-C10))
+      (define c (C10-make-instance))
       (define x0 (signal 10))
       (define x1 (signal 20))
       (define x2 (signal 30))
@@ -722,13 +725,13 @@
       (check-sig-equal? (port-ref c C10-z) z 5))
 
     (test-case "Can instantiate a component"
-      (define c (make-instance-C12))
+      (define c (C12-make-instance))
       (define x (list->signal (list 10 20 30 40 50)))
       (port-set! (c C12-x) x)
       (check-sig-equal? (port-ref c C12-y) (.* x (signal 10)) 5))
 
     (test-case "Can instantiate a multiple component"
-      (define c (make-instance-C13))
+      (define c (C13-make-instance))
       (define x0 (list->signal (list 10 20 30 40 50)))
       (define x1 (list->signal (list 1 2 3 4 5)))
       (port-set! (c C13-x0) x0)
@@ -736,19 +739,19 @@
       (check-sig-equal? (port-ref c C13-y) (.* (.+ x0 x1) (signal 10)) 5))
 
     (test-case "Can resolve ports in a spliced interface"
-      (define c (make-instance-C14))
+      (define c (C14-make-instance))
       (define x (signal 10))
       (port-set! (c C14-x) x)
       (check-sig-equal? (port-ref c C14-y) x 5))
 
     (test-case "Can resolve ports in a spliced flipped interface"
-      (define c (make-instance-C24))
+      (define c (C24-make-instance))
       (define y (signal 10))
       (port-set! (c C24-y) y)
       (check-sig-equal? (port-ref c C24-x) y 5))
 
     (test-case "Can resolve ports in a hierarchy from a spliced interface"
-      (define c (make-instance-C15))
+      (define c (C15-make-instance))
       (define x0 (signal 10))
       (define x1 (signal 20))
       (port-set! (c C15-i 0 I0-x) x0)
@@ -757,37 +760,37 @@
       (check-sig-equal? (port-ref c C15-i 1 I0-y) x1 5))
 
     (test-case "Can resolve ports in an interface with a spliced composite port"
-      (define c (make-instance-C16))
+      (define c (C16-make-instance))
       (define x (signal 10))
       (port-set! (c C16-j I3-x) x)
       (check-sig-equal? (port-ref c C16-j I3-y) x 5))
 
     (test-case "Can resolve ports in a doubly spliced composite port"
-      (define c (make-instance-C17))
+      (define c (C17-make-instance))
       (define x (signal 10))
       (port-set! (c C17-x) x)
       (check-sig-equal? (port-ref c C17-y) x 5))
 
     (test-case "Can resolve ports in a doubly spliced flipped-last composite port"
-      (define c (make-instance-C23))
+      (define c (C23-make-instance))
       (define y (signal 10))
       (port-set! (c C23-y) y)
       (check-sig-equal? (port-ref c C23-x) y 5))
 
     (test-case "Can resolve ports in a doubly spliced flipped-first composite port"
-      (define c (make-instance-C25))
+      (define c (C25-make-instance))
       (define y (signal 10))
       (port-set! (c C25-y) y)
       (check-sig-equal? (port-ref c C25-x) y 5))
 
     (test-case "Can resolve ports in a doubly spliced doubly-flipped composite port"
-      (define c (make-instance-C26))
+      (define c (C26-make-instance))
       (define x (signal 10))
       (port-set! (c C26-x) x)
       (check-sig-equal? (port-ref c C26-y) x 5))
 
     (test-case "Can compute a conditional signal"
-      (define c (make-instance-C18))
+      (define c (C18-make-instance))
       (define x (list->signal (list 10 20  30 40 50)))
       (define y (list->signal (list 1  200 300 4 5)))
       (port-set! (c C18-x) x)
@@ -795,13 +798,13 @@
       (check-sig-equal? (port-ref c C18-z) ((signal-lift max) x y) 5))
 
     (test-case "Can register a signal"
-      (define c (make-instance-C19))
+      (define c (C19-make-instance))
       (define x (list->signal (list 10 20  30 40 50)))
       (port-set! (c C19-x) x)
       (check-sig-equal? (port-ref c C19-y) (register 0 x) 6))
 
     (test-case "Can register a signal with reset"
-      (define c (make-instance-C20))
+      (define c (C20-make-instance))
       (define x (list->signal (list #f #f  #f #t #f)))
       (define y (list->signal (list 10 20  30 40 50)))
       (port-set! (c C20-x) x)
@@ -809,7 +812,7 @@
       (check-sig-equal? (port-ref c C20-z) (register/r 0 x y) 6))
 
     (test-case "Can register a signal with enable"
-      (define c (make-instance-C21))
+      (define c (C21-make-instance))
       (define x (list->signal (list #f #t  #f #t #f)))
       (define y (list->signal (list 10 20  30 40 50)))
       (port-set! (c C21-x) x)
@@ -817,7 +820,7 @@
       (check-sig-equal? (port-ref c C21-z) (register/e 0 x y) 6))
 
     (test-case "Can register a signal with reset and enable"
-      (define c (make-instance-C22))
+      (define c (C22-make-instance))
       (define x (list->signal (list #f #t  #f #t #f)))
       (define y (list->signal (list #f #f  #t #f #f)))
       (define z (list->signal (list 10 20  30 40 50)))

@@ -5,7 +5,7 @@
   hydromel/lib/helpers
   "full_adder.hdrml")
 
-(define inst (make-instance-full_adder))
+(define inst (full_adder-make-instance))
 
 (port-set! (inst full_adder-a)  (signal #f #f #f #f #t #t #t #t))
 (port-set! (inst full_adder-b)  (signal #f #f #t #t #f #f #t #t))

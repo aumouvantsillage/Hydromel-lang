@@ -9,9 +9,9 @@
   (for-syntax (all-defined-out)))
 
 (begin-for-syntax
-  (define-syntax-class use
-    #:literals [use]
-    (pattern (use path:str)))
+  (define-syntax-class import
+    #:literals [import]
+    (pattern (import path (~optional name))))
 
   (define-syntax-class design-unit
     #:attributes [name (body 1)]
