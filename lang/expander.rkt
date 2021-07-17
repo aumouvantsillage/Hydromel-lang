@@ -4,7 +4,7 @@
 
 (provide
   (all-from-out hydromel)
-  #%module-begin
+  #%module-begin #%datum
   ; TODO Add other keywords
   + - * / > < >= <=
-  if xor and or not)
+  xor and or not)

@@ -2,6 +2,7 @@
 
 (require
   "expander.rkt"
+  "std.rkt"
   (for-syntax
     syntax/parse))
 
@@ -94,7 +95,7 @@
     (pattern (prefix-expr fn-name right)
       #:attr (arg 1) (list #'right))
     (pattern (if-expr arg ...)
-      #:attr fn-name 'if)
+      #:attr fn-name #'hydromel-if)
     (pattern (call-expr fn-name arg ...)))
 
   (define-syntax-class lift-expr

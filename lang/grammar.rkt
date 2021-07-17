@@ -55,14 +55,18 @@ instance:
 ; Expressions ------------------------------------------------------------------
 
 ; TODO other expressions
-@expression: maybe-or-expr
+@expression: maybe-if-expr
 
+@maybe-if-expr:     if-expr     | maybe-or-expr
 @maybe-or-expr:     or-expr     | maybe-and-expr
 @maybe-and-expr:    and-expr    | maybe-rel-expr
 @maybe-rel-expr:    rel-expr    | maybe-add-expr
 @maybe-add-expr:    add-expr    | maybe-mult-expr
 @maybe-mult-expr:   mult-expr   | maybe-prefix-expr
 @maybe-prefix-expr: prefix-expr | simple-expr
+
+if-expr:
+  /"if" expression /"then" expression /"else" expression
 
 or-expr:     maybe-or-expr  ("or" | "xor") maybe-and-expr
 and-expr:    maybe-and-expr "and" maybe-rel-expr
@@ -76,7 +80,6 @@ prefix-expr: ("-" | "not") simple-expr
   name-expr |
   field-expr |
   indexed-expr |
-  if-expr |
   register-expr |
   call-expr |
   /"(" expression /")"
@@ -91,11 +94,8 @@ field-expr:
 indexed-expr:
   simple-expr /"[" expression ("," expression)* ","? /"]"
 
-if-expr:
-  /"if" expression /"then" expression /"else" expression
-
 register-expr:
-  /"register" expression when-clause? /"," expression when-clause?
+  /"register" /"(" expression when-clause? /"," expression when-clause? /")"
 
 when-clause:
   /"when" expression
