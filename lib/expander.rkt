@@ -227,13 +227,12 @@
 (define-syntax (when-clause stx)
   (raise-syntax-error #f "should be used inside a register expression" stx))
 
-; FIXME: move signal-to-bool into expressions r and e.
 (define-syntax-parser register-expr
   #:literals [when-clause]
-  [(_ i (when-clause r) d (when-clause e)) #'(register/re i (signal-to-bool r) (signal-to-bool e) d)]
-  [(_ i (when-clause r) d)                 #'(register/r  i (signal-to-bool r)                    d)]
-  [(_ i d (when-clause e))                 #'(register/e  i                    (signal-to-bool e) d)]
-  [(_ i d)                                 #'(register    i                                       d)])
+  [(_ i (when-clause r) d (when-clause e)) #'(register/re i r e d)]
+  [(_ i (when-clause r) d)                 #'(register/r  i r   d)]
+  [(_ i d (when-clause e))                 #'(register/e  i   e d)]
+  [(_ i d)                                 #'(register    i     d)])
 
 ; A signal expression is a wrapper element added by the semantic checker to
 ; identify an expression that refers to a port or local signal for reading.
