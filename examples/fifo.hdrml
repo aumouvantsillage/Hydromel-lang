@@ -14,7 +14,7 @@ component mailbox(T : type, I : T)
     c.ready = p.ready or not full
 
     signal write    = c.valid and full == p.ready
-    signal full     = register(0, write or full and not p.ready)
+    signal full     = register(0, write or not c.ready)
     signal data_reg = register(I, c.data when write)
     p.data          = if full then data_reg else c.data
 end
