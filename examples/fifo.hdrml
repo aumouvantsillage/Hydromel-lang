@@ -1,0 +1,29 @@
+#lang hydromel
+
+interface producer(T : type)
+    port valid : out bit
+    port ready : in  bit
+    port data  : out T
+end
+
+component mailbox(T : type, I : T)
+    port c : flip producer(T)
+    port p : producer(T)
+
+    p.valid = c.valid or full
+    c.ready = p.ready or not full
+
+    signal write    = c.valid and full == p.ready
+    signal full     = register(0, write or full and not p.ready)
+    signal data_reg = register(I, c.data when write)
+    p.data          = if full then data_reg else c.data
+end
+
+# full c.valid p.ready | write full* c.ready p.valid
+# ---------------------|----------------------------
+#   0     0       -    |   0     0       1      0
+#   0     1       0    |   1     1       1      1
+#   0     1       1    |   0     0       1      1
+#   1     -       0    |   0     1       0      1
+#   1     0       1    |   0     0       1      1
+#   1     1       1    |   1     1       1      1
