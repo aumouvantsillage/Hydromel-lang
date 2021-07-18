@@ -254,14 +254,14 @@
   ; Check whether stx is an expression with a static value.
   ; Returns true when stx is:
   ; - a literal expression,
-  ; - a name expression that refers to a constant,
+  ; - a name expression that refers to a constant or a parameter,
   ; - a field expression whose left-hand side has a static value,
   ; - an indexed expression whose left-hand side and indices have static values,
   ; - a call whose arguments have static values.
   (define (static-value? stx)
     (syntax-parse stx
       [s:stx/literal-expr #t]
-      [s:stx/name-expr    (meta/constant? (lookup #'s.name))]
+      [s:stx/name-expr    (define c (lookup #'s.name)) (or (meta/constant? c) (meta/parameter? c))]
       [s:stx/field-expr   (static-value? #'s.expr)]
       [s:stx/indexed-expr (and (static-value? #'s.expr) (andmap static-value? (attribute s.index)))]
       [s:stx/call-expr    (andmap static-value? (attribute s.arg))]
