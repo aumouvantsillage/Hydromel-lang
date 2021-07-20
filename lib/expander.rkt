@@ -3,6 +3,7 @@
 (require
   syntax/parse/define
   racket/stxparam
+  racket/splicing
   "signal.rkt"
   "std.rkt"
   (for-syntax
@@ -52,11 +53,15 @@
 
   ; Return the list of ports, signals and instances in the given syntax object.
   (define (design-unit-fields stx-lst)
-    (stx-filter stx-lst '(data-port composite-port local-signal instance)))
+    (stx-filter stx-lst '(constant data-port composite-port local-signal instance)))
 
-  ; Return the list of statements in the given syntax object.
-  (define (design-unit-statements stx-lst)
-    (stx-filter stx-lst '(constant local-signal alias assignment)))
+  ; Return the list of statements in the given interface.
+  (define (interface-statements stx-lst)
+    (stx-filter stx-lst '(constant)))
+
+  ; Return the list of statements in the given component.
+  (define (component-statements stx-lst)
+    (stx-filter stx-lst '(local-signal alias assignment)))
 
   ; Return the list of aliases in the given syntax object.
   (define (design-unit-aliases stx-lst)
@@ -87,6 +92,7 @@
   #:with (field-name ...) (design-unit-field-names     (attribute body))
   #:with (field-stx ...)  (design-unit-fields          (attribute body))
   #:with (alias-stx ...)  (design-unit-aliases         (attribute body))
+  #:with (stmt ...)       (interface-statements        (attribute body))
   (begin
     (provide (struct-out struct-name) ctor-name)
     (struct name (field-name ...)
@@ -95,6 +101,9 @@
       #:constructor-name struct-ctor-name)
     (alias-accessor name alias-stx) ...
     (define (ctor-name param-name ...)
+      (splicing-syntax-parameterize ([as-statement #t])
+        ; (void) prevents errors when there is no statement.
+        stmt ... (void))
       (struct-ctor-name field-stx ...))))
 
 (define-syntax-parse-rule (alias-accessor parent-intf-name (alias alias-name port-name alias-intf-name))
@@ -118,7 +127,7 @@
    #:with chan-ctor-name   (channel-ctor-name           #'name)
    #:with (param-name ...) (design-unit-parameter-names (attribute body))
    #:with (field-name ...) (design-unit-field-names     (attribute body))
-   #:with (stmt ...)       (design-unit-statements      (attribute body))
+   #:with (stmt ...)       (component-statements        (attribute body))
    #:with (field-acc-name ...) (for/list ([fname (in-list (attribute field-name))])
                                  (accessor-name #'name fname))
    (begin
@@ -183,9 +192,11 @@
       (ctor #f))))
 
 ; A constant expands to a variable definition.
-; TODO: define constants as fields in interfaces and components.
-(define-syntax-parse-rule (constant name expr)
-  (define name expr))
+(define-syntax-parser constant
+  [(constant name expr)
+   (if (syntax-parameter-value #'as-statement)
+     #'(define name expr)
+     #'name)])
 
 ; An alias expands to a variable that receives the result of the accessor
 ; for the target port.
@@ -259,7 +270,8 @@
   [(_ (name sexpr) ...+ expr)
    #'(for/signal ([name sexpr] ...) expr)])
 
-
+; TODO test constants (global, in interfaces, in components)
+; TODO test functions
 (module+ test
   (require
     rackunit
@@ -418,6 +430,29 @@
     (data-port u out #f)
     (assignment (name-expr u) (register-expr (literal-expr 0) (when-clause (signal-expr (name-expr x)))
                                              (signal-expr (name-expr z)) (when-clause (signal-expr (name-expr y))))))
+
+  (component C15
+    (constant N (literal-expr 56))
+    (data-port y out #f)
+    (assignment (name-expr y) (signal (name-expr N))))
+
+  (interface I9
+    (constant N (literal-expr 56))
+    (data-port y out #f))
+
+  (component C16
+    (composite-port p I9)
+    (assignment (field-expr (name-expr p) y I9) (signal (field-expr (name-expr p) N I9))))
+
+  (component C17
+    (data-port y out #f)
+    (instance c C15)
+    (assignment (name-expr y) (signal (field-expr (name-expr c) N C15))))
+
+  (component C18
+    (data-port y out #f)
+    (instance c C16)
+    (assignment (name-expr y) (signal (field-expr (field-expr (name-expr c) p C16) N I9))))
 
   (define (check-sig-equal? t e n)
     (check-equal? (signal-take t n) (signal-take e n)))
@@ -584,4 +619,24 @@
     (port-set! (c C14-x) x)
     (port-set! (c C14-y) y)
     (port-set! (c C14-z) z)
-    (check-sig-equal? (port-ref c C14-u) (register/re 0 x y z) 6)))
+    (check-sig-equal? (port-ref c C14-u) (register/re 0 x y z) 6))
+
+  (test-case "Can read a local constant"
+    (define c (C15-make-instance))
+    (check-sig-equal? (port-ref c C15-y) (signal 56) 1))
+
+  (test-case "Can read a constant as a channel field"
+    (define c (C15-make-instance))
+    (check-equal? (C15-N c) 56))
+
+  (test-case "Can read a constant from a port"
+    (define c (C16-make-instance))
+    (check-sig-equal? (port-ref c C16-p I9-y) (signal 56) 1))
+
+  (test-case "Can read a constant from an instance"
+    (define c (C17-make-instance))
+    (check-sig-equal? (port-ref c C17-y) (signal 56) 1))
+
+  (test-case "Can read a constant from an instance port"
+    (define c (C18-make-instance))
+    (check-sig-equal? (port-ref c C18-y) (signal 56) 1)))
