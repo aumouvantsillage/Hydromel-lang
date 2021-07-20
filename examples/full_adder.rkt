@@ -7,9 +7,9 @@
 
 (define inst (full_adder-make-instance))
 
-(port-set! (inst full_adder-a)  (signal #f #f #f #f #t #t #t #t))
-(port-set! (inst full_adder-b)  (signal #f #f #t #t #f #f #t #t))
-(port-set! (inst full_adder-ci) (signal #f #t #f #t #f #t #f #t))
+(port-set! (inst full_adder-a)  (signal 0 0 0 0 1 1 1 1))
+(port-set! (inst full_adder-b)  (signal 0 0 1 1 0 0 1 1))
+(port-set! (inst full_adder-ci) (signal 0 1 0 1 0 1 0 1))
 
 (define s  (signal-take (port-ref inst full_adder-s)  8))
 (define co (signal-take (port-ref inst full_adder-co) 8))
