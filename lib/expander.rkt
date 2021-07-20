@@ -101,9 +101,7 @@
       #:constructor-name struct-ctor-name)
     (alias-accessor name alias-stx) ...
     (define (ctor-name param-name ...)
-      (splicing-syntax-parameterize ([as-statement #t])
-        ; (void) prevents errors when there is no statement.
-        stmt ... (void))
+      stmt ...
       (struct-ctor-name field-stx ...))))
 
 (define-syntax-parse-rule (alias-accessor parent-intf-name (alias alias-name port-name alias-intf-name))
@@ -114,10 +112,6 @@
     (provide acc-name)
     (define (acc-name x)
       (orig-acc-name (port-acc-name x)))))
-
-; Inside a component, this parameter becomes true when expanding statements.
-; This is useful for constructs that are expanded twice, as fields and as statements.
-(define-syntax-parameter as-statement #f)
 
 ; A component expands to:
 ; - the same output as for an interface
@@ -136,9 +130,7 @@
      (define (inst-ctor-name param-name ...)
        (define self (chan-ctor-name param-name ...))
        (define field-name (field-acc-name self)) ...
-       (syntax-parameterize ([as-statement #t])
-         ; (void) prevents errors when there is no statement.
-         stmt ... (void))
+       stmt ...
        self)))
 
 ; Parameters are expanded in macros interface and component.
@@ -153,11 +145,11 @@
 ; on whether it is treated as a statement or as a declaration.
 (define-syntax-parser local-signal
   [(local-signal name expr)
-   (if (syntax-parameter-value #'as-statement)
-     ; Local signal assignment in a component body.
-     #'(assignment name expr)
+   (if (equal? (syntax-local-context) 'expression)
      ; Local signal initialization in a channel constructor.
-     #'(box #f))])
+     #'(box #f)
+     ; Local signal assignment in a component body.
+     #'(assignment name expr))])
 
 ; Multiplicity indications are processed in macros composite-port and instance.
 (define-syntax (multiplicity stx)
@@ -194,9 +186,9 @@
 ; A constant expands to a variable definition.
 (define-syntax-parser constant
   [(constant name expr)
-   (if (or (syntax-parameter-value #'as-statement) (not (equal? (syntax-local-context) 'expression)))
-     #'(define name expr)
-     #'name)])
+   (if (equal? (syntax-local-context) 'expression)
+     #'name
+     #'(define name expr))])
 
 ; An alias expands to a variable that receives the result of the accessor
 ; for the target port.
