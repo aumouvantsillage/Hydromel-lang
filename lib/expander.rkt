@@ -194,7 +194,7 @@
 ; A constant expands to a variable definition.
 (define-syntax-parser constant
   [(constant name expr)
-   (if (syntax-parameter-value #'as-statement)
+   (if (or (syntax-parameter-value #'as-statement) (not (equal? (syntax-local-context) 'expression)))
      #'(define name expr)
      #'name)])
 
@@ -270,7 +270,6 @@
   [(_ (name sexpr) ...+ expr)
    #'(for/signal ([name sexpr] ...) expr)])
 
-; TODO test constants (global)
 ; TODO test functions
 (module+ test
   (require
@@ -453,6 +452,12 @@
     (data-port y out #f)
     (instance c C16)
     (assignment (name-expr y) (signal (field-expr (field-expr (name-expr c) p C16) N I9))))
+
+  (constant K 44)
+
+  (component C19
+    (data-port y out (name-expr integer))
+    (assignment (name-expr y) (signal (name-expr K))))
 
   (define (check-sig-equal? t e n)
     (check-equal? (signal-take t n) (signal-take e n)))
@@ -639,4 +644,8 @@
 
   (test-case "Can read a constant from an instance port"
     (define c (C18-make-instance))
-    (check-sig-equal? (port-ref c C18-y) (signal 56) 1)))
+    (check-sig-equal? (port-ref c C18-y) (signal 56) 1))
+
+  (test-case "Can read a global constant"
+    (define c (C19-make-instance))
+    (check-sig-equal? (port-ref c C19-y) (signal 44) 1)))
