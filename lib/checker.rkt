@@ -30,13 +30,13 @@
      #'(require s.path))]
 
   [(_ s:stx/interface)
-   #:with (p ...) (port-metadata (attribute s.body))
+   #:with (p ...) (design-unit-field-metadata (attribute s.body))
    #'(begin
        (provide s.name)
        (define-syntax s.name (meta/make-interface (list p ...))))]
 
   [(_ s:stx/component)
-   #:with (p ...) (port-metadata (attribute s.body))
+   #:with (p ...) (design-unit-field-metadata (attribute s.body))
    #'(begin
        (provide s.name)
        (define-syntax s.name (meta/make-component (list p ...))))]
@@ -57,16 +57,18 @@
   ; First pass: fill the metadata of module-level elements.
   ; Those metadata are constructed as syntax objects that will be inserted
   ; into the result of compile-as-module-level-defs.
-  (define (port-metadata lst)
+  (define (design-unit-field-metadata lst)
     (filter identity
       (for/list ([stx (in-list lst)])
         (syntax-parse stx
-          [p:stx/data-port
-           #'(cons 'p.name (meta/data-port 'p.mode))]
-          [p:stx/composite-port
-           #:with flip   (boolean->syntax (attribute p.flip?))
-           #:with splice (boolean->syntax (attribute p.splice?))
-           #'(cons 'p.name (meta/composite-port #'p.intf-name flip splice))]
+          [s:stx/data-port
+           #'(cons 's.name (meta/data-port 's.mode))]
+          [s:stx/composite-port
+           #:with flip   (boolean->syntax (attribute s.flip?))
+           #:with splice (boolean->syntax (attribute s.splice?))
+           #'(cons 's.name (meta/composite-port #'s.intf-name flip splice))]
+          [s:stx/constant
+           #'(cons 's.name (meta/constant))]
           [_ #f]))))
 
   (define current-design-unit (make-parameter #f))
@@ -117,6 +119,17 @@
          ; TODO check type
          #'(parameter name^ s.type))]
 
+      [s:stx/constant
+       #:with name^ (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
+       (define expr^ (make-checker #'s.expr))
+       (thunk/in-scope
+         (define checked-expr (expr^))
+         ; TODO check expression type
+         ; Check that the expression has a static value.
+         (unless (static-value? checked-expr)
+           (raise-syntax-error #f "Non-static expression cannot be assigned to constant" #'s.expr))
+         #`(constant name^ #,checked-expr))]
+
       [s:stx/data-port
        #:with name^ (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
        (thunk/in-scope
@@ -148,17 +161,6 @@
          ; Check that comp-name refers to an existing component
          (lookup #'s.comp-name meta/component?)
          #`(instance name^ (multiplicity #,checked-mult) s.comp-name #,@(check-all args)))]
-
-      [s:stx/constant
-       #:with name^ (bind! #'s.name (meta/constant))
-       (define expr^ (make-checker #'s.expr))
-       (thunk/in-scope
-         (define checked-expr (expr^))
-         ; TODO check expression type
-         ; Check that the expression has a static value.
-         (unless (static-value? checked-expr)
-           (raise-syntax-error #f "Non-static expression cannot be assigned to constant" #'s.expr))
-         #`(constant name^ #,checked-expr))]
 
       [s:stx/local-signal
        #:with name^ (bind! #'s.name (meta/local-signal))
@@ -228,14 +230,14 @@
   ; Returns a list of ports in interface intf after splicing.
   (define (splice-interface intf flip?)
     (apply append
-      (for/list ([(port-name p) (in-dict (meta/design-unit-ports intf))])
+      (for/list ([(field-name field) (in-dict (meta/design-unit-fields intf))])
         (cons
-          (cons port-name (if flip? (meta/flip-port p) p))
-          (if (and (meta/composite-port? p) (meta/composite-port-splice? p))
-            (~> p
+          (cons field-name (if flip? (meta/flip-port field) field))
+          (if (and (meta/composite-port? field) (meta/composite-port-splice? field))
+            (~> field
                 (meta/composite-port-intf-name)
                 (lookup meta/interface?)
-                (splice-interface (xor flip? (meta/composite-port-flip? p))))
+                (splice-interface (xor flip? (meta/composite-port-flip? field))))
             empty)))))
 
   ; Insert aliases for the spliced composite ports in the given list.
@@ -262,7 +264,7 @@
     (syntax-parse stx
       [s:stx/literal-expr #t]
       [s:stx/name-expr    (define c (lookup #'s.name)) (or (meta/constant? c) (meta/parameter? c))]
-      [s:stx/field-expr   (static-value? #'s.expr)]
+      [s:stx/field-expr   (or (static-value? #'s.expr) (meta/constant? (resolve stx)))]
       [s:stx/indexed-expr (and (static-value? #'s.expr) (andmap static-value? (attribute s.index)))]
       [s:stx/call-expr    (andmap static-value? (attribute s.arg))]
       [_                  #f]))
@@ -625,6 +627,29 @@
       (assignment (name-expr u) (register-expr (literal-expr 0) (when-clause (name-expr x))
                                                (name-expr z) (when-clause (name-expr y)))))
 
+    (component C29
+      (constant N (literal-expr 56))
+      (data-port y out (name-expr integer))
+      (assignment (name-expr y) (name-expr N)))
+
+    (interface I5
+      (constant N (literal-expr 56))
+      (data-port y out (name-expr integer)))
+
+    (component C30
+      (composite-port p I5)
+      (assignment (field-expr (name-expr p) y) (field-expr (name-expr p) N)))
+
+    (component C31
+      (data-port y out (name-expr integer))
+      (instance c C29)
+      (assignment (name-expr y) (field-expr (name-expr c) N)))
+
+    (component C32
+      (data-port y out (name-expr integer))
+      (instance c C30)
+      (assignment (name-expr y) (field-expr (field-expr (name-expr c) p) N)))
+
     (define (check-sig-equal? t e n)
       (check-equal? (signal-take t n) (signal-take e n)))
 
@@ -827,4 +852,24 @@
       (port-set! (c C22-x) x)
       (port-set! (c C22-y) y)
       (port-set! (c C22-z) z)
-      (check-sig-equal? (port-ref c C22-u) (register/re 0 x y z) 6))))
+      (check-sig-equal? (port-ref c C22-u) (register/re 0 x y z) 6))
+
+    (test-case "Can read a local constant"
+      (define c (C29-make-instance))
+      (check-sig-equal? (port-ref c C29-y) (signal 56) 1))
+
+    (test-case "Can read a constant as a channel field"
+      (define c (C29-make-instance))
+      (check-equal? (C29-N c) 56))
+
+    (test-case "Can read a constant from a port"
+      (define c (C30-make-instance))
+      (check-sig-equal? (port-ref c C30-p I5-y) (signal 56) 1))
+
+    (test-case "Can read a constant from an instance"
+      (define c (C31-make-instance))
+      (check-sig-equal? (port-ref c C31-y) (signal 56) 1))
+
+    (test-case "Can read a constant from an instance port"
+      (define c (C32-make-instance))
+      (check-sig-equal? (port-ref c C32-y) (signal 56) 1))))

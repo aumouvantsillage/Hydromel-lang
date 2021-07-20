@@ -8,17 +8,17 @@
 (provide (all-defined-out))
 
 ; Common parent struct for all design units.
-; ports is a hash map whose keys are symbols and values are port metadata.
-(struct design-unit (ports))
+; fields is a hash map whose keys are symbols and values are port and constant metadata.
+(struct design-unit (fields))
 
 (define (design-unit-ref unit name [strict? #t])
-  (define ports (design-unit-ports unit))
+  (define fields (design-unit-fields unit))
   ; Attempt to find a port with the given name in the current unit.
-  (dict-ref ports (syntax-e name)
+  (dict-ref fields (syntax-e name)
     (thunk
       ; If not found, look into each spliced composite port.
       (define port (for/fold ([res #f])
-                             ([p (in-list (dict-values ports))]
+                             ([p (in-list (dict-values fields))]
                               #:when (and (composite-port? p) (composite-port-splice? p))
                               #:break res)
                      ; Find a port with the given name in the interface
@@ -40,17 +40,18 @@
 (struct interface design-unit ())
 (struct component design-unit ())
 
-(define (make-interface ports)
-  (interface (make-hash ports)))
+(define (make-interface fields)
+  (interface (make-hash fields)))
 
-(define (make-component ports)
-  (component (make-hash ports)))
+(define (make-component fields)
+  (component (make-hash fields)))
 
 (struct port ())
 (struct data-port      port (mode))
 (struct composite-port port (intf-name flip? splice?))
 
 ; Returns a port with the same properties as p, but with flipped mode.
+; If p is not a port, it is returned unchanged.
 (define (flip-port p)
   (match p
     [(data-port      mode)

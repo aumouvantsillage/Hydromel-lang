@@ -270,7 +270,7 @@
   [(_ (name sexpr) ...+ expr)
    #'(for/signal ([name sexpr] ...) expr)])
 
-; TODO test constants (global, in interfaces, in components)
+; TODO test constants (global)
 ; TODO test functions
 (module+ test
   (require
