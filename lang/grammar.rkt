@@ -8,7 +8,7 @@
 ;
 ; This will create an AST node of the form: (a (a-item ...))
 
-begin-hydromel: (import | interface | component)*
+begin-hydromel: (import | interface | component | constant | type | function)*
 
 import: /"import" STRING (/"as" ID)?
 
@@ -21,7 +21,8 @@ component: /"component" ID parameter-list? component-item* /"end"
 @interface-item:
   data-port |
   composite-port |
-  constant
+  constant |
+  type
 
 @component-item:
   interface-item |
@@ -32,6 +33,10 @@ component: /"component" ID parameter-list? component-item* /"end"
 parameter: ID /":" ("type" | type-expression)
 
 constant: /"constant" ID /"=" expression
+
+type: /"type" ID parameter-list? (/"=" type-expression)?
+
+function: /"function" ID parameter-list (/"=" expression)?
 
 local-signal: /"signal" ID /"=" expression
 
@@ -105,5 +110,15 @@ call-expr:
 
 ; Type expressions -------------------------------------------------------------
 
-; TODO type parameters
-@type-expression: name-expr
+; Array and tuple types are included in call-expr
+@type-expression:
+  name-expr |
+  call-expr |
+  record-type
+
+record-type:
+  /"record" /"(" record-field (/"," record-field)* ","? /")"
+
+; TODO spliced fields?
+/record-field:
+  ID /":" type-expression
