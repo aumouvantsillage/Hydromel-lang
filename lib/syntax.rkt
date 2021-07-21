@@ -69,7 +69,7 @@
 
   (define-syntax-class name-expr
     #:literals [name-expr]
-    (pattern (name-expr name)))
+    (pattern (name-expr name (~optional suffix))))
 
   (define-syntax-class field-expr
     #:literals [field-expr]
@@ -108,3 +108,5 @@
   (define-syntax-class lift-expr
     #:literals [lift-expr]
     (pattern (lift-expr binding ...+ expr))))
+
+; TODO Add types, type expressions, functions

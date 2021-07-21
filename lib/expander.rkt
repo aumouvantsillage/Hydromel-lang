@@ -7,6 +7,7 @@
   "signal.rkt"
   "std.rkt"
   (for-syntax
+    racket/match
     racket/syntax
     syntax/stx))
 
@@ -186,9 +187,17 @@
 ; A constant expands to a variable definition.
 (define-syntax-parser constant
   [(constant name expr)
-   (if (equal? (syntax-local-context) 'expression)
-     #'name
-     #'(define name expr))])
+   (match (syntax-local-context)
+     ; In an expression context, expand to the constant name.
+     [(== 'expression) #'name]
+     ; In an internal definition context, expand to a define.
+     [(list _ ...)     #'(define name expr)]
+     ; In a module-level context, expand to a provided suffixed define.
+     [_
+      (define name^ (format-id #'name "~a-constant" #'name))
+      #`(begin
+          (provide #,name^)
+          (define #,name^ expr))])])
 
 ; An alias expands to a variable that receives the result of the accessor
 ; for the target port.
@@ -205,8 +214,9 @@
   value)
 
 ; A name expression expands to the corresponding variable name in the current scope.
-(define-syntax-parse-rule (name-expr name)
-  name)
+(define-syntax-parser name-expr
+  [(name-expr name) #'name]
+  [(name-expr name suffix) (format-id #'name "~a~a" #'name #'suffix)])
 
 ; After semantic checking, a field expression contains the name
 ; of the interface or record type where the field is declared.
@@ -445,11 +455,11 @@
     (instance c C16)
     (assignment (name-expr y) (signal (field-expr (field-expr (name-expr c) p C16) N I9))))
 
-  (constant K 44)
+  (constant K (literal-expr 44))
 
   (component C19
     (data-port y out (name-expr integer))
-    (assignment (name-expr y) (signal (name-expr K))))
+    (assignment (name-expr y) (signal (name-expr K -constant))))
 
   (define (check-sig-equal? t e n)
     (check-equal? (signal-take t n) (signal-take e n)))

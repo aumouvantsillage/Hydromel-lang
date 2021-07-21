@@ -29,6 +29,12 @@
        #`(require (prefix-in #,prefix s.path)))
      #'(require s.path))]
 
+  [(_ s:stx/constant)
+   #:with alt-name (generate-temporary (format-id #'s.name "hdrml:constant:~a" #'s.name))
+   #'(begin
+       (provide s.name)
+       (define-syntax s.name (meta/constant #t)))]
+
   [(_ s:stx/interface)
    #:with (p ...) (design-unit-field-metadata (attribute s.body))
    #'(begin
@@ -68,7 +74,7 @@
            #:with splice (boolean->syntax (attribute s.splice?))
            #'(cons 's.name (meta/composite-port #'s.intf-name flip splice))]
           [s:stx/constant
-           #'(cons 's.name (meta/constant))]
+           #'(cons 's.name (meta/constant #f))]
           [_ #f]))))
 
   (define current-design-unit (make-parameter #f))
@@ -120,7 +126,9 @@
          #'(parameter name^ s.type))]
 
       [s:stx/constant
-       #:with name^ (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
+       #:with name^ (if (current-design-unit)
+                      (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
+                      #'s.name)
        (define expr^ (make-checker #'s.expr))
        (thunk/in-scope
          (define checked-expr (expr^))
@@ -224,6 +232,13 @@
        (define args (map make-checker (attribute s.arg)))
        (thunk/in-scope
          #`(call-expr s.fn-name #,@(check-all args)))]
+
+      [s:stx/name-expr
+       (thunk
+         (define meta (lookup #'s.name))
+         (if (and (meta/constant? meta) (meta/constant-global? meta))
+           #'(name-expr s.name -constant)
+           stx))]
 
       [_ (thunk stx)]))
 
@@ -650,6 +665,12 @@
       (instance c C30)
       (assignment (name-expr y) (field-expr (field-expr (name-expr c) p) N)))
 
+    (constant K (literal-expr 44))
+
+    (component C33
+      (data-port y out (name-expr integer))
+      (assignment (name-expr y) (name-expr K)))
+
     (define (check-sig-equal? t e n)
       (check-equal? (signal-take t n) (signal-take e n)))
 
@@ -872,4 +893,8 @@
 
     (test-case "Can read a constant from an instance port"
       (define c (C32-make-instance))
-      (check-sig-equal? (port-ref c C32-y) (signal 56) 1))))
+      (check-sig-equal? (port-ref c C32-y) (signal 56) 1))
+
+    (test-case "Can read a global constant"
+      (define c (C33-make-instance))
+      (check-sig-equal? (port-ref c C33-y) (signal 44) 1))))

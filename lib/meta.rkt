@@ -2,7 +2,6 @@
 
 (require
   threading
-  syntax/id-table
   "scope.rkt")
 
 (provide (all-defined-out))
@@ -60,7 +59,8 @@
      (composite-port intf-name (not flip?) splice?)]
     [_ p]))
 
-(struct constant ())
+(struct constant (global?))
+
 (struct parameter ())
 
 (struct local-signal ())
