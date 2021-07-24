@@ -26,9 +26,13 @@ component: /"component" ID parameter-list? component-item* /"end"
 
 @component-item:
   interface-item |
+  statement
+
+@statement:
   local-signal |
   assignment |
-  instance
+  instance |
+  if-statement
 
 parameter: ID /":" ("type" | type-expression)
 
@@ -57,6 +61,15 @@ assignment:
 instance:
   /"instance" ID multiplicity? /"=" ID argument-list?
 
+if-statement:
+  /"if" expression /"then" statement-block
+  (/"elseif" expression /"then" statement-block)*
+  (/"else" statement-block)?
+  /"end"
+
+statement-block:
+  statement*
+
 ; Expressions ------------------------------------------------------------------
 
 ; TODO other expressions
@@ -71,7 +84,11 @@ instance:
 @maybe-prefix-expr: prefix-expr | simple-expr
 
 if-expr:
-  /"if" expression /"then" expression /"else" expression
+  /"if" expression /"then" expression else-clause
+
+@else-clause:
+  /"else" expression |
+  /"elseif" expression /"then" expression else-clause
 
 or-expr:     maybe-or-expr  ("or" | "xor") maybe-and-expr
 and-expr:    maybe-and-expr "and" maybe-rel-expr

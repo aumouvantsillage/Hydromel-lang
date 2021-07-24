@@ -91,8 +91,9 @@
       [(compile-hydromel body ...)
        (define body^ (map make-checker (attribute body)))
        (thunk
-         #`(begin
-             #,@(check-all body^)))]
+         (define/syntax-parse (body ...) (check-all body^))
+         (syntax/loc stx
+           (begin body ...)))]
 
       [s:stx/import
        (thunk #'(begin))]
@@ -106,7 +107,9 @@
                   (map add-scope)
                   (map make-checker)))))
        (thunk/in-scope
-         #`(interface s.name #,@(check-all body^)))]
+         (define/syntax-parse (body ...) (check-all body^))
+         (syntax/loc stx
+           (interface s.name body ...)))]
 
       [s:stx/component
        (define body^
@@ -117,65 +120,78 @@
                   (map add-scope)
                   (map make-checker)))))
        (thunk/in-scope
-         #`(component s.name #,@(check-all body^)))]
+         (define/syntax-parse (body ...) (check-all body^))
+         (syntax/loc stx
+           (component s.name body ...)))]
 
       [s:stx/parameter
-       #:with name^ (bind! #'s.name (meta/parameter))
+       #:with name (bind! #'s.name (meta/parameter))
        (thunk/in-scope
          ; TODO check type
-         #'(parameter name^ s.type))]
+         (syntax/loc stx
+           (parameter name s.type)))]
 
       [s:stx/constant
-       #:with name^ (if (current-design-unit)
-                      (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
-                      #'s.name)
+       #:with name (if (current-design-unit)
+                     (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
+                     #'s.name)
        (define expr^ (make-checker #'s.expr))
        (thunk/in-scope
-         (define checked-expr (expr^))
+         (define/syntax-parse expr (expr^))
          ; TODO check expression type
          ; Check that the expression has a static value.
-         (unless (static-value? checked-expr)
+         (unless (static-value? #'expr)
            (raise-syntax-error #f "Non-static expression cannot be assigned to constant" #'s.expr))
-         #`(constant name^ #,checked-expr))]
+         (syntax/loc stx
+           (constant name expr)))]
 
       [s:stx/data-port
-       #:with name^ (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
+       #:with name (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
        (thunk/in-scope
          ; TODO check type
-         #'(data-port name^ s.mode s.type))]
+         (syntax/loc stx
+           (data-port name s.mode s.type)))]
 
       [s:stx/composite-port
-       #:with name^ (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
+       #:with name (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
        (define mult^ (make-checker (or (attribute s.mult) #'(literal-expr 1))))
-       (define args (map make-checker (attribute s.arg)))
+       (define args^ (map make-checker (attribute s.arg)))
        (thunk/in-scope
-         ; Check that intf-name refers to an existing interface
-         (define intf (lookup #'s.intf-name meta/interface?))
          ; Check that the multiplicity has a static value.
-         (define checked-mult (mult^))
-         (unless (static-value? checked-mult)
+         (define/syntax-parse mult (mult^))
+         (unless (static-value? #'mult)
            (raise-syntax-error #f "Non-static expression cannot be used as instance multiplicity" #'s.mult))
-         #`(composite-port name^ (multiplicity #,checked-mult) s.mode ... s.intf-name #,@(check-all args)))]
+         ; Check that intf-name refers to an existing interface
+         (lookup #'s.intf-name meta/interface?)
+         ; Check arguments
+         (define/syntax-parse (arg ...) (check-all args^))
+         (syntax/loc stx
+           (composite-port name (multiplicity mult) s.mode ... s.intf-name arg ...)))]
 
       [s:stx/instance
-       #:with name^ (bind! #'s.name (meta/instance #'s.comp-name))
+       #:with name (bind! #'s.name (meta/instance #'s.comp-name))
        (define mult^ (make-checker (or (attribute s.mult) #'(literal-expr 1))))
-       (define args (map make-checker (attribute s.arg)))
+       (define args^ (map make-checker (attribute s.arg)))
        (thunk/in-scope
          ; Check that the multiplicity has a static value.
-         (define checked-mult (mult^))
-         (unless (static-value? checked-mult)
+         (define/syntax-parse mult (mult^))
+         (unless (static-value? #'mult)
            (raise-syntax-error #f "Non-static expression cannot be used as instance multiplicity" #'s.mult))
          ; Check that comp-name refers to an existing component
          (lookup #'s.comp-name meta/component?)
-         #`(instance name^ (multiplicity #,checked-mult) s.comp-name #,@(check-all args)))]
+         ; Check arguments
+         (define/syntax-parse (arg ...) (check-all args^))
+         (syntax/loc stx
+           (instance name (multiplicity mult) s.comp-name arg ...)))]
 
       [s:stx/local-signal
-       #:with name^ (bind! #'s.name (meta/local-signal))
+       #:with name (bind! #'s.name (meta/local-signal))
        (define expr^ (make-checker #'s.expr))
        (thunk/in-scope
          ; TODO check expression type
-         #`(local-signal s.name #,(check-assigned-expr (expr^))))]
+         (define/syntax-parse expr (check-assigned-expr (expr^)))
+         (syntax/loc stx
+           (local-signal name expr)))]
 
       [s:stx/assignment
        ; TODO support assignment from composite to composite.
@@ -183,27 +199,53 @@
        (define target^ (make-checker #'s.target))
        (define expr^   (make-checker #'s.expr))
        (thunk/in-scope
-         (define checked-target (target^))
-         (check-assignment-target checked-target)
-         #`(assignment #,checked-target #,(check-assigned-expr (expr^))))]
+         (define/syntax-parse target (target^))
+         (check-assignment-target #'target)
+         (define/syntax-parse expr (check-assigned-expr (expr^)))
+         (syntax/loc stx
+           (assignment target expr)))]
+
+      [s:stx/if-statement
+       (define conditions^  (map make-checker (attribute s.condition)))
+       (define then-bodies^ (map make-checker (attribute s.then-body)))
+       (define else-body^   (make-checker     (attribute s.else-body)))
+       (thunk/in-scope
+         (define/syntax-parse (condition ...) (check-all conditions^))
+         (define/syntax-parse (then-body ...) (check-all then-bodies^))
+         (define/syntax-parse else-body       (else-body^))
+         (syntax/loc stx
+           (if-statement (~@ condition then-body) ... else-body)))]
+
+      [s:stx/statement-block
+       (define body^ (with-scope
+                       (~>> (attribute s.body)
+                            (map add-scope)
+                            (map make-checker))))
+       (thunk/in-scope
+         (define/syntax-parse (body ...) (check-all body^))
+         (syntax/loc stx
+           (statement-block body ...)))]
 
       [s:stx/field-expr
        (define expr^ (make-checker #'s.expr))
        (thunk/in-scope
-         (define checked-expr (expr^))
-         (define type-name (resolve-composite-type-name checked-expr #'s.field-name))
-         #`(field-expr #,checked-expr s.field-name #,type-name))]
+         (define/syntax-parse expr (expr^))
+         (define/syntax-parse type-name (resolve-composite-type-name #'expr #'s.field-name))
+         (syntax/loc stx
+           (field-expr expr s.field-name type-name)))]
 
       [s:stx/indexed-expr
        (define expr^ (make-checker #'s.expr))
        (define indices^ (map make-checker (attribute s.index)))
        (thunk/in-scope
          ; TODO support indexed access to array data types.
-         (define checked-expr (expr^))
-         (define r (resolve checked-expr))
+         (define/syntax-parse expr (expr^))
+         (define r (resolve #'expr))
          (unless (or (meta/composite-port? r) (meta/instance? r))
            (raise-syntax-error #f "Expression not suitable for indexing" #'s.expr))
-         #`(indexed-expr #,checked-expr #,@(check-all indices^)))]
+         (define/syntax-parse (index ...) (check-all indices^))
+         (syntax/loc stx
+           (indexed-expr expr index ...)))]
 
       [s:stx/register-expr
        (define init-expr^   (make-checker #'s.init-expr))
@@ -211,33 +253,40 @@
        (define update-expr^ (make-checker #'s.update-expr))
        (define update-cond^ (and (attribute s.update-cond) (make-checker #'s.update-cond)))
        (thunk/in-scope
-         (define checked-args (filter identity
-                                (list
-                                  (init-expr^)
-                                  (and init-cond^ (init-cond^))
-                                  (check-assigned-expr (update-expr^))
-                                  (and update-cond^ (update-cond^)))))
-         (unless (static-value? (first checked-args))
+         (define init-expr (init-expr^))
+         (unless (static-value? init-expr)
            (raise-syntax-error #f "Non-static expression cannot be used as an initial register value" #'s.init-expr))
-         #`(register-expr #,@checked-args))]
+         (define/syntax-parse (arg ...) (filter identity
+                                          (list
+                                            init-expr
+                                            (and init-cond^ (init-cond^))
+                                            (check-assigned-expr (update-expr^))
+                                            (and update-cond^ (update-cond^)))))
+         (syntax/loc stx
+           (register-expr arg ...)))]
 
       [s:stx/when-clause
        (define expr^ (make-checker #'s.expr))
        (thunk/in-scope
-         #`(when-clause #,(check-assigned-expr (expr^))))]
+         (define/syntax-parse expr (check-assigned-expr (expr^)))
+         (syntax/loc stx
+           (when-clause expr)))]
 
       [s:stx/call-expr
        ; TODO check that fn-name is bound or built-in
        ; TODO typecheck arguments against fn
-       (define args (map make-checker (attribute s.arg)))
+       (define args^ (map make-checker (attribute s.arg)))
        (thunk/in-scope
-         #`(call-expr s.fn-name #,@(check-all args)))]
+         (define/syntax-parse (arg ...) (check-all args^))
+         (syntax/loc stx
+           (call-expr s.fn-name arg ...)))]
 
       [s:stx/name-expr
        (thunk
          (define meta (lookup #'s.name))
          (if (and (meta/constant? meta) (meta/constant-global? meta))
-           #'(name-expr s.name -constant)
+           (syntax/loc stx
+             (name-expr s.name -constant))
            stx))]
 
       [_ (thunk stx)]))
@@ -264,8 +313,8 @@
                 [s:stx/composite-port #:when (attribute s.splice?)
                  (define intf (lookup #'s.intf-name meta/interface?))
                  (for/list ([(port-name p) (in-dict (splice-interface intf (attribute s.flip?)))])
-                   (define port-name^ (bind! (datum->syntax stx port-name) p))
-                   #`(alias #,port-name^ s.name s.intf-name))]
+                   (define/syntax-parse port-name^ (bind! (datum->syntax stx port-name) p))
+                   #'(alias port-name^ s.name s.intf-name))]
                 [_ empty])))))
 
   ; Check whether stx is an expression with a static value.
@@ -316,50 +365,30 @@
 
   ; Check an expression that appears in the left-hand side of an assignment.
   (define (check-assignment-target stx)
-    (define (check p name thunk)
-      (unless (meta/data-port? p)
-        (raise-syntax-error #f "Not a port" name))
-      (unless (thunk p)
-        (raise-syntax-error #f "Port cannot be assigned" name)))
+    (match (resolve stx)
+      ; If the left-hand side of an assignment resolves to a data port,
+      ; check the mode of this port.
+      [(meta/data-port mode)
+       (define (flip? stx [res #f])
+         (syntax-parse stx
+           [s:stx/field-expr
+            (define res^ (flip? #'s.expr res))
+            (match (resolve #'s.expr)
+              [(meta/composite-port _ f? _) (xor f? res^)]
+              [(meta/instance _) (not res^)])]
+           [_ res]))
+       (unless (equal? mode (if (flip? stx) 'in 'out))
+         (raise-syntax-error #f "Port cannot be assigned" stx))]
 
-    (syntax-parse stx
-      [s:stx/name-expr
-       ; If the assignment target is a simple name, it must refer to one of these items:
-       ; - a data port of the current component, with the out mode,
-       ; - a data port in a spliced composite port, with the out mode if not flipped,
-       ;   or with the in mode if flipped.
-       ; Function splice-interface takes care of flipping the mode in spliced
-       ; composite ports when needed, so we only need to check the out mode here:
-       (check (lookup #'s.name)
-              #'s.name
-              (λ (p) (eq? 'out (meta/data-port-mode p))))]
-
-      [s:stx/field-expr
-       ; For a field expression, resolve the left-hand side first.
-       (match (resolve #'s.expr)
-         [(meta/composite-port intf-name flip? _)
-          ; If the lhs maps to a composite port, look up the given field name
-          ; in the target interface.
-          ; The field name must refer to a data port with the out mode when the
-          ; composite port is not flipped, or with the in mode when the composite
-          ; port is flipped.
-          ; Function design-unit-ref takes care of flipping the mode if the
-          ; field name belongs to a flipped spliced composite port.
-          (check (meta/design-unit-ref (lookup intf-name meta/interface?) #'s.field-name)
-                 #'s.field-name
-                 (λ (p) (xor flip? (eq? 'out (meta/data-port-mode p)))))]
-
-         [(meta/instance comp-name)
-          ; If the lhs maps to an instance, look up the given field name
-          ; in the target component.
-          ; The field name must refer to a data port with the in mode.
-          ; Function design-unit-ref takes care of flipping the mode if the
-          ; field name belongs to a flipped spliced composite port.
-          (check (meta/design-unit-ref (lookup comp-name meta/component?) #'s.field-name)
-                 #'s.field-name
-                 (λ (p) (eq? 'in (meta/data-port-mode p))))])]
+      ; TODO If the left-hand side resolves to a composite port,
+      ; check that the right-hand side has the same interface.
+      [(meta/composite-port intf-name flip? splice?)
+       (raise-syntax-error #f "Assignment to composite port is not supported yet" stx)]
 
       [_ (raise-syntax-error #f "Expression not suitable as assignment target" stx)]))
+
+  (define-syntax-parse-rule (qs/l expr)
+    (quasisyntax/loc this-syntax expr))
 
   ; Check an expression that constitutes the right-hand side of an assignment.
   ; This includes:
@@ -378,18 +407,18 @@
       [_
        ; If stx has a static value, wrap it in a static-expr.
        ; If stx resolves to a signal, wrap it in a signal-expr.
-       (cond [(static-value? stx)          #`(static-expr #,stx)]
-             [(meta/signal? (resolve stx)) #`(signal-expr #,stx)]
+       (cond [(static-value? stx)          (qs/l (static-expr #,stx))]
+             [(meta/signal? (resolve stx)) (qs/l (signal-expr #,stx))]
              [else                         stx])]))
 
   (define (lift-if-needed stx)
     (syntax-parse stx
       [s:stx/call-expr    (lift-if-needed* stx (attribute s.arg)
-                                           (λ (lst) #`(call-expr s.fn-name #,@lst)))]
+                                           (λ (lst) (qs/l (call-expr s.fn-name #,@lst))))]
       [s:stx/indexed-expr (lift-if-needed* stx (cons #'s.expr (attribute s.index))
-                                           (λ (lst) #`(indexed-expr #,@lst)))]
+                                           (λ (lst) (qs/l (indexed-expr #,@lst))))]
       [s:stx/field-expr   (lift-if-needed* stx (list #'s.expr)
-                                           (λ (lst) #`(field-expr #,(first lst) s.field-name s.type-name)))]
+                                           (λ (lst) (qs/l (field-expr #,(first lst) s.field-name s.type-name))))]
       [_                  stx]))
 
   (define (lift-if-needed* stx lst thunk)
@@ -399,7 +428,8 @@
                 ; else, make a new call-expr wrapped in a lift-expr.
                 #:result (if (empty? b-lst)
                            stx
-                           #`(lift-expr #,@b-lst #,(thunk a-lst))))
+                           (quasisyntax/loc stx
+                             (lift-expr #,@b-lst #,(thunk a-lst)))))
                 ; Lift each argument if needed before proceeding.
                ([a (in-list (map lift-if-needed lst))])
       (syntax-parse a
@@ -412,9 +442,9 @@
         [_ #:when (meta/signal? (resolve a))
          ; If the argument resolves to a signal, wrap it in a signal-expr,
          ; create a binding and replace it with a name-expr.
-         (define bname (gensym "lift"))
-         (values (cons #`(#,bname (signal-expr #,a)) b-lst)
-                 (cons #`(name-expr #,bname)         a-lst))]
+         #:with bname (gensym "lift")
+         (values (cons #`(bname (signal-expr #,a)) b-lst)
+                 (cons #'(name-expr bname)         a-lst))]
 
         [_
          ; In the other cases, keep the current list of bindings

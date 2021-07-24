@@ -24,6 +24,8 @@
   constant
   local-signal
   instance
+  if-statement
+  statement-block
   assignment
   literal-expr
   alias
@@ -62,7 +64,7 @@
 
   ; Return the list of statements in the given component.
   (define (component-statements stx-lst)
-    (stx-filter stx-lst '(local-signal alias assignment)))
+    (stx-filter stx-lst '(local-signal alias assignment if-statement)))
 
   ; Return the list of aliases in the given syntax object.
   (define (design-unit-aliases stx-lst)
@@ -180,9 +182,19 @@
   #:with m (or (attribute mult) #'1)
   #:with inst-ctor-name (instance-ctor-name #'comp-name)
   (let ([ctor (λ (z) (inst-ctor-name arg ...))])
+    (printf "INST ~a\n" 'comp-name)
     (if (> m 1)
       (build-vector m ctor)
       (ctor #f))))
+
+; TODO expose instances and signals from each branch into the current interface struct.
+(define-syntax-parse-rule (if-statement (~seq condition then-body) ... else-body)
+  (cond [(not (zero? condition)) then-body]
+        ...
+        [else else-body]))
+
+(define-syntax-parse-rule (statement-block stmt ...)
+  (let () stmt ...))
 
 ; A constant expands to a variable definition.
 (define-syntax-parser constant

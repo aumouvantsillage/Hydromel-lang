@@ -63,6 +63,14 @@
     #:literals [instance multiplicity]
     (pattern (instance name (~optional (multiplicity mult)) comp-name arg ...)))
 
+  (define-syntax-class if-statement
+    #:literals [if-statement]
+    (pattern (if-statement (~seq condition then-body) ... else-body)))
+
+  (define-syntax-class statement-block
+    #:literals [statement-block]
+    (pattern (statement-block body ...)))
+
   (define-syntax-class literal-expr
     #:literals [literal-expr]
     (pattern (literal-expr value)))
