@@ -37,17 +37,17 @@ component fifo(T : type, I : T, N : unsigned)
     m.c.data  = c.data
     c.ready = m.c.ready
 
-    if N == 1 then
+#    if N == 1 then
         p.valid = m.p.valid
         p.data  = m.p.data
         m.p.ready = p.ready
-    else
-        instance f = fifo(T, I, N-1)
-        f.c.valid = m.p.valid
-        f.c.data  = m.p.data
-        m.p.ready = f.c.ready
-        p.valid = f.p.valid
-        p.data  = f.p.data
-        f.p.ready = p.ready
-    end
+#    else
+#        instance f = fifo(T, I, N-1)
+#        f.c.valid = m.p.valid
+#        f.c.data  = m.p.data
+#        m.p.ready = f.c.ready
+#        p.valid = f.p.valid
+#        p.data  = f.p.data
+#        f.p.ready = p.ready
+#    end
 end

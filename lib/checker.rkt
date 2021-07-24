@@ -106,7 +106,7 @@
                   (create-aliases)
                   (map add-scope)
                   (map make-checker)))))
-       (thunk/in-scope
+       (thunk
          (define/syntax-parse (body ...) (check-all body^))
          (syntax/loc stx
            (interface s.name body ...)))]
@@ -119,7 +119,7 @@
                   (create-aliases)
                   (map add-scope)
                   (map make-checker)))))
-       (thunk/in-scope
+       (thunk
          (define/syntax-parse (body ...) (check-all body^))
          (syntax/loc stx
            (component s.name body ...)))]
@@ -221,7 +221,7 @@
                        (~>> (attribute s.body)
                             (map add-scope)
                             (map make-checker))))
-       (thunk/in-scope
+       (thunk
          (define/syntax-parse (body ...) (check-all body^))
          (syntax/loc stx
            (statement-block body ...)))]
@@ -237,7 +237,7 @@
       [s:stx/indexed-expr
        (define expr^ (make-checker #'s.expr))
        (define indices^ (map make-checker (attribute s.index)))
-       (thunk/in-scope
+       (thunk
          ; TODO support indexed access to array data types.
          (define/syntax-parse expr (expr^))
          (define r (resolve #'expr))
@@ -252,7 +252,7 @@
        (define init-cond^   (and (attribute s.init-cond) (make-checker #'s.init-cond)))
        (define update-expr^ (make-checker #'s.update-expr))
        (define update-cond^ (and (attribute s.update-cond) (make-checker #'s.update-cond)))
-       (thunk/in-scope
+       (thunk
          (define init-expr (init-expr^))
          (unless (static-value? init-expr)
            (raise-syntax-error #f "Non-static expression cannot be used as an initial register value" #'s.init-expr))
@@ -267,7 +267,7 @@
 
       [s:stx/when-clause
        (define expr^ (make-checker #'s.expr))
-       (thunk/in-scope
+       (thunk
          (define/syntax-parse expr (check-assigned-expr (expr^)))
          (syntax/loc stx
            (when-clause expr)))]
@@ -276,7 +276,7 @@
        ; TODO check that fn-name is bound or built-in
        ; TODO typecheck arguments against fn
        (define args^ (map make-checker (attribute s.arg)))
-       (thunk/in-scope
+       (thunk
          (define/syntax-parse (arg ...) (check-all args^))
          (syntax/loc stx
            (call-expr s.fn-name arg ...)))]
