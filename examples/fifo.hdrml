@@ -13,7 +13,7 @@ component mailbox(T : type, I : T)
     p.valid = c.valid or full
     c.ready = p.ready or not full
 
-    signal write    = c.valid and full == p.ready
+    signal write    = c.valid and not (full xor p.ready)
     signal full     = register(0, write or not c.ready)
     signal data_reg = register(I, c.data when write)
     p.data          = if full then data_reg else c.data
@@ -28,6 +28,25 @@ end
 #   1     0       1    |   0     0       1      1
 #   1     1       1    |   1     1       1      1
 
+component fifo2(T : type, I : T)
+    port c : flip producer(T)
+    port p : producer(T)
+
+    instance m0 = mailbox(T, I)
+    m0.c.valid = c.valid
+    m0.c.data  = c.data
+    c.ready = m0.c.ready
+
+    instance m1 = mailbox(T, I)
+    m1.c.valid = m0.p.valid
+    m1.c.data  = m0.p.data
+    m0.p.ready = m1.c.ready
+
+    p.valid = m1.p.valid
+    p.data  = m1.p.data
+    m1.p.ready = p.ready
+end
+
 component fifo(T : type, I : T, N : unsigned)
     port c : flip producer(T)
     port p : producer(T)
@@ -37,17 +56,17 @@ component fifo(T : type, I : T, N : unsigned)
     m.c.data  = c.data
     c.ready = m.c.ready
 
-#    if N == 1 then
+    if N == 1 then
         p.valid = m.p.valid
         p.data  = m.p.data
         m.p.ready = p.ready
-#    else
-#        instance f = fifo(T, I, N-1)
-#        f.c.valid = m.p.valid
-#        f.c.data  = m.p.data
-#        m.p.ready = f.c.ready
-#        p.valid = f.p.valid
-#        p.data  = f.p.data
-#        f.p.ready = p.ready
-#    end
+    else
+        instance f = fifo(T, I, N-1)
+        f.c.valid = m.p.valid
+        f.c.data  = m.p.data
+        m.p.ready = f.c.ready
+        p.valid = f.p.valid
+        p.data  = f.p.data
+        f.p.ready = p.ready
+    end
 end

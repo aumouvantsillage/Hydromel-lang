@@ -146,6 +146,7 @@
 
 ; A local signal expands to an assignment or an empty box, depending
 ; on whether it is treated as a statement or as a declaration.
+; TODO local signal assignment in a statement block.
 (define-syntax-parser local-signal
   [(local-signal name expr)
    (if (equal? (syntax-local-context) 'expression)
@@ -178,14 +179,18 @@
 
 ; An instance expands to a constructor call for the corresponding interface.
 ; If the multiplicity is greater than 1, a vector of channels is created.
-(define-syntax-parse-rule (instance _ (~optional ((~literal multiplicity) mult)) comp-name arg ...)
-  #:with m (or (attribute mult) #'1)
-  #:with inst-ctor-name (instance-ctor-name #'comp-name)
-  (let ([ctor (λ (z) (inst-ctor-name arg ...))])
-    (printf "INST ~a\n" 'comp-name)
-    (if (> m 1)
-      (build-vector m ctor)
-      (ctor #f))))
+(define-syntax-parser instance
+  [(instance _ (~optional ((~literal multiplicity) mult)) comp-name arg ...)
+   #:when (equal? (syntax-local-context) 'expression)
+   #:with m (or (attribute mult) #'1)
+   #:with inst-ctor-name (instance-ctor-name #'comp-name)
+   #'(let ([ctor (λ (z) (inst-ctor-name arg ...))])
+       (if (> m 1)
+         (build-vector m ctor)
+         (ctor #f)))]
+  [(instance name rest ...)
+   ; TODO Instance should be assigned to a struct field for the current block.
+   #'(define name (instance name rest ...))])
 
 ; TODO expose instances and signals from each branch into the current interface struct.
 (define-syntax-parse-rule (if-statement (~seq condition then-body) ... else-body)

@@ -178,7 +178,6 @@
          (unless (static-value? #'mult)
            (raise-syntax-error #f "Non-static expression cannot be used as instance multiplicity" #'s.mult))
          ; Check that comp-name refers to an existing component
-         (lookup #'s.comp-name meta/component?)
          ; Check arguments
          (define/syntax-parse (arg ...) (check-all args^))
          (syntax/loc stx

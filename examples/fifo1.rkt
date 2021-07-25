@@ -32,4 +32,4 @@
     (p-ready 1)
     (p-data  8))
   10 "10 ns"
-  (open-output-file "fifo.vcd" #:exists 'replace))
+  (open-output-file "fifo1.vcd" #:exists 'replace))
