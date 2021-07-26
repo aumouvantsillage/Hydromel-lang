@@ -45,6 +45,10 @@
                #:when (member (syntax-e (stx-car it)) id-lst))
       it))
 
+  ; Make a constructor name for a design unit.
+  (define (design-unit-ctor-name name)
+    (format-id name "~a-make" name))
+
   ; Return the list of ports, signals and instances in the given syntax object.
   (define (design-unit-fields stx-lst)
     (stx-filter stx-lst '(constant data-port composite-port local-signal instance if-statement)))
@@ -67,9 +71,10 @@
 ; Interfaces and components differ by the element types they are allowed
 ; to contain, but the expansion rule is exactly the same.
 (define-syntax-parse-rule (design-unit name body ...)
+  #:with ctor-name        (design-unit-ctor-name #'name)
   #:with (param-name ...) (design-unit-parameter-names (attribute body))
   #:with (field-name ...) (design-unit-field-names     (attribute body))
-  (define (name param-name ...)
+  (define (ctor-name param-name ...)
     body ...
     (make-immutable-hash `((field-name . ,field-name) ...))))
 
@@ -113,8 +118,9 @@
 ; call for the corresponding interface.
 ; If the multiplicity is greater than 1, a vector of channels is created.
 (define-syntax-parse-rule (composite-port name (~optional (multiplicity mult)) (~or (~literal splice) (~literal flip)) ... intf-name arg ...)
+  #:with ctor-name (design-unit-ctor-name #'intf-name)
   #:with m (or (attribute mult) #'1)
-  (define name (let ([ctor (λ (z) (intf-name arg ...))])
+  (define name (let ([ctor (λ (z) (ctor-name arg ...))])
                  (if (> m 1)
                    (build-vector m ctor)
                    (ctor #f)))))
@@ -123,11 +129,12 @@
 ; for the corresponding component.
 ; If the multiplicity is greater than 1, a vector of channels is created.
 (define-syntax-parse-rule (instance name (~optional ((~literal multiplicity) mult)) comp-name arg ...)
-   #:with m (or (attribute mult) #'1)
-   (define name (let ([ctor (λ (z) (comp-name arg ...))])
-                  (if (> m 1)
-                    (build-vector m ctor)
-                    (ctor #f)))))
+  #:with ctor-name (design-unit-ctor-name #'comp-name)
+  #:with m (or (attribute mult) #'1)
+  (define name (let ([ctor (λ (z) (ctor-name arg ...))])
+                 (if (> m 1)
+                   (build-vector m ctor)
+                   (ctor #f)))))
 
 ; An if statement expands to a conditional statement that generates a hash map.
 ; That hash map is assigned to a variable with the same name as the if label.
@@ -428,24 +435,24 @@
   (define .* (signal-lift *))
 
   (test-case "Can construct a channel for an interface with simple ports"
-    (define i (I0 30))
+    (define i (I0-make 30))
     (check-pred box? (dict-ref i 'x))
     (check-pred box? (dict-ref i 'y)))
 
   (test-case "Can construct a channel for a component with simple ports"
-    (define c (C0 30))
+    (define c (C0-make 30))
     (check-pred box? (dict-ref c 'x))
     (check-pred box? (dict-ref c 'y)))
 
   (test-case "Can construct a channel for an interface with composite ports and no parameters"
-    (define i3 (I3))
+    (define i3 (I3-make))
     (check-pred box?  (dict-ref i3 'z))
     (check-pred dict? (dict-ref i3 'i))
     (check-pred box?  (dict-ref (dict-ref i3 'i) 'x))
     (check-pred box?  (dict-ref (dict-ref i3 'i) 'y))
     (check-pred box?  (dict-ref i3 'u))
 
-    (define i4 (I4))
+    (define i4 (I4-make))
     (check-pred box?  (dict-ref i4 'v))
     (check-pred dict? (dict-ref i4 'j))
     (check-pred box?  (dict-ref (dict-ref i4 'j) 'z))
@@ -455,7 +462,7 @@
     (check-pred box?  (dict-ref i4 'w)))
 
   (test-case "Can construct a channel for a component with composite ports and no parameters"
-    (define c (C2))
+    (define c (C2-make))
     (check-pred box?  (dict-ref c 'v))
     (check-pred dict? (dict-ref c 'j))
     (check-pred box?  (dict-ref (dict-ref c 'j) 'z))
@@ -465,40 +472,40 @@
     (check-pred box?  (dict-ref c 'w)))
 
   (test-case "Can construct a channel for an interface with a vector port"
-    (define j (I5))
+    (define j (I5-make))
     (check-pred vector? (dict-ref j 'i))
     (check-eq? (vector-length (dict-ref j 'i)) 3)
     (for ([n (range 3)])
       (check-pred dict? (vector-ref (dict-ref j 'i) n))))
 
   (test-case "Can construct a channel for an interface with arguments"
-    (define j (I6 5))
+    (define j (I6-make 5))
     (check-pred vector? (dict-ref j 'i))
     (check-eq? (vector-length (dict-ref j 'i)) 5)
     (for ([n (range 5)])
       (check-pred dict? (vector-ref (dict-ref j 'i) n))))
 
   (test-case "Can construct a channel containing a composite port with arguments"
-    (define k (I7 3))
+    (define k (I7-make 3))
     (check-pred vector? (dict-ref (dict-ref k 'j) 'i))
     (check-eq? (vector-length (dict-ref (dict-ref k 'j) 'i)) 3)
     (for ([n (range 3)])
       (check-pred dict? (vector-ref (dict-ref (dict-ref k 'j) 'i) n))))
 
   (test-case "Can assign a simple port to another simple port"
-    (define c (C0 #f))
+    (define c (C0-make #f))
     (define x (signal 23))
     (port-set! (c x) x)
     (check-sig-equal? (port-ref c y) x 5))
 
   (test-case "Can access simple ports in a composite port"
-    (define c (C3))
+    (define c (C3-make))
     (define x (signal 23))
     (port-set! (c i x) x)
     (check-sig-equal? (port-ref c i y) x 5))
 
   (test-case "Can access simple ports in a vector composite port with static indices"
-    (define c (C4))
+    (define c (C4-make))
     (define x0 (signal 10))
     (define x1 (signal 20))
     (define x2 (signal 30))
@@ -510,7 +517,7 @@
     (check-sig-equal? (port-ref c i 2 x) x2 5))
 
   (test-case "Can access simple ports in a vector composite port with dynamic indices"
-    (define c (C5))
+    (define c (C5-make))
     (define x0 (signal 10))
     (define x1 (signal 20))
     (define x2 (signal 30))
@@ -523,7 +530,7 @@
     (check-sig-equal? (port-ref c z) z 5))
 
   (test-case "Can perform an operation between signals"
-    (define c (C6))
+    (define c (C6-make))
     (define x (list->signal (range 1  5  1)))
     (define y (list->signal (range 10 50 10)))
     (port-set! (c x) x)
@@ -531,7 +538,7 @@
     (check-sig-equal? (port-ref c z) (.+ x y) 5))
 
   (test-case "Can use local signals"
-    (define c (C7))
+    (define c (C7-make))
     (define x (list->signal (list 10 20 30 40 50)))
     (define y (signal 2))
     (define z (list->signal (list 1 2 3 4 5)))
@@ -543,13 +550,13 @@
     (check-sig-equal? (port-ref c v) (.+ (.* x y) (.* z u)) 5))
 
   (test-case "Can instantiate a component"
-    (define c (C9))
+    (define c (C9-make))
     (define x (list->signal (list 10 20 30 40 50)))
     (port-set! (c x) x)
     (check-sig-equal? (port-ref c y) (.* x (signal 10)) 5))
 
   (test-case "Can instantiate a multiple component"
-    (define c (C10))
+    (define c (C10-make))
     (define x0 (list->signal (list 10 20 30 40 50)))
     (define x1 (list->signal (list 1 2 3 4 5)))
     (port-set! (c x0) x0)
@@ -557,13 +564,13 @@
     (check-sig-equal? (port-ref c y) (.* (.+ x0 x1) (signal 10)) 5))
 
   (test-case "Can register a signal"
-    (define c (C11))
+    (define c (C11-make))
     (define x (list->signal (list 10 20  30 40 50)))
     (port-set! (c x) x)
     (check-sig-equal? (port-ref c y) (register 0 x) 6))
 
   (test-case "Can register a signal with reset"
-    (define c (C12))
+    (define c (C12-make))
     (define x (list->signal (list #f #f  #f #t #f)))
     (define y (list->signal (list 10 20  30 40 50)))
     (port-set! (c x) x)
@@ -571,7 +578,7 @@
     (check-sig-equal? (port-ref c z) (register/r 0 x y) 6))
 
   (test-case "Can register a signal with enable"
-    (define c (C13))
+    (define c (C13-make))
     (define x (list->signal (list #f #t  #f #t #f)))
     (define y (list->signal (list 10 20  30 40 50)))
     (port-set! (c x) x)
@@ -579,7 +586,7 @@
     (check-sig-equal? (port-ref c z) (register/e 0 x y) 6))
 
   (test-case "Can register a signal with reset and enable"
-    (define c (C14))
+    (define c (C14-make))
     (define x (list->signal (list #f #t  #f #t #f)))
     (define y (list->signal (list #f #f  #t #f #f)))
     (define z (list->signal (list 10 20  30 40 50)))
@@ -589,25 +596,25 @@
     (check-sig-equal? (port-ref c u) (register/re 0 x y z) 6))
 
   (test-case "Can read a local constant"
-    (define c (C15))
+    (define c (C15-make))
     (check-sig-equal? (port-ref c y) (signal 56) 1))
 
   (test-case "Can read a constant as a channel field"
-    (define c (C15))
+    (define c (C15-make))
     (check-equal? (dict-ref c 'N) 56))
 
   (test-case "Can read a constant from a port"
-    (define c (C16))
+    (define c (C16-make))
     (check-sig-equal? (port-ref c p y) (signal 56) 1))
 
   (test-case "Can read a constant from an instance"
-    (define c (C17))
+    (define c (C17-make))
     (check-sig-equal? (port-ref c y) (signal 56) 1))
 
   (test-case "Can read a constant from an instance port"
-    (define c (C18))
+    (define c (C18-make))
     (check-sig-equal? (port-ref c y) (signal 56) 1))
 
   (test-case "Can read a global constant"
-    (define c (C19))
+    (define c (C19-make))
     (check-sig-equal? (port-ref c y) (signal 44) 1)))
