@@ -4,7 +4,8 @@
 
 (provide
   port-ref
-  port-set!)
+  port-set!
+  signal-table)
 
 (define-syntax-parser port-ref*
   [(port-ref* x)                    #'x]
@@ -16,3 +17,12 @@
 
 (define-syntax-parse-rule (port-set! (path ...) value)
   (set-box! (port-ref* path ...) value))
+
+(define (signal-table inst [parent #hash()] [path #f])
+  (for/fold ([res parent])
+            ([(k v) (in-dict inst)])
+    (define name (symbol->string k))
+    (define path^ (if path (string-append path "." name) name))
+    (if (dict? v)
+      (signal-table v res path^)
+      (hash-set res path^ (unbox v)))))

@@ -74,9 +74,11 @@
   #:with ctor-name        (design-unit-ctor-name #'name)
   #:with (param-name ...) (design-unit-parameter-names (attribute body))
   #:with (field-name ...) (design-unit-field-names     (attribute body))
-  (define (ctor-name param-name ...)
-    body ...
-    (make-immutable-hash `((field-name . ,field-name) ...))))
+  (begin
+    (provide ctor-name)
+    (define (ctor-name param-name ...)
+      body ...
+      (make-immutable-hash `((field-name . ,field-name) ...)))))
 
 (define-syntax-parse-rule (interface name body ...)
   (design-unit name body ...))

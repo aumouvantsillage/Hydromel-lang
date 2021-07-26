@@ -62,6 +62,7 @@ instance:
   /"instance" ID multiplicity? /"=" ID argument-list?
 
 if-statement:
+  (ID /":")?
   /"if" expression /"then" statement-block
   (/"elseif" expression /"then" statement-block)*
   (/"else" statement-block)?

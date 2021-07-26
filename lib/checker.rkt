@@ -205,6 +205,7 @@
            (assignment target expr)))]
 
       [s:stx/if-statement
+       #:with name (or (attribute s.name) (generate-temporary #'if))
        (define conditions^  (map make-checker (attribute s.condition)))
        (define then-bodies^ (map make-checker (attribute s.then-body)))
        (define else-body^   (make-checker     (attribute s.else-body)))
@@ -213,7 +214,7 @@
          (define/syntax-parse (then-body ...) (check-all then-bodies^))
          (define/syntax-parse else-body       (else-body^))
          (syntax/loc stx
-           (if-statement (~@ condition then-body) ... else-body)))]
+           (if-statement name (~@ condition then-body) ... else-body)))]
 
       [s:stx/statement-block
        (define body^ (with-scope
