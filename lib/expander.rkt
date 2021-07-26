@@ -51,7 +51,7 @@
 
   ; Return the list of ports, signals and instances in the given syntax object.
   (define (design-unit-fields stx-lst)
-    (stx-filter stx-lst '(constant data-port composite-port local-signal instance if-statement)))
+    (stx-filter stx-lst '(constant data-port composite-port local-signal alias instance if-statement)))
 
   ; Return the list of parameter names in the given syntax object.
   (define (design-unit-parameter-names stx-lst)
@@ -163,9 +163,10 @@
        (provide name^)
        (define name^ expr))])
 
-; An alias expands to a variable that receives the value of the target port.
+; An alias expands to a partial access to the target port.
+; The alias and the corresponding port must refer to the same box.
 (define-syntax-parse-rule (alias name port-name)
-  (define name (field-expr (name-expr port-name) name)))
+  (define name (dict-ref port-name 'name)))
 
 ; An assignment fills the target port's box with the signal
 ; from the right-hand side.

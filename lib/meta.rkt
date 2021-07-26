@@ -70,3 +70,5 @@
 (define (signal? item)
   (or (data-port?    item)
       (local-signal? item)))
+
+(struct record-type ())
