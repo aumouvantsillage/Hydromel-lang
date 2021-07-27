@@ -208,13 +208,37 @@
        #:with name (or (attribute s.name) (generate-temporary #'if))
        (define conditions^  (map make-checker (attribute s.condition)))
        (define then-bodies^ (map make-checker (attribute s.then-body)))
-       (define else-body^   (make-checker     (attribute s.else-body)))
+       (define else-body^   (make-checker     #'s.else-body))
        (thunk/in-scope
          (define/syntax-parse (condition ...) (check-all conditions^))
+         (for ([it (in-list (attribute condition))]
+               #:unless (static-value? it))
+           (raise-syntax-error #f "Non-static expression cannot be used in range" it))
          (define/syntax-parse (then-body ...) (check-all then-bodies^))
          (define/syntax-parse else-body       (else-body^))
          (syntax/loc stx
            (if-statement name (~@ condition then-body) ... else-body)))]
+
+      [s:stx/for-statement
+       #:with name (or (attribute s.name) (generate-temporary #'if))
+       (define expr^ (make-checker #'s.expr))
+       ; The loop counter is bound as a constant inside a new scope
+       ; so that only the loop body can use it.
+       (define-values (iter-name body^)
+         (with-scope
+           (values
+             (bind! #'s.iter-name (meta/constant #f))
+             (~> #'s.body
+                 add-scope
+                 make-checker))))
+       (thunk/in-scope
+         (define/syntax-parse expr (expr^))
+         (define/syntax-parse body (body^))
+         (unless (static-value? #'expr)
+           (raise-syntax-error #f "Non-static expression cannot be used as loop range" #'expr))
+         (quasisyntax/loc stx
+           (for-statement name #,iter-name expr body)))]
+
 
       [s:stx/statement-block
        (define body^ (with-scope

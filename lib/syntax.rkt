@@ -67,6 +67,10 @@
     #:literals [if-statement]
     (pattern (if-statement (~optional name) (~seq condition then-body) ... else-body)))
 
+  (define-syntax-class for-statement
+    #:literals [for-statement]
+    (pattern (for-statement (~optional name) iter-name expr body)))
+
   (define-syntax-class statement-block
     #:literals [statement-block]
     (pattern (statement-block body ...)))
@@ -98,7 +102,7 @@
 
   (define-syntax-class call-expr
     #:literals [call-expr not]
-    #:datum-literals [or-expr and-expr rel-expr add-expr mult-expr if-expr prefix-expr]
+    #:datum-literals [or-expr and-expr rel-expr add-expr mult-expr if-expr prefix-expr range-expr]
     (pattern ((~or* add-expr mult-expr) left fn-name right)
       #:attr (arg 1) (list #'left #'right))
     (pattern ((~or* or-expr and-expr rel-expr) left op right)
@@ -111,6 +115,9 @@
       #:attr (arg 1) (list #'right))
     (pattern (if-expr arg ...)
       #:attr fn-name #'hydromel-if)
+    (pattern (range-expr left op right)
+      #:attr (arg 1) (list #'left #'right)
+      #:attr fn-name #'hydromel-range)
     (pattern (call-expr fn-name arg ...)))
 
   (define-syntax-class lift-expr

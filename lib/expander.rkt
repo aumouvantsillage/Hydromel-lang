@@ -25,6 +25,7 @@
   local-signal
   instance
   if-statement
+  for-statement
   statement-block
   assignment
   literal-expr
@@ -51,7 +52,7 @@
 
   ; Return the list of ports, signals and instances in the given syntax object.
   (define (design-unit-fields stx-lst)
-    (stx-filter stx-lst '(constant data-port composite-port local-signal alias instance if-statement)))
+    (stx-filter stx-lst '(constant data-port composite-port local-signal alias instance if-statement for-statement)))
 
   ; Return the list of parameter names in the given syntax object.
   (define (design-unit-parameter-names stx-lst)
@@ -144,6 +145,10 @@
   (define name (cond [(not (zero? condition)) then-body]
                      ...
                      [else else-body])))
+
+(define-syntax-parse-rule (for-statement name iter-name expr body ...)
+  (define name (for/vector ([iter-name (in-list expr)])
+                 body ...)))
 
 ; A statement block executes statements and returns a hash map that exposes
 ; local data for debugging.

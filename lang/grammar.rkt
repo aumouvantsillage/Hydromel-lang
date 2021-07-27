@@ -32,7 +32,8 @@ component: /"component" ID parameter-list? component-item* /"end"
   local-signal |
   assignment |
   instance |
-  if-statement
+  if-statement |
+  for-statement
 
 parameter: ID /":" ("type" | type-expression)
 
@@ -68,6 +69,12 @@ if-statement:
   (/"else" statement-block)?
   /"end"
 
+for-statement:
+  (ID /":")?
+  /"for" ID /"in" expression /"loop"
+  statement-block
+  /"end"
+
 statement-block:
   statement*
 
@@ -79,7 +86,8 @@ statement-block:
 @maybe-if-expr:     if-expr     | maybe-or-expr
 @maybe-or-expr:     or-expr     | maybe-and-expr
 @maybe-and-expr:    and-expr    | maybe-rel-expr
-@maybe-rel-expr:    rel-expr    | maybe-add-expr
+@maybe-rel-expr:    rel-expr    | maybe-range-expr
+@maybe-range-expr:  range-expr  | maybe-add-expr
 @maybe-add-expr:    add-expr    | maybe-mult-expr
 @maybe-mult-expr:   mult-expr   | maybe-prefix-expr
 @maybe-prefix-expr: prefix-expr | simple-expr
@@ -93,7 +101,8 @@ if-expr:
 
 or-expr:     maybe-or-expr  ("or" | "xor") maybe-and-expr
 and-expr:    maybe-and-expr "and" maybe-rel-expr
-rel-expr:    maybe-rel-expr ("<" | ">" | "<=" | ">=" | "==" | "/=") maybe-add-expr
+rel-expr:    maybe-add-expr ("<" | ">" | "<=" | ">=" | "==" | "/=" | "in") maybe-range-expr
+range-expr:  maybe-add-expr ".." maybe-add-expr
 add-expr:    maybe-add-expr ("+" | "-") maybe-mult-expr
 mult-expr:   maybe-mult-expr ("*" | "/") maybe-prefix-expr
 prefix-expr: ("-" | "not") simple-expr

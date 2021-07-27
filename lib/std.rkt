@@ -22,3 +22,7 @@
 (define hydromel-and bitwise-and)
 (define hydromel-or  bitwise-ior)
 (define hydromel-xor bitwise-xor)
+
+; TODO descending ranges
+(define (hydromel-range a b)
+  (range a (add1 b)))

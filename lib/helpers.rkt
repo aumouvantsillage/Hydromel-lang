@@ -19,10 +19,24 @@
   (set-box! (port-ref* path ...) value))
 
 (define (signal-table inst [parent #hash()] [path #f])
-  (for/fold ([res parent])
-            ([(k v) (in-dict inst)])
-    (define name (symbol->string k))
-    (define path^ (if path (string-append path "." name) name))
-    (if (dict? v)
-      (signal-table v res path^)
-      (hash-set res path^ (unbox v)))))
+  (match inst
+    [(box sig) #:when sig
+     (hash-set parent path sig)]
+
+    [(hash-table _ ...)
+     (for/fold ([res parent])
+               ([(k v) (in-dict inst)])
+       (define name (symbol->string k))
+       (define path^ (if path (string-append path "." name) name))
+       (signal-table v res path^))]
+
+    [(vector elt ...)
+     (for/fold ([res parent])
+               ([v (in-list elt)]
+                [n (in-naturals)])
+       (define index (format "[~a]" n))
+       (define path^ (if path (string-append path index) index))
+       (signal-table v res path^))]
+
+    [_
+     (error "No signal at" path)]))

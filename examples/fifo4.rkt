@@ -6,7 +6,7 @@
   hydromel/lib/vcd
   "fifo.hdrml")
 
-(define inst (fifo_rec-make #f 0 3))
+(define inst (fifo_iter-make #f 0 3))
 
 (port-set! (inst c valid) (signal 0  1  1  1  1  1 1 0))
 (port-set! (inst c data)  (signal 10 10 20 30 40))
@@ -25,4 +25,4 @@
   (for/list ([(name sig) (in-dict sigs)])
     (waveform name wav-size sig))
   duration "10 ns"
-  (open-output-file "fifo3.vcd" #:exists 'replace))
+  (open-output-file "fifo4.vcd" #:exists 'replace))
