@@ -50,6 +50,17 @@ component fifo2(T : type, I : T)
     f1.p.ready  = p.ready
 end
 
+component fifo2b(T : type, I : T)
+    port io : splice consumer_producer(T)
+
+    instance f0 = fifo1(T, I)
+    instance f1 = fifo1(T, I)
+
+    f0.c = c
+    f1.c = f0.p
+    p    = f1.p
+end
+
 component fifo_rec(T : type, I : T, N : unsigned)
     port io : splice consumer_producer(T)
 
@@ -73,6 +84,21 @@ component fifo_rec(T : type, I : T, N : unsigned)
     end
 end
 
+component fifo_rec_b(T : type, I : T, N : unsigned)
+    port io : splice consumer_producer(T)
+
+    instance f0 = fifo1(T, I)
+    f0.c = c
+
+    if N == 1 then
+        p = f0.p
+    else
+        instance f = fifo_rec(T, I, N-1)
+        f.c = f0.p
+        p   = f.p
+    end
+end
+
 component fifo_iter(T : type, I : T, N : unsigned)
     port io : splice consumer_producer(T)
 
@@ -82,13 +108,26 @@ component fifo_iter(T : type, I : T, N : unsigned)
     f[0].c.data  = c.data
     c.ready      = f[0].c.ready
 
-    p.valid        = f[N-1].p.valid
-    p.data         = f[N-1].p.data
-    f[N-1].p.ready = p.ready
-
     for n in 1 .. N-1 loop
         f[n].c.valid   = f[n-1].p.valid
         f[n].c.data    = f[n-1].p.data
         f[n-1].p.ready = f[n].c.ready
     end
+
+    p.valid        = f[N-1].p.valid
+    p.data         = f[N-1].p.data
+    f[N-1].p.ready = p.ready
+end
+
+component fifo_iter_b(T : type, I : T, N : unsigned)
+    port io : splice consumer_producer(T)
+
+    instance f[N] = fifo1(T, I)
+    f[0].c = c
+
+    for n in 1 .. N-1 loop
+        f[n].c = f[n-1].p
+    end
+
+    p = f[N-1].p
 end

@@ -28,6 +28,7 @@
   for-statement
   statement-block
   assignment
+  connection
   literal-expr
   alias
   name-expr
@@ -79,7 +80,7 @@
     (provide ctor-name)
     (define (ctor-name param-name ...)
       body ...
-      (make-immutable-hash `((field-name . ,field-name) ...)))))
+      (make-hash `((field-name . ,field-name) ...)))))
 
 (define-syntax-parse-rule (interface name body ...)
   (design-unit name body ...))
@@ -156,7 +157,7 @@
   #:with (field-name ...) (design-unit-field-names (attribute body))
   (let ()
     body ...
-    (make-immutable-hash `((field-name . ,field-name) ...))))
+    (make-hash `((field-name . ,field-name) ...))))
 
 ; A constant expands to a variable definition.
 (define-syntax-parser constant
@@ -179,6 +180,9 @@
 ; from the right-hand side.
 (define-syntax-parse-rule (assignment target expr)
   (set-box! target expr))
+
+(define-syntax-parse-rule (connection left right)
+  (hydromel-connect left right))
 
 ; A literal expression expands to its value.
 (define-syntax-parse-rule (literal-expr value)

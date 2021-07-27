@@ -193,16 +193,27 @@
            (local-signal name expr)))]
 
       [s:stx/assignment
-       ; TODO support assignment from composite to composite.
        ; TODO check circular dependencies.
        (define target^ (make-checker #'s.target))
        (define expr^   (make-checker #'s.expr))
        (thunk/in-scope
          (define/syntax-parse target (target^))
-         (check-assignment-target #'target)
-         (define/syntax-parse expr (check-assigned-expr (expr^)))
-         (syntax/loc stx
-           (assignment target expr)))]
+         (define/syntax-parse expr   (expr^))
+         (define target-port (check-assignment-target #'target))
+         (if (meta/composite-port? target-port)
+           ; If the left-hand side is a composite port, generate a
+           ; connection statement.
+           (let ([expr-port (resolve #'expr)])
+             (unless (meta/composite-port? expr-port)
+               (raise-syntax-error #f "Right-hand side of assignment is not a composite port" #'expr))
+             (unless (equal? (syntax-e (meta/composite-port-intf-name target-port))
+                             (syntax-e (meta/composite-port-intf-name expr-port)))
+               (raise-syntax-error #f "Right-hand side and left-hand side of assignment have different interfaces" stx))
+             (syntax/loc stx
+               (connection target expr)))
+           ; If the left-hand side is a signal, generate an assignment statement.
+           (quasisyntax/loc stx
+               (assignment target #,(check-assigned-expr #'expr)))))]
 
       [s:stx/if-statement
        #:with name (or (attribute s.name) (generate-temporary #'if))
@@ -392,7 +403,8 @@
 
   ; Check an expression that appears in the left-hand side of an assignment.
   (define (check-assignment-target stx)
-    (match (resolve stx)
+    (define target (resolve stx))
+    (match target
       ; If the left-hand side of an assignment resolves to a data port,
       ; check the mode of this port.
       [(meta/data-port mode)
@@ -407,12 +419,11 @@
        (unless (equal? mode (if (flip? stx) 'in 'out))
          (raise-syntax-error #f "Port cannot be assigned" stx))]
 
-      ; TODO If the left-hand side resolves to a composite port,
-      ; check that the right-hand side has the same interface.
       [(meta/composite-port intf-name flip? splice?)
-       (raise-syntax-error #f "Assignment to composite port is not supported yet" stx)]
+       (void)]
 
-      [_ (raise-syntax-error #f "Expression not suitable as assignment target" stx)]))
+      [_ (raise-syntax-error #f "Expression not suitable as assignment target" stx)])
+    target)
 
   (define-syntax-parse-rule (qs/l expr)
     (quasisyntax/loc this-syntax expr))
