@@ -35,41 +35,41 @@ end
 component fifo2(T : type, I : T)
     port io : splice consumer_producer(T)
 
-    instance m0 = fifo1(T, I)
-    m0.c.valid = c.valid
-    m0.c.data  = c.data
-    c.ready = m0.c.ready
+    instance f0 = fifo1(T, I)
+    f0.c.valid  = c.valid
+    f0.c.data   = c.data
+    c.ready     = f0.c.ready
 
-    instance m1 = fifo1(T, I)
-    m1.c.valid = m0.p.valid
-    m1.c.data  = m0.p.data
-    m0.p.ready = m1.c.ready
+    instance f1 = fifo1(T, I)
+    f1.c.valid  = f0.p.valid
+    f1.c.data   = f0.p.data
+    f0.p.ready  = f1.c.ready
 
-    p.valid = m1.p.valid
-    p.data  = m1.p.data
-    m1.p.ready = p.ready
+    p.valid     = f1.p.valid
+    p.data      = f1.p.data
+    f1.p.ready  = p.ready
 end
 
 component fifo_rec(T : type, I : T, N : unsigned)
     port io : splice consumer_producer(T)
 
-    instance m = fifo1(T, I)
-    m.c.valid = c.valid
-    m.c.data  = c.data
-    c.ready = m.c.ready
+    instance f0 = fifo1(T, I)
+    f0.c.valid = c.valid
+    f0.c.data  = c.data
+    c.ready    = f0.c.ready
 
     if N == 1 then
-        p.valid = m.p.valid
-        p.data  = m.p.data
-        m.p.ready = p.ready
+        p.valid    = f0.p.valid
+        p.data     = f0.p.data
+        f0.p.ready = p.ready
     else
         instance f = fifo_rec(T, I, N-1)
-        f.c.valid = m.p.valid
-        f.c.data  = m.p.data
-        m.p.ready = f.c.ready
-        p.valid = f.p.valid
-        p.data  = f.p.data
-        f.p.ready = p.ready
+        f.c.valid  = f0.p.valid
+        f.c.data   = f0.p.data
+        f0.p.ready = f.c.ready
+        p.valid    = f.p.valid
+        p.data     = f.p.data
+        f.p.ready  = p.ready
     end
 end
 
