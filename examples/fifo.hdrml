@@ -6,9 +6,13 @@ interface producer(T : type)
     port data  : out T
 end
 
-component fifo1(T : type, I : T)
+interface consumer_producer(T : type)
     port c : flip producer(T)
     port p : producer(T)
+end
+
+component fifo1(T : type, I : T)
+    port io : splice consumer_producer(T)
 
     p.valid = c.valid or full
     c.ready = p.ready or not full
@@ -29,8 +33,7 @@ end
 #   1     1       1    |   1     1       1      1
 
 component fifo2(T : type, I : T)
-    port c : flip producer(T)
-    port p : producer(T)
+    port io : splice consumer_producer(T)
 
     instance m0 = fifo1(T, I)
     m0.c.valid = c.valid
@@ -48,8 +51,7 @@ component fifo2(T : type, I : T)
 end
 
 component fifo_rec(T : type, I : T, N : unsigned)
-    port c : flip producer(T)
-    port p : producer(T)
+    port io : splice consumer_producer(T)
 
     instance m = fifo1(T, I)
     m.c.valid = c.valid
@@ -70,3 +72,5 @@ component fifo_rec(T : type, I : T, N : unsigned)
         f.p.ready = p.ready
     end
 end
+
+# component fifo_iter(T : type, I : T, N : unsigned)
