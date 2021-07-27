@@ -6,7 +6,7 @@ interface producer(T : type)
     port data  : out T
 end
 
-component mailbox(T : type, I : T)
+component fifo1(T : type, I : T)
     port c : flip producer(T)
     port p : producer(T)
 
@@ -32,12 +32,12 @@ component fifo2(T : type, I : T)
     port c : flip producer(T)
     port p : producer(T)
 
-    instance m0 = mailbox(T, I)
+    instance m0 = fifo1(T, I)
     m0.c.valid = c.valid
     m0.c.data  = c.data
     c.ready = m0.c.ready
 
-    instance m1 = mailbox(T, I)
+    instance m1 = fifo1(T, I)
     m1.c.valid = m0.p.valid
     m1.c.data  = m0.p.data
     m0.p.ready = m1.c.ready
@@ -47,11 +47,11 @@ component fifo2(T : type, I : T)
     m1.p.ready = p.ready
 end
 
-component fifo(T : type, I : T, N : unsigned)
+component fifo_rec(T : type, I : T, N : unsigned)
     port c : flip producer(T)
     port p : producer(T)
 
-    instance m = mailbox(T, I)
+    instance m = fifo1(T, I)
     m.c.valid = c.valid
     m.c.data  = c.data
     c.ready = m.c.ready
@@ -61,7 +61,7 @@ component fifo(T : type, I : T, N : unsigned)
         p.data  = m.p.data
         m.p.ready = p.ready
     else
-        instance f = fifo(T, I, N-1)
+        instance f = fifo_rec(T, I, N-1)
         f.c.valid = m.p.valid
         f.c.data  = m.p.data
         m.p.ready = f.c.ready
