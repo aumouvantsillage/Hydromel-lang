@@ -9,6 +9,7 @@
   (for-syntax racket/syntax))
 
 (provide
+  min-unsigned-width min-signed-width
   unsigned unsigned-slice unsigned-concat
   signed signed-slice signed-concat
   integer->bit-string)
@@ -16,7 +17,7 @@
 ; Returns the minimum bit width to store the integer `v`
 ; as an unsigned logic value.
 (define (min-unsigned-width v)
-  (cond [(zero?     v) 0]
+  (cond [(zero?     v) 1]
         [(positive? v) (exact-floor (add1 (log v 2)))]
         [else          (add1 (min-unsigned-width (sub1 (- v))))]))
 

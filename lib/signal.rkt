@@ -180,12 +180,6 @@
   (λ (stx)
     (raise-syntax-error (syntax-e stx) "can only be used inside register")))
 
-; In register control signals (reset, enable), 0 is considered falsy.
-(define (true? x)
-  (if (number? x)
-    (not (zero? x))
-    x))
-
 ; Register the given signal.
 ; The initial value of the result is q0.
 ; The expression can refer to the result as `this-reg`.
@@ -199,20 +193,20 @@
 ; The resulting signal receives q0 each time sig-r is true.
 (define-simple-macro (register/r q0 sig-r sig-d)
   (register q0 (for/signal ([r sig-r] [d sig-d])
-                 (if (true? r) q0 d))))
+                 (if r q0 d))))
 
 ; Register with enable.
 ; The resulting signal receives sig-d each time sig-e is true.
 (define-simple-macro (register/e q0 sig-e sig-d)
   (register q0 (for/signal ([e sig-e] [d sig-d] [q this-reg])
-                 (if (true? e) d q))))
+                 (if e d q))))
 
 ; Register with synchronous reset and enable.
 (define-simple-macro (register/re q0 sig-r sig-e sig-d)
   (register q0 (for/signal ([r sig-r] [e sig-e] [d sig-d] [q this-reg])
-                 (cond [(true? r) q0]
-                       [(true? e) d]
-                       [else      q]))))
+                 (cond [r    q0]
+                       [e    d]
+                       [else q]))))
 
 ; Convert one or more signals into a signal where each element is a list.
 (define signal-bundle (signal-lift list))

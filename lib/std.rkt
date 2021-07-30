@@ -2,30 +2,30 @@
 
 (require
   "signal.rkt"
+  "logic-vector.rkt"
   syntax/parse/define)
 
 (provide (all-defined-out))
 
-(define-syntax-parse-rule (hydromel-== a b)
-  (if (= a b) 1 0))
-
-(define-syntax-parse-rule (hydromel-/= a b)
-  (if (= a b) 0 1))
-
 (define-syntax-parse-rule (hydromel-if (~seq c t) ... e)
-  (cond [(not (zero? c)) t]
+  (cond [(logic-vector-true? c) t]
         ...
         [else e]))
 
-; TODO Force data size and signedness
-(define hydromel-not bitwise-not)
-(define hydromel-and bitwise-and)
-(define hydromel-or  bitwise-ior)
-(define hydromel-xor bitwise-xor)
+(define hydromel-==  logic-vector-==)
+(define hydromel-/=  logic-vector-/=)
+(define hydromel->   logic-vector->)
+(define hydromel-not logic-vector-not)
+(define hydromel-and logic-vector-and)
+(define hydromel-or  logic-vector-or)
+(define hydromel-xor logic-vector-xor)
+(define hydromel--   logic-vector--)
+(define hydromel-+   logic-vector-+)
+(define hydromel-*   logic-vector-*)
 
 ; TODO descending ranges
 (define (hydromel-range a b)
-  (range a (add1 b)))
+  (map make-logic-vector (range (logic-vector-value a) (add1 (logic-vector-value b)))))
 
 (define (hydromel-connect left right)
   (for ([(k vl) (in-dict left)])

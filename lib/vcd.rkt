@@ -7,39 +7,35 @@
 (require
   syntax/parse/define
   "logic.rkt"
+  "logic-vector.rkt"
   "signal.rkt")
 
-(provide
-  waveforms
-  (struct-out waveform)
-  vcd)
+(provide vcd)
 
-(struct waveform (name size sig))
+(struct waveform (short-name width values))
 
-(define-simple-macro (waveforms (name size) ...)
-  (list
-    (waveform 'name size name)
-    ...))
-
-(define (vcd wavs duration ts [out (current-output-port)])
-  ; Generate short names for signals.
-  (define short-names (for/list ([n (in-range (length wavs))])
-                        (format "s~a" n)))
+(define (vcd sigs duration ts [out (current-output-port)])
+  (define wavs (for/hash ([(name sig) (in-dict sigs)]
+                          [index      (in-naturals)])
+                 (define samples (signal-take sig duration))
+                 (values name (waveform (format "s~a" index)
+                                        (apply max (map logic-vector-width samples))
+                                        (map logic-vector-value samples)))))
 
   ; VCD header.
   (fprintf out "$timescale ~a $end\n" ts)
-  (for ([w (in-list wavs)]
-        [s (in-list short-names)])
-    (fprintf out "$var wire ~a ~a ~a $end\n" (waveform-size w) s (waveform-name w)))
+  (for ([(name wav) (in-dict wavs)])
+    (fprintf out "$var wire ~a ~a ~a $end\n" (waveform-width wav) (waveform-short-name wav) name))
   (fprintf out "$enddefinitions $end\n")
 
   ; Value changes.
-  (for/fold ([sigs (map waveform-sig wavs)]
-             [prev (map void wavs)] ; This will force a value change at t=0
+  (define short-names (map waveform-short-name (dict-values wavs)))
+  (define widths      (map waveform-width      (dict-values wavs)))
+  (for/fold ([it   (map waveform-values (dict-values wavs))]
+             [prev (map void (dict-keys wavs))] ; This will force a value change at t=0
              #:result (void))
             ([t (in-range duration)])
-    ; Read the current value of all signals.
-    (define current (map signal-first sigs))
+    (define current (map first it))
 
     ; If at least one signal changed.
     (unless (equal? current prev)
@@ -48,21 +44,18 @@
 
       ; Output value changes.
       (for ([n (in-list short-names)]
-            [s (in-list (map waveform-size wavs))]
-            [c (in-list current)]
+            [w (in-list widths)]
+            [v (in-list current)]
             [p (in-list prev)]
-            #:when (not (equal? c p)))
-        (define v (cond [(number? c) (integer->bit-string s c)]
-                        [c           1]
-                        [else        0]))
-        (define fmt (if (= s 1)
+            #:when (not (equal? v p)))
+        (define fmt (if (= w 1)
                       "~a~a\n"
                       "b~a ~a\n"))
-        (fprintf out fmt v n)))
+        (fprintf out fmt (integer->bit-string w v) n)))
 
     ; Continue with the rest of the signals.
     (values
-      (map signal-rest sigs)
+      (map rest it)
       current))
 
   ; Last timestamp

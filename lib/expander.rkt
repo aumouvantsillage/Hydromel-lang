@@ -6,6 +6,7 @@
   racket/splicing
   "signal.rkt"
   "std.rkt"
+  "logic-vector.rkt"
   (for-syntax
     racket/match
     racket/syntax
@@ -123,7 +124,7 @@
 ; If the multiplicity is greater than 1, a vector of channels is created.
 (define-syntax-parse-rule (composite-port name (~optional (multiplicity mult)) (~or (~literal splice) (~literal flip)) ... intf-name arg ...)
   #:with ctor-name (design-unit-ctor-name #'intf-name)
-  #:with m (or (attribute mult) #'1)
+  #:with m (if (attribute mult) #'(logic-vector-value mult) #'1)
   (define name (let ([ctor (λ (z) (ctor-name arg ...))])
                  (if (> m 1)
                    (build-vector m ctor)
@@ -134,7 +135,7 @@
 ; If the multiplicity is greater than 1, a vector of channels is created.
 (define-syntax-parse-rule (instance name (~optional ((~literal multiplicity) mult)) comp-name arg ...)
   #:with ctor-name (design-unit-ctor-name #'comp-name)
-  #:with m (or (attribute mult) #'1)
+  #:with m (if (attribute mult) #'(logic-vector-value mult) #'1)
   (define name (let ([ctor (λ (z) (ctor-name arg ...))])
                  (if (> m 1)
                    (build-vector m ctor)
@@ -143,7 +144,7 @@
 ; An if statement expands to a conditional statement that generates a hash map.
 ; That hash map is assigned to a variable with the same name as the if label.
 (define-syntax-parse-rule (if-statement name (~seq condition then-body) ... else-body)
-  (define name (cond [(not (zero? condition)) then-body]
+  (define name (cond [(logic-vector-true? condition) then-body]
                      ...
                      [else else-body])))
 
@@ -186,7 +187,7 @@
 
 ; A literal expression expands to its value.
 (define-syntax-parse-rule (literal-expr value)
-  value)
+  (make-logic-vector value))
 
 ; A name expression expands to the corresponding variable name in the current scope.
 (define-syntax-parser name-expr
@@ -207,7 +208,7 @@
 ; An indexed expression expands to a chain of vector accesses.
 (define-syntax-parser indexed-expr
   [(indexed-expr expr index ... last)
-   #'(vector-ref (indexed-expr expr index ...) last)]
+   #'(vector-ref (indexed-expr expr index ...) (logic-vector-value last))]
   [(indexed-expr expr)
    #'expr])
 
@@ -298,7 +299,7 @@
     (assignment (name-expr w) (signal-expr (name-expr v))))
 
   (interface I5
-    (composite-port i (multiplicity 3) I2))
+    (composite-port i (multiplicity (literal-expr 3)) I2))
 
   (interface I6
     (parameter N #f)
@@ -314,7 +315,7 @@
                 (signal-expr (field-expr (name-expr i) x))))
 
   (component C4
-    (composite-port i (multiplicity 3) I2)
+    (composite-port i (multiplicity (literal-expr 3)) I2)
     (assignment (field-expr (indexed-expr (name-expr i) (literal-expr 0)) y)
                 (signal-expr (field-expr (indexed-expr (name-expr i) (literal-expr 0)) x)))
     (assignment (field-expr (indexed-expr (name-expr i) (literal-expr 1)) y)
@@ -340,7 +341,7 @@
     (assignment (name-expr z)
                 (lift-expr [x^ (signal-expr (name-expr x))]
                            [y^ (signal-expr (name-expr y))]
-                           (call-expr + (name-expr x^) (name-expr y^)))))
+                           (call-expr logic-vector-+ (name-expr x^) (name-expr y^)))))
 
   (component C7
     (data-port x in #f)
@@ -350,14 +351,14 @@
     (data-port v out #f)
     (local-signal xy (lift-expr [x^ (signal-expr (name-expr x))]
                                 [y^ (signal-expr (name-expr y))]
-                                (call-expr * (name-expr x^) (name-expr y^))))
+                                (call-expr logic-vector-* (name-expr x^) (name-expr y^))))
     (local-signal zu (lift-expr [z^ (signal-expr (name-expr z))]
                                 [u^ (signal-expr (name-expr u))]
-                                (call-expr * (name-expr z^) (name-expr u^))))
+                                (call-expr logic-vector-* (name-expr z^) (name-expr u^))))
     (assignment (name-expr v)
                 (lift-expr [xy^ (signal-expr (name-expr xy))]
                            [zu^ (signal-expr (name-expr zu))]
-                           (call-expr + (name-expr xy^) (name-expr zu^)))))
+                           (call-expr logic-vector-+ (name-expr xy^) (name-expr zu^)))))
 
   (component C8
     (parameter N #f)
@@ -365,11 +366,11 @@
     (data-port y out #f)
     (assignment (name-expr y)
                 (lift-expr [x^ (signal-expr (name-expr x))]
-                           (call-expr * x^ N))))
+                           (call-expr logic-vector-* x^ N))))
   (component C9
     (data-port x in #f)
     (data-port y out #f)
-    (instance c C8 10)
+    (instance c C8 (literal-expr 10))
     (assignment (field-expr (name-expr c) x) (signal-expr (name-expr x)))
     (assignment (name-expr y) (signal-expr (field-expr (name-expr c) y))))
 
@@ -377,12 +378,12 @@
     (data-port x0 in #f)
     (data-port x1 in #f)
     (data-port y out #f)
-    (instance c (multiplicity 2) C8 10)
-    (assignment (field-expr (indexed-expr (name-expr c) 0) x) (signal-expr (name-expr x0)))
-    (assignment (field-expr (indexed-expr (name-expr c) 1) x) (signal-expr (name-expr x1)))
-    (assignment (name-expr y) (lift-expr [y0 (signal-expr (field-expr (indexed-expr (name-expr c) 0) y))]
-                                         [y1 (signal-expr (field-expr (indexed-expr (name-expr c) 1) y))]
-                                         (call-expr + y0 y1))))
+    (instance c (multiplicity (literal-expr 2)) C8 (literal-expr 10))
+    (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 0)) x) (signal-expr (name-expr x0)))
+    (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 1)) x) (signal-expr (name-expr x1)))
+    (assignment (name-expr y) (lift-expr [y0 (signal-expr (field-expr (indexed-expr (name-expr c) (literal-expr 0)) y))]
+                                         [y1 (signal-expr (field-expr (indexed-expr (name-expr c) (literal-expr 1)) y))]
+                                         (call-expr logic-vector-+ y0 y1))))
 
   (component C11
     (data-port x in #f)
@@ -441,10 +442,10 @@
     (assignment (name-expr y) (signal (name-expr K -constant))))
 
   (define (check-sig-equal? t e n)
-    (check-equal? (signal-take t n) (signal-take e n)))
+    (check-equal? (logic-signal-take t n) (logic-signal-take e n)))
 
-  (define .+ (signal-lift +))
-  (define .* (signal-lift *))
+  (define .+ (signal-lift logic-vector-+))
+  (define .* (signal-lift logic-vector-*))
 
   (test-case "Can construct a channel for an interface with simple ports"
     (define i (I0-make 30))
@@ -491,14 +492,14 @@
       (check-pred dict? (vector-ref (dict-ref j 'i) n))))
 
   (test-case "Can construct a channel for an interface with arguments"
-    (define j (I6-make 5))
+    (define j (I6-make (make-logic-vector 5)))
     (check-pred vector? (dict-ref j 'i))
     (check-eq? (vector-length (dict-ref j 'i)) 5)
     (for ([n (range 5)])
       (check-pred dict? (vector-ref (dict-ref j 'i) n))))
 
   (test-case "Can construct a channel containing a composite port with arguments"
-    (define k (I7-make 3))
+    (define k (I7-make (make-logic-vector 3)))
     (check-pred vector? (dict-ref (dict-ref k 'j) 'i))
     (check-eq? (vector-length (dict-ref (dict-ref k 'j) 'i)) 3)
     (for ([n (range 3)])
@@ -506,21 +507,21 @@
 
   (test-case "Can assign a simple port to another simple port"
     (define c (C0-make #f))
-    (define x (signal 23))
+    (define x (logic-signal 23))
     (port-set! (c x) x)
     (check-sig-equal? (port-ref c y) x 5))
 
   (test-case "Can access simple ports in a composite port"
     (define c (C3-make))
-    (define x (signal 23))
+    (define x (logic-signal 23))
     (port-set! (c i x) x)
     (check-sig-equal? (port-ref c i y) x 5))
 
   (test-case "Can access simple ports in a vector composite port with static indices"
     (define c (C4-make))
-    (define x0 (signal 10))
-    (define x1 (signal 20))
-    (define x2 (signal 30))
+    (define x0 (logic-signal 10))
+    (define x1 (logic-signal 20))
+    (define x2 (logic-signal 30))
     (port-set! (c i 0 x) x0)
     (port-set! (c i 1 x) x1)
     (port-set! (c i 2 x) x2)
@@ -530,31 +531,31 @@
 
   (test-case "Can access simple ports in a vector composite port with dynamic indices"
     (define c (C5-make))
-    (define x0 (signal 10))
-    (define x1 (signal 20))
-    (define x2 (signal 30))
-    (define y (list->signal (list 0 1 2 1 0 2)))
+    (define x0 (logic-signal 10))
+    (define x1 (logic-signal 20))
+    (define x2 (logic-signal 30))
+    (define y (logic-signal 0 1 2 1 0 2))
     (port-set! (c i 0 x) x0)
     (port-set! (c i 1 x) x1)
     (port-set! (c i 2 x) x2)
     (port-set! (c y)     y)
-    (define z (list->signal (list 10 20 30 20 10 30)))
+    (define z (logic-signal 10 20 30 20 10 30))
     (check-sig-equal? (port-ref c z) z 5))
 
   (test-case "Can perform an operation between signals"
     (define c (C6-make))
-    (define x (list->signal (range 1  5  1)))
-    (define y (list->signal (range 10 50 10)))
+    (define x (logic-signal 1  2  3  4  5))
+    (define y (logic-signal 10 20 30 40 50))
     (port-set! (c x) x)
     (port-set! (c y) y)
     (check-sig-equal? (port-ref c z) (.+ x y) 5))
 
   (test-case "Can use local signals"
     (define c (C7-make))
-    (define x (list->signal (list 10 20 30 40 50)))
-    (define y (signal 2))
-    (define z (list->signal (list 1 2 3 4 5)))
-    (define u (signal 3))
+    (define x (logic-signal 10 20 30 40 50))
+    (define y (logic-signal 2))
+    (define z (logic-signal 1 2 3 4 5))
+    (define u (logic-signal 3))
     (port-set! (c x) x)
     (port-set! (c y) y)
     (port-set! (c z) z)
@@ -563,70 +564,74 @@
 
   (test-case "Can instantiate a component"
     (define c (C9-make))
-    (define x (list->signal (list 10 20 30 40 50)))
+    (define x (logic-signal 10 20 30 40 50))
     (port-set! (c x) x)
-    (check-sig-equal? (port-ref c y) (.* x (signal 10)) 5))
+    (check-sig-equal? (port-ref c y) (.* x (logic-signal 10)) 5))
 
   (test-case "Can instantiate a multiple component"
     (define c (C10-make))
-    (define x0 (list->signal (list 10 20 30 40 50)))
-    (define x1 (list->signal (list 1 2 3 4 5)))
+    (define x0 (logic-signal 10 20 30 40 50))
+    (define x1 (logic-signal 1 2 3 4 5))
     (port-set! (c x0) x0)
     (port-set! (c x1) x1)
-    (check-sig-equal? (port-ref c y) (.* (.+ x0 x1) (signal 10)) 5))
+    (check-sig-equal? (port-ref c y) (.* (.+ x0 x1) (logic-signal 10)) 5))
 
   (test-case "Can register a signal"
     (define c (C11-make))
-    (define x (list->signal (list 10 20  30 40 50)))
+    (define x (logic-signal 10 20 30 40 50))
+    (define y (logic-signal 0  10 20 30 40 50))
     (port-set! (c x) x)
-    (check-sig-equal? (port-ref c y) (register 0 x) 6))
+    (check-sig-equal? (port-ref c y) y 6))
 
   (test-case "Can register a signal with reset"
     (define c (C12-make))
-    (define x (list->signal (list #f #f  #f #t #f)))
-    (define y (list->signal (list 10 20  30 40 50)))
+    (define x (signal       #f #f #f #t #f))
+    (define y (logic-signal 10 20 30 40 50))
+    (define z (logic-signal 0  10 20 30 0  50))
     (port-set! (c x) x)
     (port-set! (c y) y)
-    (check-sig-equal? (port-ref c z) (register/r 0 x y) 6))
+    (check-sig-equal? (port-ref c z) z 6))
 
   (test-case "Can register a signal with enable"
     (define c (C13-make))
-    (define x (list->signal (list #f #t  #f #t #f)))
-    (define y (list->signal (list 10 20  30 40 50)))
+    (define x (signal       #f #t #f #t #f))
+    (define y (logic-signal 10 20 30 40 50))
+    (define z (logic-signal 0  0  20 20 40))
     (port-set! (c x) x)
     (port-set! (c y) y)
-    (check-sig-equal? (port-ref c z) (register/e 0 x y) 6))
+    (check-sig-equal? (port-ref c z) z 6))
 
   (test-case "Can register a signal with reset and enable"
     (define c (C14-make))
-    (define x (list->signal (list #f #t  #f #t #f)))
-    (define y (list->signal (list #f #f  #t #f #f)))
-    (define z (list->signal (list 10 20  30 40 50)))
+    (define x (signal       #f #f #t #f #f))
+    (define y (signal       #f #t #f #t #f))
+    (define z (logic-signal 10 20 30 40 50))
+    (define u (logic-signal 0  0  20 0  40))
     (port-set! (c x) x)
     (port-set! (c y) y)
     (port-set! (c z) z)
-    (check-sig-equal? (port-ref c u) (register/re 0 x y z) 6))
+    (check-sig-equal? (port-ref c u) u 6))
 
   (test-case "Can read a local constant"
     (define c (C15-make))
-    (check-sig-equal? (port-ref c y) (signal 56) 1))
+    (check-sig-equal? (port-ref c y) (logic-signal 56) 1))
 
   (test-case "Can read a constant as a channel field"
     (define c (C15-make))
-    (check-equal? (dict-ref c 'N) 56))
+    (check-equal? (logic-vector-value (dict-ref c 'N)) 56))
 
   (test-case "Can read a constant from a port"
     (define c (C16-make))
-    (check-sig-equal? (port-ref c p y) (signal 56) 1))
+    (check-sig-equal? (port-ref c p y) (logic-signal 56) 1))
 
   (test-case "Can read a constant from an instance"
     (define c (C17-make))
-    (check-sig-equal? (port-ref c y) (signal 56) 1))
+    (check-sig-equal? (port-ref c y) (logic-signal 56) 1))
 
   (test-case "Can read a constant from an instance port"
     (define c (C18-make))
-    (check-sig-equal? (port-ref c y) (signal 56) 1))
+    (check-sig-equal? (port-ref c y) (logic-signal 56) 1))
 
   (test-case "Can read a global constant"
     (define c (C19-make))
-    (check-sig-equal? (port-ref c y) (signal 44) 1)))
+    (check-sig-equal? (port-ref c y) (logic-signal 44) 1)))

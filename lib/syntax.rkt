@@ -103,16 +103,12 @@
   (define-syntax-class call-expr
     #:literals [call-expr not]
     #:datum-literals [or-expr and-expr rel-expr add-expr mult-expr if-expr prefix-expr range-expr]
-    (pattern ((~or* add-expr mult-expr) left fn-name right)
-      #:attr (arg 1) (list #'left #'right))
-    (pattern ((~or* or-expr and-expr rel-expr) left op right)
+    (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
       #:attr fn-name (format-id #'op "hydromel-~a" #'op))
-    (pattern (prefix-expr not right)
+    (pattern (prefix-expr op right)
       #:attr (arg 1) (list #'right)
-      #:attr fn-name #'hydromel-not)
-    (pattern (prefix-expr fn-name right)
-      #:attr (arg 1) (list #'right))
+      #:attr fn-name (format-id #'op "hydromel-~a" #'op))
     (pattern (if-expr arg ...)
       #:attr fn-name #'hydromel-if)
     (pattern (range-expr left op right)
