@@ -1,6 +1,8 @@
 #lang racket
 
-(require syntax/parse/define)
+(require
+  syntax/parse/define
+  "std.rkt")
 
 (provide
   port-ref
@@ -13,14 +15,14 @@
   [(port-ref* x n:number i ...)     #'(port-ref* (vector-ref x n)  i ...)])
 
 (define-syntax-parse-rule (port-ref path ...)
-  (unbox (port-ref* path ...)))
+  (slot-signal (port-ref* path ...)))
 
 (define-syntax-parse-rule (port-set! (path ...) value)
-  (set-box! (port-ref* path ...) value))
+  (set-slot-signal! (port-ref* path ...) value))
 
 (define (signal-table inst [parent #hash()] [path #f])
   (match inst
-    [(box sig) #:when sig
+    [(slot sig) #:when sig
      (hash-set parent path sig)]
 
     [(hash-table _ ...)

@@ -93,19 +93,19 @@
 (define-syntax-parse-rule (parameter _ ...)
   (begin))
 
-; A data port expands to a variable containing an empty box.
-; The box is relevant for input ports because they are assigned from outside
+; A data port expands to a variable containing an empty slot.
+; The slot is relevant for input ports because they are assigned from outside
 ; the current component instance.
-; We use a box for output ports as well to keep a simple port access mechanism.
-(define-syntax-parse-rule (data-port name _ ...)
-  (define name (box #f)))
+; We use a slot for output ports as well to keep a simple port access mechanism.
+(define-syntax-parse-rule (data-port name _ type)
+  (define name (slot #f)))
 
 ; A local signal expands to a variable containing the result of the given
-; expression in a box.
-; Like output ports, local signals do not need to be wrapped in a box, but
+; expression in a slot.
+; Like output ports, local signals do not need to be wrapped in a slot, but
 ; it helps expanding expressions without managing several special cases.
 (define-syntax-parse-rule (local-signal name expr)
-  (define name (box expr)))
+  (define name (slot expr)))
 
 ; Multiplicity indications are processed in macros composite-port and instance.
 (define-syntax (multiplicity stx)
@@ -173,14 +173,14 @@
        (define name^ expr))])
 
 ; An alias expands to a partial access to the target port.
-; The alias and the corresponding port must refer to the same box.
+; The alias and the corresponding port must refer to the same slot.
 (define-syntax-parse-rule (alias name port-name)
   (define name (dict-ref port-name 'name)))
 
-; An assignment fills the target port's box with the signal
+; An assignment fills the target port's slot with the signal
 ; from the right-hand side.
 (define-syntax-parse-rule (assignment target expr)
-  (set-box! target expr))
+  (set-slot-signal! target expr))
 
 (define-syntax-parse-rule (connection left right)
   (hydromel-connect left right))
@@ -231,7 +231,7 @@
 ; identify an expression that refers to a port or local signal for reading.
 ; It expands to a deferred signal read.
 (define-syntax-parse-rule (signal-expr expr)
-  (signal-defer (unbox expr)))
+  (signal-defer (slot-signal expr)))
 
 ; A static expression wraps a constant into a signal.
 (define-syntax-parse-rule (static-expr expr)
@@ -449,40 +449,40 @@
 
   (test-case "Can construct a channel for an interface with simple ports"
     (define i (I0-make 30))
-    (check-pred box? (dict-ref i 'x))
-    (check-pred box? (dict-ref i 'y)))
+    (check-pred slot? (dict-ref i 'x))
+    (check-pred slot? (dict-ref i 'y)))
 
   (test-case "Can construct a channel for a component with simple ports"
     (define c (C0-make 30))
-    (check-pred box? (dict-ref c 'x))
-    (check-pred box? (dict-ref c 'y)))
+    (check-pred slot? (dict-ref c 'x))
+    (check-pred slot? (dict-ref c 'y)))
 
   (test-case "Can construct a channel for an interface with composite ports and no parameters"
     (define i3 (I3-make))
-    (check-pred box?  (dict-ref i3 'z))
+    (check-pred slot? (dict-ref i3 'z))
     (check-pred dict? (dict-ref i3 'i))
-    (check-pred box?  (dict-ref (dict-ref i3 'i) 'x))
-    (check-pred box?  (dict-ref (dict-ref i3 'i) 'y))
-    (check-pred box?  (dict-ref i3 'u))
+    (check-pred slot? (dict-ref (dict-ref i3 'i) 'x))
+    (check-pred slot? (dict-ref (dict-ref i3 'i) 'y))
+    (check-pred slot? (dict-ref i3 'u))
 
     (define i4 (I4-make))
-    (check-pred box?  (dict-ref i4 'v))
+    (check-pred slot? (dict-ref i4 'v))
     (check-pred dict? (dict-ref i4 'j))
-    (check-pred box?  (dict-ref (dict-ref i4 'j) 'z))
-    (check-pred box?  (dict-ref (dict-ref (dict-ref i4 'j) 'i) 'x))
-    (check-pred box?  (dict-ref (dict-ref (dict-ref i4 'j) 'i) 'y))
-    (check-pred box?  (dict-ref (dict-ref i4 'j) 'u))
-    (check-pred box?  (dict-ref i4 'w)))
+    (check-pred slot? (dict-ref (dict-ref i4 'j) 'z))
+    (check-pred slot? (dict-ref (dict-ref (dict-ref i4 'j) 'i) 'x))
+    (check-pred slot? (dict-ref (dict-ref (dict-ref i4 'j) 'i) 'y))
+    (check-pred slot? (dict-ref (dict-ref i4 'j) 'u))
+    (check-pred slot? (dict-ref i4 'w)))
 
   (test-case "Can construct a channel for a component with composite ports and no parameters"
     (define c (C2-make))
-    (check-pred box?  (dict-ref c 'v))
+    (check-pred slot? (dict-ref c 'v))
     (check-pred dict? (dict-ref c 'j))
-    (check-pred box?  (dict-ref (dict-ref c 'j) 'z))
-    (check-pred box?  (dict-ref (dict-ref (dict-ref c 'j) 'i) 'x))
-    (check-pred box?  (dict-ref (dict-ref (dict-ref c 'j) 'i) 'y))
-    (check-pred box?  (dict-ref (dict-ref c 'j) 'u))
-    (check-pred box?  (dict-ref c 'w)))
+    (check-pred slot? (dict-ref (dict-ref c 'j) 'z))
+    (check-pred slot? (dict-ref (dict-ref (dict-ref c 'j) 'i) 'x))
+    (check-pred slot? (dict-ref (dict-ref (dict-ref c 'j) 'i) 'y))
+    (check-pred slot? (dict-ref (dict-ref c 'j) 'u))
+    (check-pred slot? (dict-ref c 'w)))
 
   (test-case "Can construct a channel for an interface with a vector port"
     (define j (I5-make))

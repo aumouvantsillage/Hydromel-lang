@@ -7,6 +7,8 @@
 
 (provide (all-defined-out))
 
+(struct slot (signal) #:mutable)
+
 (define-syntax-parse-rule (hydromel-if (~seq c t) ... e)
   (cond [(logic-vector-true? c) t]
         ...
@@ -31,16 +33,16 @@
   (for ([(k vl) (in-dict left)])
     (define vr (dict-ref right k))
     (cond
-      [(box? vl)
-       (let ([sl (unbox vl)]
-             [sr (unbox vr)])
-         ; If one of the current items is a non-empty box,
-         ; copy the content of the non-empty box into the empty one.
-         ; If both items are empty boxes, copy the left box itself
+      [(slot? vl)
+       (let ([sl (slot-signal vl)]
+             [sr (slot-signal vr)])
+         ; If one of the current items is a non-empty slot,
+         ; copy the content of the non-empty slot into the empty one.
+         ; If both items are empty slots, copy the left slot itself
          ; into the right dictionary.
          (cond [(and sl sr) (error "Cannot overwrite an existing connection at" k)]
-               [sl          (set-box! vr sl)]
-               [sr          (set-box! vl sr)]
+               [sl          (set-slot-signal! vr sl)]
+               [sr          (set-slot-signal! vl sr)]
                [else        (dict-set! right k vl)]))]
 
       ; If both items are dictionaries, connect their contents.
