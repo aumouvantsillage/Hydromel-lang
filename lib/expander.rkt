@@ -90,6 +90,7 @@
   (design-unit name body ...))
 
 ; Parameters are expanded in macro design-unit.
+; TODO add type checking
 (define-syntax-parse-rule (parameter _ ...)
   (begin))
 
@@ -98,14 +99,14 @@
 ; the current component instance.
 ; We use a slot for output ports as well to keep a simple port access mechanism.
 (define-syntax-parse-rule (data-port name _ type)
-  (define name (slot #f)))
+  (define name (slot #f type)))
 
 ; A local signal expands to a variable containing the result of the given
 ; expression in a slot.
 ; Like output ports, local signals do not need to be wrapped in a slot, but
 ; it helps expanding expressions without managing several special cases.
 (define-syntax-parse-rule (local-signal name expr)
-  (define name (slot expr)))
+  (define name (slot expr #f))) ; TODO infer type of expr
 
 ; Multiplicity indications are processed in macros composite-port and instance.
 (define-syntax (multiplicity stx)
@@ -257,56 +258,58 @@
   (require
     rackunit
     "helpers.rkt"
-    "signal.rkt")
+    "signal.rkt"
+    "types.rkt")
 
   (interface I0
-    (parameter N #f)
-    (data-port x in  #f)
-    (data-port y out #f))
+    (parameter N (name-expr unsigned))
+    (data-port x in  (call-expr signed (name-expr N)))
+    (data-port y out (call-expr signed (name-expr N))))
 
   (component C0
-    (parameter N #f)
-    (data-port x in  #f)
-    (data-port y out #f)
+    (parameter N (name-expr unsigned))
+    (data-port x in  (call-expr signed (name-expr N)))
+    (data-port y out (call-expr signed (name-expr N)))
     (assignment (name-expr y) (signal-expr (name-expr x))))
 
   (interface I1
-    (composite-port i I0)
-    (data-port z in #f))
+    (composite-port i I0 8)
+    (data-port z in (call-expr signed (literal-expr 32))))
 
   (component C1
-    (composite-port i I0)
-    (data-port z in #f)
+    (composite-port i I0 8)
+    (data-port z in (call-expr signed (literal-expr 32)))
     (assignment (field-expr (name-expr i) y) (signal-expr (field-expr (name-expr i) x))))
 
   (interface I2
-    (data-port x in #f)
-    (data-port y out #f))
+    (data-port x in  (call-expr signed (literal-expr 32)))
+    (data-port y out (call-expr signed (literal-expr 32))))
 
   (interface I3
-    (data-port z in #f)
-    (composite-port i I2)  (data-port u out #f))
+    (data-port z in (call-expr signed (literal-expr 32)))
+    (composite-port i I2)
+    (data-port u out (call-expr signed (literal-expr 32))))
 
   (interface I4
-    (data-port v in #f)
+    (data-port v in (call-expr signed (literal-expr 32)))
     (composite-port j I3)
-    (data-port w out #f))
+    (data-port w out (call-expr signed (literal-expr 32))))
 
   (component C2
-    (data-port v in #f)
+    (data-port v in (call-expr signed (literal-expr 32)))
     (composite-port j I3)
-    (data-port w out #f)
+    (data-port w out (call-expr signed (literal-expr 32)))
     (assignment (name-expr w) (signal-expr (name-expr v))))
 
   (interface I5
     (composite-port i (multiplicity (literal-expr 3)) I2))
 
   (interface I6
-    (parameter N #f)
+    (parameter N (name-expr unsigned))
     (composite-port i (multiplicity (name-expr N)) I2))
 
   (interface I7
-    (parameter M #f)
+    (parameter M (name-expr unsigned))
     (composite-port j I6 (name-expr M)))
 
   (component C3
@@ -324,31 +327,31 @@
                 (signal-expr (field-expr (indexed-expr (name-expr i) (literal-expr 2)) x))))
 
   (interface I8
-    (data-port x in (name-expr integer)))
+    (data-port x in (call-expr signed (literal-expr 32))))
 
   (component C5
     (composite-port i (multiplicity (literal-expr 3)) I8)
-    (data-port y in (name-expr integer))
-    (data-port z out (name-expr integer))
+    (data-port y in (call-expr signed (literal-expr 32)))
+    (data-port z out (call-expr signed (literal-expr 32)))
     (assignment (name-expr z)
                 (lift-expr [y^ (signal-expr (name-expr y))]
                            (signal-expr (field-expr (indexed-expr (name-expr i) (name-expr y^)) x)))))
 
   (component C6
-    (data-port x in #f)
-    (data-port y in #f)
-    (data-port z out #f)
+    (data-port x in (call-expr signed (literal-expr 32)))
+    (data-port y in (call-expr signed (literal-expr 32)))
+    (data-port z out (call-expr signed (literal-expr 32)))
     (assignment (name-expr z)
                 (lift-expr [x^ (signal-expr (name-expr x))]
                            [y^ (signal-expr (name-expr y))]
                            (call-expr logic-vector-+ (name-expr x^) (name-expr y^)))))
 
   (component C7
-    (data-port x in #f)
-    (data-port y in #f)
-    (data-port z in #f)
-    (data-port u in #f)
-    (data-port v out #f)
+    (data-port x in (call-expr signed (literal-expr 32)))
+    (data-port y in (call-expr signed (literal-expr 32)))
+    (data-port z in (call-expr signed (literal-expr 32)))
+    (data-port u in (call-expr signed (literal-expr 32)))
+    (data-port v out (call-expr signed (literal-expr 32)))
     (local-signal xy (lift-expr [x^ (signal-expr (name-expr x))]
                                 [y^ (signal-expr (name-expr y))]
                                 (call-expr logic-vector-* (name-expr x^) (name-expr y^))))
@@ -361,23 +364,23 @@
                            (call-expr logic-vector-+ (name-expr xy^) (name-expr zu^)))))
 
   (component C8
-    (parameter N #f)
-    (data-port x in #f)
-    (data-port y out #f)
+    (parameter N (name-expr unsigned))
+    (data-port x in (call-expr signed (literal-expr 32)))
+    (data-port y out (call-expr signed (literal-expr 32)))
     (assignment (name-expr y)
                 (lift-expr [x^ (signal-expr (name-expr x))]
                            (call-expr logic-vector-* x^ N))))
   (component C9
-    (data-port x in #f)
-    (data-port y out #f)
+    (data-port x in (call-expr signed (literal-expr 32)))
+    (data-port y out (call-expr signed (literal-expr 32)))
     (instance c C8 (literal-expr 10))
     (assignment (field-expr (name-expr c) x) (signal-expr (name-expr x)))
     (assignment (name-expr y) (signal-expr (field-expr (name-expr c) y))))
 
   (component C10
-    (data-port x0 in #f)
-    (data-port x1 in #f)
-    (data-port y out #f)
+    (data-port x0 in (call-expr signed (literal-expr 32)))
+    (data-port x1 in (call-expr signed (literal-expr 32)))
+    (data-port y out (call-expr signed (literal-expr 32)))
     (instance c (multiplicity (literal-expr 2)) C8 (literal-expr 10))
     (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 0)) x) (signal-expr (name-expr x0)))
     (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 1)) x) (signal-expr (name-expr x1)))
@@ -386,59 +389,59 @@
                                          (call-expr logic-vector-+ y0 y1))))
 
   (component C11
-    (data-port x in #f)
-    (data-port y out #f)
+    (data-port x in (call-expr signed (literal-expr 32)))
+    (data-port y out (call-expr signed (literal-expr 32)))
     (assignment (name-expr y) (register-expr (literal-expr 0) (signal-expr (name-expr x)))))
 
   (component C12
-    (data-port x in #f)
-    (data-port y in #f)
-    (data-port z out #f)
+    (data-port x in (call-expr signed (literal-expr 32)))
+    (data-port y in (call-expr signed (literal-expr 32)))
+    (data-port z out (call-expr signed (literal-expr 32)))
     (assignment (name-expr z) (register-expr (literal-expr 0) (when-clause (signal-expr (name-expr x)))
                                              (signal-expr (name-expr y)))))
 
   (component C13
-    (data-port x in #f)
-    (data-port y in #f)
-    (data-port z out #f)
+    (data-port x in (call-expr signed (literal-expr 32)))
+    (data-port y in (call-expr signed (literal-expr 32)))
+    (data-port z out (call-expr signed (literal-expr 32)))
     (assignment (name-expr z) (register-expr (literal-expr 0)
                                              (signal-expr (name-expr y)) (when-clause (signal-expr (name-expr x))))))
 
   (component C14
-    (data-port x in #f)
-    (data-port y in #f)
-    (data-port z in #f)
-    (data-port u out #f)
+    (data-port x in (call-expr signed (literal-expr 32)))
+    (data-port y in (call-expr signed (literal-expr 32)))
+    (data-port z in (call-expr signed (literal-expr 32)))
+    (data-port u out (call-expr signed (literal-expr 32)))
     (assignment (name-expr u) (register-expr (literal-expr 0) (when-clause (signal-expr (name-expr x)))
                                              (signal-expr (name-expr z)) (when-clause (signal-expr (name-expr y))))))
 
   (component C15
     (constant N (literal-expr 56))
-    (data-port y out #f)
+    (data-port y out (call-expr signed (literal-expr 32)))
     (assignment (name-expr y) (signal (name-expr N))))
 
   (interface I9
     (constant N (literal-expr 56))
-    (data-port y out #f))
+    (data-port y out (call-expr signed (literal-expr 32))))
 
   (component C16
     (composite-port p I9)
     (assignment (field-expr (name-expr p) y) (signal (field-expr (name-expr p) N))))
 
   (component C17
-    (data-port y out #f)
+    (data-port y out (call-expr signed (literal-expr 32)))
     (instance c C15)
     (assignment (name-expr y) (signal (field-expr (name-expr c) N))))
 
   (component C18
-    (data-port y out #f)
+    (data-port y out (call-expr signed (literal-expr 32)))
     (instance c C16)
     (assignment (name-expr y) (signal (field-expr (field-expr (name-expr c) p) N))))
 
   (constant K (literal-expr 44))
 
   (component C19
-    (data-port y out (name-expr integer))
+    (data-port y out (call-expr signed (literal-expr 32)))
     (assignment (name-expr y) (signal (name-expr K -constant))))
 
   (define (check-sig-equal? t e n)
@@ -506,7 +509,7 @@
       (check-pred dict? (vector-ref (dict-ref (dict-ref k 'j) 'i) n))))
 
   (test-case "Can assign a simple port to another simple port"
-    (define c (C0-make #f))
+    (define c (C0-make 32))
     (define x (logic-signal 23))
     (port-set! (c x) x)
     (check-sig-equal? (port-ref c y) x 5))

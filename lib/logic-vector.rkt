@@ -24,7 +24,7 @@
   logic-vector-*
   logic-vector->)
 
-(struct logic-vector (value width signed?))
+(struct logic-vector (value width signed?) #:transparent)
 
 (define (make-logic-vector v)
   (if (< v 0)

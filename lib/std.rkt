@@ -7,7 +7,7 @@
 
 (provide (all-defined-out))
 
-(struct slot (signal) #:mutable)
+(struct slot (signal type) #:mutable)
 
 (define-syntax-parse-rule (hydromel-if (~seq c t) ... e)
   (cond [(logic-vector-true? c) t]

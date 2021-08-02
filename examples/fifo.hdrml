@@ -1,8 +1,8 @@
 #lang hydromel
 
 interface producer(T : type)
-    port valid : out bit
-    port ready : in  bit
+    port valid : out unsigned(1)
+    port ready : in  unsigned(1)
     port data  : out T
 end
 

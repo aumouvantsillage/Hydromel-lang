@@ -22,7 +22,7 @@
 
 (define (signal-table inst [parent #hash()] [path #f])
   (match inst
-    [(slot sig) #:when sig
+    [(slot sig _) #:when sig
      (hash-set parent path inst)]
 
     [(hash-table _ ...)

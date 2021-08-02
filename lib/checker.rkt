@@ -521,17 +521,18 @@
     rackunit
     "helpers.rkt"
     "signal.rkt"
-    "std.rkt")
+    "std.rkt"
+    "types.rkt")
 
   (begin-hydromel
     (component C0
-      (data-port x in (name-expr integer))
-      (data-port y out (name-expr integer))
+      (data-port x in (call-expr signed (literal-expr 32)))
+      (data-port y out (call-expr signed (literal-expr 32)))
       (assignment (name-expr y) (name-expr x)))
 
     (interface I0
-      (data-port x in (name-expr integer))
-      (data-port y out (name-expr integer)))
+      (data-port x in (call-expr signed (literal-expr 32)))
+      (data-port y out (call-expr signed (literal-expr 32))))
 
     (component C1
       (composite-port i I0)
@@ -559,71 +560,71 @@
                   (field-expr (indexed-expr (field-expr (indexed-expr (name-expr j) (literal-expr 1)) i) (literal-expr 1)) x)))
 
     (component C4
-      (data-port x out (name-expr integer))
+      (data-port x out (call-expr signed (literal-expr 32)))
       (assignment (name-expr x) (literal-expr 10)))
 
     (component C5
-      (data-port x out (name-expr integer))
+      (data-port x out (call-expr signed (literal-expr 32)))
       (constant k (literal-expr 10))
       (assignment (name-expr x) (name-expr k)))
 
     (component C6
-      (data-port x out (name-expr integer))
+      (data-port x out (call-expr signed (literal-expr 32)))
       (constant k (literal-expr 10))
       (assignment (name-expr x) (call-expr hydromel-+ (name-expr k) (literal-expr 1))))
 
     (component C7
-      (data-port x in (name-expr integer))
-      (data-port y in (name-expr integer))
-      (data-port z out (name-expr integer))
+      (data-port x in (call-expr signed (literal-expr 32)))
+      (data-port y in (call-expr signed (literal-expr 32)))
+      (data-port z out (call-expr signed (literal-expr 32)))
       (assignment (name-expr z) (call-expr hydromel-+ (name-expr x) (name-expr y))))
 
     (component C8
-      (data-port x in (name-expr integer))
-      (data-port y in (name-expr integer))
-      (data-port z in (name-expr integer))
-      (data-port u in (name-expr integer))
-      (data-port v out (name-expr integer))
+      (data-port x in (call-expr signed (literal-expr 32)))
+      (data-port y in (call-expr signed (literal-expr 32)))
+      (data-port z in (call-expr signed (literal-expr 32)))
+      (data-port u in (call-expr signed (literal-expr 32)))
+      (data-port v out (call-expr signed (literal-expr 32)))
       (assignment (name-expr v) (call-expr hydromel-+ (call-expr hydromel-* (name-expr x) (name-expr y))
                                                       (call-expr hydromel-* (name-expr z) (name-expr u)))))
 
     (component C9
-      (data-port x in (name-expr integer))
-      (data-port y in (name-expr integer))
-      (data-port z in (name-expr integer))
-      (data-port u in (name-expr integer))
-      (data-port v out (name-expr integer))
+      (data-port x in (call-expr signed (literal-expr 32)))
+      (data-port y in (call-expr signed (literal-expr 32)))
+      (data-port z in (call-expr signed (literal-expr 32)))
+      (data-port u in (call-expr signed (literal-expr 32)))
+      (data-port v out (call-expr signed (literal-expr 32)))
       (local-signal xy (call-expr hydromel-* (name-expr x) (name-expr y)))
       (local-signal zu (call-expr hydromel-* (name-expr z) (name-expr u)))
       (assignment (name-expr v) (call-expr hydromel-+ (name-expr xy) (name-expr zu))))
 
     (interface I2
-      (data-port x in (name-expr integer)))
+      (data-port x in (call-expr signed (literal-expr 32))))
 
     (component C10
       (composite-port i (multiplicity (literal-expr 3)) I2)
-      (data-port y in (name-expr integer))
-      (data-port z out (name-expr integer))
+      (data-port y in (call-expr signed (literal-expr 32)))
+      (data-port z out (call-expr signed (literal-expr 32)))
       (assignment (name-expr z)
                   (field-expr (indexed-expr (name-expr i) (name-expr y)) x)))
 
     (component C11
-      (parameter N (name-expr integer))
-      (data-port x in (name-expr integer))
-      (data-port y out (name-expr integer))
+      (parameter N (name-expr unsigned))
+      (data-port x in (call-expr signed (literal-expr 32)))
+      (data-port y out (call-expr signed (literal-expr 32)))
       (assignment (name-expr y) (call-expr hydromel-* (name-expr x) (name-expr N))))
 
     (component C12
-      (data-port x in (name-expr integer))
-      (data-port y out (name-expr integer))
+      (data-port x in (call-expr signed (literal-expr 32)))
+      (data-port y out (call-expr signed (literal-expr 32)))
       (instance c C11 (literal-expr 10))
       (assignment (field-expr (name-expr c) x) (name-expr x))
       (assignment (name-expr y) (field-expr (name-expr c) y)))
 
     (component C13
-      (data-port x0 in (name-expr integer))
-      (data-port x1 in (name-expr integer))
-      (data-port y out (name-expr integer))
+      (data-port x0 in (call-expr signed (literal-expr 32)))
+      (data-port x1 in (call-expr signed (literal-expr 32)))
+      (data-port y out (call-expr signed (literal-expr 32)))
       (instance c (multiplicity (literal-expr 2)) C11 (literal-expr 10))
       (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 0)) x) (name-expr x0))
       (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 1)) x) (name-expr x1))
@@ -635,8 +636,8 @@
       (assignment (name-expr y) (name-expr x)))
 
     (component C27
-      (data-port x in (name-expr integer))
-      (data-port y out (name-expr integer))
+      (data-port x in (call-expr signed (literal-expr 32)))
+      (data-port y out (call-expr signed (literal-expr 32)))
       (instance c C14)
       (assignment (field-expr (name-expr c) x) (name-expr x))
       (assignment (name-expr y) (field-expr (name-expr c) y)))
@@ -646,8 +647,8 @@
       (assignment (name-expr x) (name-expr y)))
 
     (component C28
-      (data-port x in (name-expr integer))
-      (data-port y out (name-expr integer))
+      (data-port x in (call-expr signed (literal-expr 32)))
+      (data-port y out (call-expr signed (literal-expr 32)))
       (instance c C24)
       (assignment (field-expr (name-expr c) y) (name-expr x))
       (assignment (name-expr y) (field-expr (name-expr c) x)))
@@ -686,67 +687,67 @@
       (assignment (name-expr y) (name-expr x)))
 
     (component C18
-      (data-port x in (name-expr integer))
-      (data-port y in (name-expr integer))
-      (data-port z out (name-expr integer))
+      (data-port x in (call-expr signed (literal-expr 32)))
+      (data-port y in (call-expr signed (literal-expr 32)))
+      (data-port z out (call-expr signed (literal-expr 32)))
       (assignment (name-expr z) (call-expr hydromel-if (call-expr hydromel-> (name-expr x) (name-expr y))
                                   (name-expr x)
                                   (name-expr y))))
 
     (component C19
-      (data-port x in (name-expr integer))
-      (data-port y out (name-expr integer))
+      (data-port x in (call-expr signed (literal-expr 32)))
+      (data-port y out (call-expr signed (literal-expr 32)))
       (assignment (name-expr y) (register-expr (literal-expr 0) (name-expr x))))
 
     (component C20
-      (data-port x in (name-expr integer))
-      (data-port y in (name-expr integer))
-      (data-port z out (name-expr integer))
+      (data-port x in (call-expr signed (literal-expr 32)))
+      (data-port y in (call-expr signed (literal-expr 32)))
+      (data-port z out (call-expr signed (literal-expr 32)))
       (assignment (name-expr z) (register-expr (literal-expr 0) (when-clause (name-expr x))
                                                (name-expr y))))
 
     (component C21
-      (data-port x in (name-expr integer))
-      (data-port y in (name-expr integer))
-      (data-port z out (name-expr integer))
+      (data-port x in (call-expr signed (literal-expr 32)))
+      (data-port y in (call-expr signed (literal-expr 32)))
+      (data-port z out (call-expr signed (literal-expr 32)))
       (assignment (name-expr z) (register-expr (literal-expr 0)
                                                (name-expr y) (when-clause (name-expr x)))))
 
     (component C22
-      (data-port x in (name-expr integer))
-      (data-port y in (name-expr integer))
-      (data-port z in (name-expr integer))
-      (data-port u out (name-expr integer))
+      (data-port x in (call-expr signed (literal-expr 32)))
+      (data-port y in (call-expr signed (literal-expr 32)))
+      (data-port z in (call-expr signed (literal-expr 32)))
+      (data-port u out (call-expr signed (literal-expr 32)))
       (assignment (name-expr u) (register-expr (literal-expr 0) (when-clause (name-expr x))
                                                (name-expr z) (when-clause (name-expr y)))))
 
     (component C29
       (constant N (literal-expr 56))
-      (data-port y out (name-expr integer))
+      (data-port y out (call-expr signed (literal-expr 32)))
       (assignment (name-expr y) (name-expr N)))
 
     (interface I5
       (constant N (literal-expr 56))
-      (data-port y out (name-expr integer)))
+      (data-port y out (call-expr signed (literal-expr 32))))
 
     (component C30
       (composite-port p I5)
       (assignment (field-expr (name-expr p) y) (field-expr (name-expr p) N)))
 
     (component C31
-      (data-port y out (name-expr integer))
+      (data-port y out (call-expr signed (literal-expr 32)))
       (instance c C29)
       (assignment (name-expr y) (field-expr (name-expr c) N)))
 
     (component C32
-      (data-port y out (name-expr integer))
+      (data-port y out (call-expr signed (literal-expr 32)))
       (instance c C30)
       (assignment (name-expr y) (field-expr (field-expr (name-expr c) p) N)))
 
     (constant K (literal-expr 44))
 
     (component C33
-      (data-port y out (name-expr integer))
+      (data-port y out (call-expr signed (literal-expr 32)))
       (assignment (name-expr y) (name-expr K)))
 
     (define (check-sig-equal? t e n)
