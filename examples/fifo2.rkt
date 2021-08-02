@@ -4,6 +4,7 @@
   hydromel/lib/signal
   hydromel/lib/helpers
   hydromel/lib/logic-vector
+  hydromel/lib/std
   hydromel/lib/vcd
   "fifo.hdrml")
 
@@ -15,10 +16,10 @@
 
 (define duration 15)
 
-(define sigs (signal-table inst))
+(define tbl (signal-table inst))
 
-(for ([(name sig) (in-dict sigs)])
-  (printf "~a = ~a\n" name (logic-signal-take sig duration)))
+(for ([(name slt) (in-dict tbl)])
+  (printf "~a = ~a\n" name (logic-signal-take (slot-signal slt) duration)))
 
-(vcd sigs duration "10 ns"
+(vcd tbl duration "10 ns"
   (open-output-file "fifo2.vcd" #:exists 'replace))

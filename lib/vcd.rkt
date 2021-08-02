@@ -8,16 +8,17 @@
   syntax/parse/define
   "logic.rkt"
   "logic-vector.rkt"
-  "signal.rkt")
+  "signal.rkt"
+  "std.rkt")
 
 (provide vcd)
 
 (struct waveform (short-name width values))
 
-(define (vcd sigs duration ts [out (current-output-port)])
-  (define wavs (for/hash ([(name sig) (in-dict sigs)]
+(define (vcd table duration ts [out (current-output-port)])
+  (define wavs (for/hash ([(name slt) (in-dict table)]
                           [index      (in-naturals)])
-                 (define samples (signal-take sig duration))
+                 (define samples (signal-take (slot-signal slt) duration))
                  (values name (waveform (format "s~a" index)
                                         (apply max (map logic-vector-width samples))
                                         (map logic-vector-value samples)))))
