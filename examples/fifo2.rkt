@@ -1,14 +1,14 @@
 #lang racket
 
 (require
+  hydromel
   hydromel/lib/signal
   hydromel/lib/helpers
   hydromel/lib/logic-vector
-  hydromel/lib/std
   hydromel/lib/vcd
   "fifo.hdrml")
 
-(define inst (fifo2b-make #f (make-logic-vector 0)))
+(define inst (fifo2b-make (unsigned 8) (make-logic-vector 0)))
 
 (port-set! (inst c valid) (logic-signal 0  1  1  1  1  0))
 (port-set! (inst c data)  (logic-signal 10 10 20 30))
@@ -19,7 +19,7 @@
 (define tbl (signal-table inst))
 
 (for ([(name slt) (in-dict tbl)])
-  (printf "~a = ~a\n" name (logic-signal-take (slot-signal slt) duration)))
+  (printf "~a : ~a = ~a\n" name (slot-type slt) (logic-signal-take (slot-signal slt) duration)))
 
 (vcd tbl duration "10 ns"
   (open-output-file "fifo2.vcd" #:exists 'replace))

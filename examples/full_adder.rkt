@@ -1,6 +1,7 @@
 #lang racket
 
 (require
+  hydromel
   hydromel/lib/signal
   hydromel/lib/helpers
   hydromel/lib/logic-vector
@@ -14,5 +15,5 @@
 
 (define duration 8)
 
-(for ([(name sig) (in-dict (signal-table inst))])
-  (printf "~a = ~a\n" name (logic-signal-take sig duration)))
+(for ([(name slt) (in-dict (signal-table inst))])
+  (printf "~a = ~a\n" name (logic-signal-take (slot-signal slt) duration)))
