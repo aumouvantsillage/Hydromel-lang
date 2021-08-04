@@ -7,3 +7,18 @@ digital circuits with a *single clock domain*.
 
 The reference implementation of Hydromel is written in Racket.
 It is available under the conditions of the Mozilla Public License 2.0.
+
+## Install
+
+```
+git clone https://github.com/aumouvantsillage/Hydromel-lang.git
+cd Hydromel-lang/hydromel
+raco pkg install --auto
+cd ..
+```
+
+## Run an example
+
+```
+racket examples/counter.rkt
+```
