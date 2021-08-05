@@ -9,7 +9,8 @@
   "logic.rkt"
   "logic-vector.rkt"
   "signal.rkt"
-  "std.rkt")
+  "std.rkt"
+  "slot.rkt")
 
 (provide vcd)
 

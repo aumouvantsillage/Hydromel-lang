@@ -5,6 +5,7 @@
   racket/stxparam
   racket/splicing
   "signal.rkt"
+  "slot.rkt"
   "std.rkt"
   "logic-vector.rkt"
   "types.rkt"

@@ -2,7 +2,8 @@
 
 (require
   syntax/parse/define
-  "std.rkt")
+  "std.rkt"
+  "slot.rkt")
 
 (provide
   port-ref
