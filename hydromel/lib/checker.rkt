@@ -190,8 +190,11 @@
        (thunk/in-scope
          ; TODO check expression type
          (define/syntax-parse expr (check-assigned-expr (expr^)))
-         (syntax/loc stx
-           (local-signal name expr)))]
+         (if (attribute s.type)
+           (syntax/loc stx
+             (local-signal name s.type expr))
+           (syntax/loc stx
+             (local-signal name expr))))]
 
       [s:stx/assignment
        ; TODO check circular dependencies.

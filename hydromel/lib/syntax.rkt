@@ -53,7 +53,7 @@
 
   (define-syntax-class local-signal
     #:literals [local-signal]
-    (pattern (local-signal name expr)))
+    (pattern (local-signal name (~optional type) expr)))
 
   (define-syntax-class assignment
     #:literals [assignment]

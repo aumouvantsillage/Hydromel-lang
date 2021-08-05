@@ -7,6 +7,7 @@
   "signal.rkt"
   "std.rkt"
   "logic-vector.rkt"
+  "types.rkt"
   (for-syntax
     racket/match
     racket/syntax
@@ -64,7 +65,50 @@
   ; Return the list of port and signal names in the given syntax object.
   (define (design-unit-field-names stx-lst)
     (define/syntax-parse ((_ name _ ...) ...) (design-unit-fields stx-lst))
-    (attribute name)))
+    (attribute name))
+
+  ; Generate type inference code.
+  ; TODO defer type inference to support out-of-order dependencies
+  ; TODO handle circular dependencies in register-expr
+  (define (type-inference stx)
+    (syntax-parse stx
+      #:literals [name-expr register-expr when-clause field-expr call-expr signal-expr lift-expr]
+      [(name-expr _)
+       (quasisyntax/loc stx
+         (let ([x #,stx])
+           (match x
+             [(slot _ _)            (slot-type x)]
+             [(logic-vector _ n #f) (unsigned n)]
+             [(logic-vector _ n #t) (signed   n)]
+             [_                     'any])))]
+
+      [(register-expr _ (~optional (when-clause _)) d (~optional (when-clause _)))
+       (type-inference #'d)]
+
+      [(field-expr expr field-name)
+       (syntax/loc stx
+         (slot-type (dict-ref expr 'field-name)))]
+
+      [(call-expr name arg ...)
+       #:with sig-name (format-id #'here "~a-signature" #'name)
+       #:with (arg-type ...) (map type-inference (attribute arg))
+       (syntax/loc stx
+         (sig-name arg-type ...))]
+
+      ; TODO
+      ; [(field-expr expr field-name type-name)]
+
+      [(signal-expr x)
+       (type-inference #'x)]
+
+      [(lift-expr (name sexpr) ...+ expr)
+       #:with (sexpr-type ...) (map type-inference (attribute sexpr))
+       #:with expr-type (type-inference #'expr)
+       (syntax/loc stx
+         (let ([name (slot #f (type-thunk sexpr-type))] ...)
+           expr-type))]
+
+      [_ #''any])))
 
 (define-syntax (import stx)
   (raise-syntax-error #f "should not be used outside of begin-tiny-hdl" stx))
@@ -99,14 +143,16 @@
 ; the current component instance.
 ; We use a slot for output ports as well to keep a simple port access mechanism.
 (define-syntax-parse-rule (data-port name _ type)
-  (define name (slot #f type)))
+  (define name (slot #f (type-thunk type))))
 
 ; A local signal expands to a variable containing the result of the given
 ; expression in a slot.
 ; Like output ports, local signals do not need to be wrapped in a slot, but
 ; it helps expanding expressions without managing several special cases.
-(define-syntax-parse-rule (local-signal name expr)
-  (define name (slot expr #f))) ; TODO infer type of expr
+; TODO optional type
+(define-syntax-parse-rule (local-signal name (~optional type) expr)
+  #:with type^ (or (attribute type) (type-inference #'expr))
+  (define name (slot expr (type-thunk type^))))
 
 ; Multiplicity indications are processed in macros composite-port and instance.
 (define-syntax (multiplicity stx)
@@ -444,6 +490,13 @@
     (data-port y out (call-expr signed (literal-expr 32)))
     (assignment (name-expr y) (signal (name-expr K -constant))))
 
+  (component C20
+    (constant N (literal-expr 255))
+    (data-port x in (call-expr signed (literal-expr 32)))
+    (local-signal y (name-expr x))
+    (local-signal z (name-expr N)))
+
+
   (define (check-sig-equal? t e n)
     (check-equal? (logic-signal-take t n) (logic-signal-take e n)))
 
@@ -637,4 +690,17 @@
 
   (test-case "Can read a global constant"
     (define c (C19-make))
-    (check-sig-equal? (port-ref c y) (logic-signal 44) 1)))
+    (check-sig-equal? (port-ref c y) (logic-signal 44) 1))
+
+  (test-case "Can infer the type of a port"
+    (define c (C0-make 30))
+    (check-equal? (slot-type (dict-ref c 'x)) (signed 30)))
+
+  (test-case "Can infer the type of a local signal that copies a port"
+    (define c (C20-make))
+    (check-equal? (slot-type (dict-ref c 'y)) (slot-type (dict-ref c 'x))))
+
+  (test-case "Can infer the type of a local signal that copies a constant"
+    (define c (C20-make))
+    (check-equal? (slot-type (dict-ref c 'y)) (slot-type (dict-ref c 'x)))
+    (check-equal? (slot-type (dict-ref c 'z)) (unsigned 8))))

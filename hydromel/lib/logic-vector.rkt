@@ -3,7 +3,8 @@
 (require
   "logic.rkt"
   "signal.rkt"
-  syntax/parse/define)
+  syntax/parse/define
+  (prefix-in t/ "types.rkt"))
 
 (provide
   (struct-out logic-vector)
@@ -13,17 +14,18 @@
   logic-vector-0
   logic-vector-1
   logic-vector-true?
-  logic-vector-not
-  logic-vector-and
-  logic-vector-or
-  logic-vector-xor
-  logic-vector-==
-  logic-vector-/=
-  logic-vector--
-  logic-vector-+
-  logic-vector-*
-  logic-vector->)
-
+  logic-vector-not logic-vector-not-signature
+  logic-vector-and logic-vector-and-signature
+  logic-vector-or  logic-vector-or-signature
+  logic-vector-xor logic-vector-xor-signature
+  logic-vector-==  logic-vector-==-signature
+  logic-vector-/=  logic-vector-/=-signature
+  logic-vector--   logic-vector---signature
+  logic-vector-+   logic-vector-+-signature
+  logic-vector-*   logic-vector-*-signature
+  logic-vector->   logic-vector->-signature
+  logic-vector-unsigned-width)
+  
 (struct logic-vector (value width signed?) #:transparent)
 
 (define (make-logic-vector v)
@@ -54,70 +56,131 @@
   (match-define (logic-vector v w s) a)
   (make-logic-vector* (bitwise-not v) w s))
 
+(define (logic-vector-not-signature ta)
+  ta)
+
 (define (logic-vector-and a b)
-  (match-define (logic-vector va wa sa) a)
-  (match-define (logic-vector vb wb sb) b)
+  (match-define (logic-vector va na sa) a)
+  (match-define (logic-vector vb nb sb) b)
   (make-logic-vector* (bitwise-and va vb)
-                      (max         wa wb)
+                      (max         na nb)
                       (or          sa sb)))
+
+(define (logic-vector-max a b)
+  (max (logic-vector-value a) (logic-vector-value b)))
+
+(define (logic-vector-and-signature ta tb)
+  (match (cons ta tb)
+    [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (logic-vector-max na nb))]
+    [(cons (t/signed   na) (t/integer  nb)) (t/signed   (logic-vector-max na nb))]
+    [(cons (t/integer  na) (t/signed   nb)) (t/signed   (logic-vector-max na nb))]
+    [_ 'invalid]))
 
 (define (logic-vector-or a b)
-  (match-define (logic-vector va wa sa) a)
-  (match-define (logic-vector vb wb sb) b)
+  (match-define (logic-vector va na sa) a)
+  (match-define (logic-vector vb nb sb) b)
   (make-logic-vector* (bitwise-ior va vb)
-                      (max         wa wb)
+                      (max         na nb)
                       (or          sa sb)))
+
+(define (logic-vector-or-signature ta tb)
+  (match (cons ta tb)
+    [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (logic-vector-max na nb))]
+    [(cons (t/signed   na) (t/integer  nb)) (t/signed   (logic-vector-max na nb))]
+    [(cons (t/integer  na) (t/signed   nb)) (t/signed   (logic-vector-max na nb))]
+    [_ 'invalid]))
 
 (define (logic-vector-xor a b)
-  (match-define (logic-vector va wa sa) a)
-  (match-define (logic-vector vb wb sb) b)
+  (match-define (logic-vector va na sa) a)
+  (match-define (logic-vector vb nb sb) b)
   (make-logic-vector* (bitwise-xor va vb)
-                      (max         wa wb)
+                      (max         na nb)
                       (or          sa sb)))
 
+(define (logic-vector-xor-signature ta tb)
+  (match (cons ta tb)
+    [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (logic-vector-max na nb))]
+    [(cons (t/signed   na) (t/integer  nb)) (t/signed   (logic-vector-max na nb))]
+    [(cons (t/integer  na) (t/signed   nb)) (t/signed   (logic-vector-max na nb))]
+    [_ 'invalid]))
+
 (define (logic-vector-== a b)
-  (match-define (logic-vector va wa sa) a)
-  (match-define (logic-vector vb wb sb) b)
+  (match-define (logic-vector va na sa) a)
+  (match-define (logic-vector vb nb sb) b)
   (if (= va vb)
     logic-vector-1
     logic-vector-0))
 
+(define (logic-vector-==-signature ta tb)
+  (t/unsigned 1))
+
 (define (logic-vector-/= a b)
-  (match-define (logic-vector va wa sa) a)
-  (match-define (logic-vector vb wb sb) b)
+  (match-define (logic-vector va na sa) a)
+  (match-define (logic-vector vb nb sb) b)
   (if (= va vb)
     logic-vector-0
     logic-vector-1))
 
+(define (logic-vector-/=-signature ta tb)
+  (t/unsigned 1))
+
 (define (logic-vector-> a b)
-  (match-define (logic-vector va wa sa) a)
-  (match-define (logic-vector vb wb sb) b)
+  (match-define (logic-vector va na sa) a)
+  (match-define (logic-vector vb nb sb) b)
   (if (> va vb)
     logic-vector-1
     logic-vector-0))
 
+(define (logic-vector->-signature ta tb)
+  (t/unsigned 1))
+
 (define (logic-vector-- a [b #f])
-  (match-define (logic-vector va wa sa) a)
+  (match-define (logic-vector va na sa) a)
   (if b
-    (match-let ([(logic-vector vb wb sb) b])
+    (match-let ([(logic-vector vb nb sb) b])
       (make-logic-vector* (- va vb)
-                          (add1 (max wa wb))
+                          (add1 (max na nb))
                           #t))
     (make-logic-vector* (- va)
-                        (if sa wa (add1 wa))
+                        (if sa na (add1 na))
                         #t)))
 
+(define (logic-vector---signature ta [tb #f])
+  (match (cons ta tb)
+    [(cons (t/signed   na) #f)             ta]
+    [(cons (t/unsigned na) #f)             (t/signed (add1 (logic-vector-value na)))]
+    [(cons (t/integer  na) (t/integer nb)) (t/signed (add1 (logic-vector-max na nb)))]
+    [_ 'invalid]))
+
 (define (logic-vector-+ a b)
-  (match-define (logic-vector va wa sa) a)
-  (match-define (logic-vector vb wb sb) b)
+  (match-define (logic-vector va na sa) a)
+  (match-define (logic-vector vb nb sb) b)
   (make-logic-vector* (+ va vb)
-                      (add1 (max wa wb))
+                      (add1 (max na nb))
                       (or sa sb)))
+
+(define (logic-vector-+-signature ta tb)
+  (match (cons ta tb)
+    [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (add1 (logic-vector-max na nb)))]
+    [(cons (t/signed   na) (t/integer nb)) (t/signed    (add1 (logic-vector-max na nb)))]
+    [(cons (t/integer  na) (t/signed   nb)) (t/signed   (add1 (logic-vector-max na nb)))]
+    [_ 'invalid]))
 
 ; TODO check result size
 (define (logic-vector-* a b)
-  (match-define (logic-vector va wa sa) a)
-  (match-define (logic-vector vb wb sb) b)
+  (match-define (logic-vector va na sa) a)
+  (match-define (logic-vector vb nb sb) b)
   (make-logic-vector* (* va vb)
-                      (+ wa wb)
+                      (+ na nb)
                       (or sa sb)))
+
+(define (logic-vector-*-signature ta tb)
+  (match (cons ta tb)
+    [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (+ na nb))]
+    [(cons (t/signed   na) (t/integer  nb)) (t/signed   (+ na nb))]
+    [(cons (t/integer  na) (t/signed   nb)) (t/signed   (+ na nb))]
+    [_ 'invalid]))
+
+
+(define (logic-vector-unsigned-width n)
+  (make-logic-vector (logic-vector-width n)))

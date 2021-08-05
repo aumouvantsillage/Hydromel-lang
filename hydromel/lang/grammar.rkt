@@ -43,7 +43,7 @@ type: /"type" ID parameter-list? (/"=" type-expression)?
 
 function: /"function" ID parameter-list (/"=" expression)?
 
-local-signal: /"signal" ID /"=" expression
+local-signal: /"signal" ID (/":" type-expression)? /"=" expression
 
 data-port: /"port" ID /":" ("in" | "out") type-expression
 

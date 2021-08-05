@@ -4,7 +4,7 @@ component counter(LIMIT : unsigned)
     port clear  : in  unsigned(1)
     port up     : in  unsigned(1)
     port down   : in  unsigned(1)
-    port value  : out unsigned
+    port value  : out unsigned(unsigned_width(LIMIT))
     port bottom : out unsigned(1)
     port top    : out unsigned(1)
 
