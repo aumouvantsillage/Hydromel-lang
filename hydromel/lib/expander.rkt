@@ -106,7 +106,7 @@
        #:with (sexpr-type ...) (map type-inference (attribute sexpr))
        #:with expr-type (type-inference #'expr)
        (syntax/loc stx
-         (let ([name (slot #f (type-thunk sexpr-type))] ...)
+         (let ([name (slot #f (make-slot-typer sexpr-type))] ...)
            expr-type))]
 
       [_ #''any])))
@@ -144,7 +144,7 @@
 ; the current component instance.
 ; We use a slot for output ports as well to keep a simple port access mechanism.
 (define-syntax-parse-rule (data-port name _ type)
-  (define name (slot #f (type-thunk type))))
+  (define name (slot #f (make-slot-typer type))))
 
 ; A local signal expands to a variable containing the result of the given
 ; expression in a slot.
@@ -153,7 +153,7 @@
 ; TODO optional type
 (define-syntax-parse-rule (local-signal name (~optional type) expr)
   #:with type^ (or (attribute type) (type-inference #'expr))
-  (define name (slot expr (type-thunk type^))))
+  (define name (slot expr (make-slot-typer type^))))
 
 ; Multiplicity indications are processed in macros composite-port and instance.
 (define-syntax (multiplicity stx)

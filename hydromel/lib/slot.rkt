@@ -4,14 +4,14 @@
 
 (provide
   (struct-out slot)
-  type-thunk
+  make-slot-typer
   slot-type)
 
 ; A slot contains a signal and its type.
-; The type-thunk field is a function that returns the type of the current signal.
-(struct slot (signal type-fn) #:mutable)
+; The make-slot-typer field is a function that returns the type of the current signal.
+(struct slot (signal typer) #:mutable)
 
-(define-syntax-parse-rule (type-thunk expr)
+(define-syntax-parse-rule (make-slot-typer expr)
   (let ([res #f]
         [visiting #f])
     (thunk
@@ -25,4 +25,4 @@
       res)))
 
 (define (slot-type slt)
-  ((slot-type-fn slt)))
+  ((slot-typer slt)))
