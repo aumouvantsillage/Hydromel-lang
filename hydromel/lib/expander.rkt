@@ -232,7 +232,7 @@
   (set-slot-signal! target expr))
 
 (define-syntax-parse-rule (connection left right)
-  (hydromel-connect left right))
+  (connect left right))
 
 ; A literal expression expands to its value.
 (define-syntax-parse-rule (literal-expr value)
