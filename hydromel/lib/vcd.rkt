@@ -5,10 +5,9 @@
 #lang racket
 
 (require
-  syntax/parse/define
   "logic.rkt"
+  (prefix-in t/ "types.rkt")
   "signal.rkt"
-  "std.rkt"
   "slot.rkt")
 
 (provide vcd)
@@ -20,7 +19,7 @@
                           [index      (in-naturals)])
                  (define samples (signal-take (slot-signal slt) duration))
                  (values name (waveform (format "s~a" index)
-                                        (apply max (map min-unsigned-width samples))
+                                        (t/integer-width (slot-type slt))
                                         samples))))
 
   ; VCD header.
