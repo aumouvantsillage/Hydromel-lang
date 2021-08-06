@@ -548,21 +548,21 @@
     (define j (I5-make))
     (check-pred vector? (dict-ref j 'i))
     (check-eq? (vector-length (dict-ref j 'i)) 3)
-    (for ([n (range 3)])
+    (for ([n (hydromel-range 0 2)])
       (check-pred dict? (vector-ref (dict-ref j 'i) n))))
 
   (test-case "Can construct a channel for an interface with arguments"
     (define j (I6-make 5))
     (check-pred vector? (dict-ref j 'i))
     (check-eq? (vector-length (dict-ref j 'i)) 5)
-    (for ([n (range 5)])
+    (for ([n (hydromel-range 0 4)])
       (check-pred dict? (vector-ref (dict-ref j 'i) n))))
 
   (test-case "Can construct a channel containing a composite port with arguments"
     (define k (I7-make 3))
     (check-pred vector? (dict-ref (dict-ref k 'j) 'i))
     (check-eq? (vector-length (dict-ref (dict-ref k 'j) 'i)) 3)
-    (for ([n (range 3)])
+    (for ([n (hydromel-range 0 2)])
       (check-pred dict? (vector-ref (dict-ref (dict-ref k 'j) 'i) n))))
 
   (test-case "Can assign a simple port to another simple port"
