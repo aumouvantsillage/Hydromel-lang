@@ -7,7 +7,6 @@
 (require
   syntax/parse/define
   "logic.rkt"
-  "logic-vector.rkt"
   "signal.rkt"
   "std.rkt"
   "slot.rkt")
@@ -21,8 +20,8 @@
                           [index      (in-naturals)])
                  (define samples (signal-take (slot-signal slt) duration))
                  (values name (waveform (format "s~a" index)
-                                        (apply max (map logic-vector-width samples))
-                                        (map logic-vector-value samples)))))
+                                        (apply max (map min-unsigned-width samples))
+                                        samples))))
 
   ; VCD header.
   (fprintf out "$timescale ~a $end\n" ts)

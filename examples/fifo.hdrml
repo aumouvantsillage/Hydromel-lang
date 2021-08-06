@@ -18,7 +18,7 @@ component fifo1(T : type, I : T)
     c.ready = p.ready or not full
 
     signal x = not c.valid
-    
+
     signal write : unsigned(1) = c.valid and not (full xor p.ready)
     signal full     = register(0, write or not c.ready)
     signal data_reg = register(I, c.data when write)
@@ -50,7 +50,7 @@ component fifo2(T : type, I : T)
     p.valid     = f1.p.valid
     p.data      = f1.p.data
     f1.p.ready  = p.ready
-end
+ end
 
 component fifo2b(T : type, I : T)
     port io : splice consumer_producer(T)

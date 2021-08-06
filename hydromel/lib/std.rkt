@@ -4,16 +4,41 @@
   "signal.rkt"
   "slot.rkt"
   "logic-vector.rkt"
+  (prefix-in t/ "types.rkt")
+  (prefix-in l/ "logic.rkt")
   syntax/parse/define)
 
 (provide (all-defined-out))
 
+(define (hydromel-true? a)
+  (not (zero? a)))
+
+(define (hydromel-true?-signature t)
+  (t/boolean))
+
+(define (hydromel-if-signature tc . ts)
+  (t/union ts))
+
 (define-syntax-parse-rule (hydromel-if (~seq c t) ... e)
-  (cond [(logic-vector-true? c) t]
+  (cond [(hydromel-true? c) t]
         ...
         [else e]))
 
-(define unsigned_width logic-vector-unsigned-width)
+(define (signed-signature n)
+  (t/type))
+
+(define (unsigned-signature n)
+  (t/type))
+
+(define unsigned_width l/min-unsigned-width)
+
+(define (unsigned_width-signature t)
+  (t/unsigned 32)) ; TODO set a relevant width here
+
+(define signed_width l/min-signed-width)
+
+(define (signed_width-signature t)
+  (t/unsigned 32)) ; TODO set a relevant width here
 
 (define hydromel-==  logic-vector-==)
 (define hydromel-/=  logic-vector-/=)
@@ -39,7 +64,15 @@
 
 ; TODO descending ranges
 (define (hydromel-range a b)
-  (map make-logic-vector (range (logic-vector-value a) (add1 (logic-vector-value b)))))
+  (range a (add1 b)))
+
+(define (hydromel-range-signature ta tb)
+  (t/range
+    (match (cons ta tb)
+      [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (max na nb))]
+      [(cons (t/signed   na) (t/integer  nb)) (t/signed   (max na nb))]
+      [(cons (t/integer  na) (t/signed   nb)) (t/signed   (max na nb))]
+      [_ 'invalid-and])))
 
 (define (hydromel-connect left right)
   (for ([(k vl) (in-dict left)])

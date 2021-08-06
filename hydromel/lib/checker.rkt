@@ -3,8 +3,8 @@
 (require
   syntax/parse/define
   "expander.rkt"
+  "std.rkt"
   (prefix-in stx/ "syntax.rkt")
-  "logic-vector.rkt"
   (for-syntax
     racket
     threading
@@ -308,7 +308,7 @@
            (register-expr arg ...)))]
 
       [s:stx/when-clause
-       (define expr^ (make-checker #'(call-expr logic-vector-true? s.expr)))
+       (define expr^ (make-checker #'(call-expr hydromel-true? s.expr)))
        (thunk
          (define/syntax-parse expr (check-assigned-expr (expr^)))
          (syntax/loc stx
@@ -754,27 +754,27 @@
       (assignment (name-expr y) (name-expr K)))
 
     (define (check-sig-equal? t e n)
-      (check-equal? (logic-signal-take t n) (logic-signal-take e n)))
+      (check-equal? (signal-take t n) (signal-take e n)))
 
-    (define .+ (signal-lift logic-vector-+))
-    (define .* (signal-lift logic-vector-*))
+    (define .+ (signal-lift hydromel-+))
+    (define .* (signal-lift hydromel-*))
 
     (test-case "Can label a simple signal expressions"
       (define c (C0-make))
-      (define x (logic-signal 10))
+      (define x (signal 10))
       (port-set! (c x) x)
       (check-sig-equal? (port-ref c y) x 5))
 
     (test-case "Can resolve ports in field expressions"
       (define c (C1-make))
-      (define x (logic-signal 10))
+      (define x (signal 10))
       (port-set! (c i x) x)
       (check-sig-equal? (port-ref c i y) x 5))
 
     (test-case "Can resolve ports in indexed expressions"
       (define c (C2-make))
-      (define x0 (logic-signal 10))
-      (define x1 (logic-signal 20))
+      (define x0 (signal 10))
+      (define x1 (signal 20))
       (port-set! (c i 0 x) x0)
       (port-set! (c i 1 x) x1)
       (check-sig-equal? (port-ref c i 0 y) x0 5)
@@ -782,10 +782,10 @@
 
     (test-case "Can resolve ports in a hierarchy of expressions"
       (define c (C3-make))
-      (define x00 (logic-signal 10))
-      (define x01 (logic-signal 20))
-      (define x10 (logic-signal 30))
-      (define x11 (logic-signal 40))
+      (define x00 (signal 10))
+      (define x01 (signal 20))
+      (define x10 (signal 30))
+      (define x11 (signal 40))
       (port-set! (c j 0 i 0 x) x00)
       (port-set! (c j 0 i 1 x) x01)
       (port-set! (c j 1 i 0 x) x10)
@@ -797,30 +797,30 @@
 
     (test-case "Can assign a literal to a signal"
       (define c (C4-make))
-      (check-sig-equal? (port-ref c x) (logic-signal 10) 5))
+      (check-sig-equal? (port-ref c x) (signal 10) 5))
 
     (test-case "Can assign a constant to a signal"
       (define c (C5-make))
-      (check-sig-equal? (port-ref c x) (logic-signal 10) 5))
+      (check-sig-equal? (port-ref c x) (signal 10) 5))
 
     (test-case "Can assign a static expression to a signal"
       (define c (C6-make))
-      (check-sig-equal? (port-ref c x) (logic-signal 11) 5))
+      (check-sig-equal? (port-ref c x) (signal 11) 5))
 
     (test-case "Can lift an operation"
       (define c (C7-make))
-      (define x (logic-signal 10 20 30))
-      (define y (logic-signal 40 50 60))
+      (define x (signal 10 20 30))
+      (define y (signal 40 50 60))
       (port-set! (c x) x)
       (port-set! (c y) y)
       (check-sig-equal? (port-ref c z) (.+ x y) 5))
 
     (test-case "Can lift nested calls"
       (define c (C8-make))
-      (define x (logic-signal 10 20 30 40 50))
-      (define y (logic-signal 2))
-      (define z (logic-signal 1 2 3 4 5))
-      (define u (logic-signal 3))
+      (define x (signal 10 20 30 40 50))
+      (define y (signal 2))
+      (define z (signal 1 2 3 4 5))
+      (define u (signal 3))
       (port-set! (c x) x)
       (port-set! (c y) y)
       (port-set! (c z) z)
@@ -829,10 +829,10 @@
 
     (test-case "Can use local signals"
       (define c (C9-make))
-      (define x (logic-signal 10 20 30 40 50))
-      (define y (logic-signal 2))
-      (define z (logic-signal 1 2 3 4 5))
-      (define u (logic-signal 3))
+      (define x (signal 10 20 30 40 50))
+      (define y (signal 2))
+      (define z (signal 1 2 3 4 5))
+      (define u (signal 3))
       (port-set! (c x) x)
       (port-set! (c y) y)
       (port-set! (c z) z)
@@ -841,47 +841,47 @@
 
     (test-case "Can access simple ports in a vector composite port with dynamic indices"
       (define c (C10-make))
-      (define x0 (logic-signal 10))
-      (define x1 (logic-signal 20))
-      (define x2 (logic-signal 30))
-      (define y (logic-signal 0 1 2 1 0 2))
+      (define x0 (signal 10))
+      (define x1 (signal 20))
+      (define x2 (signal 30))
+      (define y (signal 0 1 2 1 0 2))
       (port-set! (c i 0 x) x0)
       (port-set! (c i 1 x) x1)
       (port-set! (c i 2 x) x2)
       (port-set! (c y)     y)
-      (define z (logic-signal 10 20 30 20 10 30))
+      (define z (signal 10 20 30 20 10 30))
       (check-sig-equal? (port-ref c z) z 5))
 
     (test-case "Can instantiate a component"
       (define c (C12-make))
-      (define x (logic-signal 10 20 30 40 50))
+      (define x (signal 10 20 30 40 50))
       (port-set! (c x) x)
-      (check-sig-equal? (port-ref c y) (.* x (logic-signal 10)) 5))
+      (check-sig-equal? (port-ref c y) (.* x (signal 10)) 5))
 
     (test-case "Can instantiate a multiple component"
       (define c (C13-make))
-      (define x0 (logic-signal 10 20 30 40 50))
-      (define x1 (logic-signal 1  2  3  4  5))
+      (define x0 (signal 10 20 30 40 50))
+      (define x1 (signal 1  2  3  4  5))
       (port-set! (c x0) x0)
       (port-set! (c x1) x1)
-      (check-sig-equal? (port-ref c y) (.* (.+ x0 x1) (logic-signal 10)) 5))
+      (check-sig-equal? (port-ref c y) (.* (.+ x0 x1) (signal 10)) 5))
 
     (test-case "Can resolve ports in a spliced interface"
       (define c (C14-make))
-      (define x (logic-signal 10))
+      (define x (signal 10))
       (port-set! (c x) x)
       (check-sig-equal? (port-ref c y) x 5))
 
     (test-case "Can resolve ports in a spliced flipped interface"
       (define c (C24-make))
-      (define y (logic-signal 10))
+      (define y (signal 10))
       (port-set! (c y) y)
       (check-sig-equal? (port-ref c x) y 5))
 
     (test-case "Can resolve ports in a hierarchy from a spliced interface"
       (define c (C15-make))
-      (define x0 (logic-signal 10))
-      (define x1 (logic-signal 20))
+      (define x0 (signal 10))
+      (define x1 (signal 20))
       (port-set! (c i 0 x) x0)
       (port-set! (c i 1 x) x1)
       (check-sig-equal? (port-ref c i 0 y) x0 5)
@@ -889,74 +889,74 @@
 
     (test-case "Can resolve ports in an interface with a spliced composite port"
       (define c (C16-make))
-      (define x (logic-signal 10))
+      (define x (signal 10))
       (port-set! (c j x) x)
       (check-sig-equal? (port-ref c j y) x 5))
 
     (test-case "Can resolve ports in a doubly spliced composite port"
       (define c (C17-make))
-      (define x (logic-signal 10))
+      (define x (signal 10))
       (port-set! (c x) x)
       (check-sig-equal? (port-ref c y) x 5))
 
     (test-case "Can resolve ports in a doubly spliced flipped-last composite port"
       (define c (C23-make))
-      (define y (logic-signal 10))
+      (define y (signal 10))
       (port-set! (c y) y)
       (check-sig-equal? (port-ref c x) y 5))
 
     (test-case "Can resolve ports in a doubly spliced flipped-first composite port"
       (define c (C25-make))
-      (define y (logic-signal 10))
+      (define y (signal 10))
       (port-set! (c y) y)
       (check-sig-equal? (port-ref c x) y 5))
 
     (test-case "Can resolve ports in a doubly spliced doubly-flipped composite port"
       (define c (C26-make))
-      (define x (logic-signal 10))
+      (define x (signal 10))
       (port-set! (c x) x)
       (check-sig-equal? (port-ref c y) x 5))
 
     (test-case "Can compute a conditional signal"
       (define c (C18-make))
-      (define x (logic-signal 10 20  30  40 50))
-      (define y (logic-signal 1  200 300 4  5))
-      (define z (logic-signal 10 200 300 40 50))
+      (define x (signal 10 20  30  40 50))
+      (define y (signal 1  200 300 4  5))
+      (define z (signal 10 200 300 40 50))
       (port-set! (c x) x)
       (port-set! (c y) y)
       (check-sig-equal? (port-ref c z) z 5))
 
     (test-case "Can register a signal"
       (define c (C19-make))
-      (define x (logic-signal 10 20  30 40 50))
-      (define y (logic-signal 0  10 20 30 40 50))
+      (define x (signal 10 20  30 40 50))
+      (define y (signal 0  10 20 30 40 50))
       (port-set! (c x) x)
       (check-sig-equal? (port-ref c y) y 6))
 
     (test-case "Can register a signal with reset"
       (define c (C20-make))
-      (define x (logic-signal 0  0   0  1  0))
-      (define y (logic-signal 10 20  30 40 50))
-      (define z (logic-signal 0  10 20 30 0  50))
+      (define x (signal 0  0  0  1  0))
+      (define y (signal 10 20 30 40 50))
+      (define z (signal 0  10 20 30 0  50))
       (port-set! (c x) x)
       (port-set! (c y) y)
       (check-sig-equal? (port-ref c z) z 6))
 
     (test-case "Can register a signal with enable"
       (define c (C21-make))
-      (define x (logic-signal 0  1  0  1  0))
-      (define y (logic-signal 10 20 30 40 50))
-      (define z (logic-signal 0  0  20 20 40))
+      (define x (signal 0  1  0  1  0))
+      (define y (signal 10 20 30 40 50))
+      (define z (signal 0  0  20 20 40))
       (port-set! (c x) x)
       (port-set! (c y) y)
       (check-sig-equal? (port-ref c z) z 6))
 
     (test-case "Can register a signal with reset and enable"
       (define c (C22-make))
-      (define x (logic-signal 0  0   1  0  0))
-      (define y (logic-signal 0  1   0  1  0))
-      (define z (logic-signal 10 20  30 40 50))
-      (define u (logic-signal 0  0  20 0  40))
+      (define x (signal 0  0   1  0  0))
+      (define y (signal 0  1   0  1  0))
+      (define z (signal 10 20  30 40 50))
+      (define u (signal 0  0  20 0  40))
       (port-set! (c x) x)
       (port-set! (c y) y)
       (port-set! (c z) z)
@@ -964,24 +964,24 @@
 
     (test-case "Can read a local constant"
       (define c (C29-make))
-      (check-sig-equal? (port-ref c y) (logic-signal 56) 1))
+      (check-sig-equal? (port-ref c y) (signal 56) 1))
 
     (test-case "Can read a constant as a channel field"
       (define c (C29-make))
-      (check-equal? (logic-vector-value (dict-ref c 'N)) 56))
+      (check-equal? (dict-ref c 'N) 56))
 
     (test-case "Can read a constant from a port"
       (define c (C30-make))
-      (check-sig-equal? (port-ref c p y) (logic-signal 56) 1))
+      (check-sig-equal? (port-ref c p y) (signal 56) 1))
 
     (test-case "Can read a constant from an instance"
       (define c (C31-make))
-      (check-sig-equal? (port-ref c y) (logic-signal 56) 1))
+      (check-sig-equal? (port-ref c y) (signal 56) 1))
 
     (test-case "Can read a constant from an instance port"
       (define c (C32-make))
-      (check-sig-equal? (port-ref c y) (logic-signal 56) 1))
+      (check-sig-equal? (port-ref c y) (signal 56) 1))
 
     (test-case "Can read a global constant"
       (define c (C33-make))
-      (check-sig-equal? (port-ref c y) (logic-signal 44) 1))))
+      (check-sig-equal? (port-ref c y) (signal 44) 1))))

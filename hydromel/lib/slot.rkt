@@ -9,7 +9,7 @@
 
 ; A slot contains a signal and its type.
 ; The make-slot-typer field is a function that returns the type of the current signal.
-(struct slot (signal typer) #:mutable)
+(struct slot (signal typer) #:mutable #:transparent)
 
 (define-syntax-parse-rule (make-slot-typer expr)
   (let ([res #f]
