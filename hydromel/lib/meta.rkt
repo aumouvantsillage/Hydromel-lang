@@ -72,3 +72,5 @@
       (local-signal? item)))
 
 (struct record-type ())
+
+(struct builtin-function (name))

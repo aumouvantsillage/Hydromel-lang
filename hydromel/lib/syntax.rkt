@@ -105,15 +105,15 @@
     #:datum-literals [or-expr and-expr rel-expr add-expr mult-expr if-expr prefix-expr range-expr]
     (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
-      #:attr fn-name (format-id #'op "hydromel-~a" #'op))
+      #:attr fn-name (format-id #'op "std/~a" #'op))
     (pattern (prefix-expr op right)
       #:attr (arg 1) (list #'right)
-      #:attr fn-name (format-id #'op "hydromel-~a" #'op))
+      #:attr fn-name (format-id #'op "std/~a" #'op))
     (pattern (if-expr arg ...)
-      #:attr fn-name #'hydromel-if)
+      #:attr fn-name #'std/if)
     (pattern (range-expr left op right)
       #:attr (arg 1) (list #'left #'right)
-      #:attr fn-name #'hydromel-range)
+      #:attr fn-name #'std/range)
     (pattern (call-expr fn-name arg ...)))
 
   (define-syntax-class lift-expr

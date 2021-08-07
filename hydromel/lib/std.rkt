@@ -4,45 +4,52 @@
   "signal.rkt"
   "slot.rkt"
   (prefix-in t/ "types.rkt")
-  (prefix-in l/ "logic.rkt")
-  syntax/parse/define)
+  (only-in "logic.rkt" min-unsigned-width min-signed-width)
+  syntax/parse/define
+  (for-syntax
+    (prefix-in meta/ "meta.rkt")))
 
 (provide
-  hydromel-true? hydromel-true?-signature
-  hydromel-if    hydromel-if-signature
-  signed-signature
-  unsigned-signature
-  signed_width   signed_width-signature
-  unsigned_width unsigned_width-signature
-  hydromel-not   hydromel-not-signature
-  hydromel-and   hydromel-and-signature
-  hydromel-or    hydromel-or-signature
-  hydromel-xor   hydromel-xor-signature
-  hydromel-==    hydromel-==-signature
-  hydromel-/=    hydromel-/=-signature
-  hydromel->     hydromel->-signature
-  hydromel-+     hydromel-+-signature
-  hydromel--     hydromel---signature
-  hydromel-*     hydromel-*-signature
-  hydromel-range hydromel-range-signature)
+  std/true?      true?-impl true?-impl-signature
+  std/if         if-impl    if-impl-signature
+                 signed-signature
+                 unsigned-signature
+  std/not        bitwise-not-signature
+  std/and        bitwise-and-signature
+  std/or         bitwise-ior-signature
+  std/xor        bitwise-xor-signature
+  std/==         ==-impl ==-impl-signature
+  std//=         /=-impl /=-impl-signature
+  std/>          >-impl >-impl-signature
+  std/+          +-signature
+  std/-          --signature
+  std/*          *-signature
+  std/range      range-impl range-impl-signature
+  (all-from-out  "logic.rkt")
+  signed_width   min-signed-width-signature
+  unsigned_width min-unsigned-width-signature)
 
 ; Convert an integer to a boolean.
 ; This function is used in generated conditional statements.
 ; It is not available from Hydromel source code.
-(define (hydromel-true? a)
+(define-syntax std/true? (meta/builtin-function #'true?-impl))
+
+(define (true?-impl a)
   (not (zero? a)))
 
-(define (hydromel-true?-signature t)
+(define (true?-impl-signature t)
   (t/boolean))
 
 ; The Hydromel if statement is expanded to a call-expr
-; to hydromel-if as if it were a function.
-(define-syntax-parse-rule (hydromel-if (~seq c t) ... e)
-  (cond [(hydromel-true? c) t]
+; to std/if as if it were a function.
+(define-syntax std/if (meta/builtin-function #'if-impl))
+
+(define-syntax-parse-rule (if-impl (~seq c t) ... e)
+  (cond [(true?-impl c) t]
         ...
         [else e]))
 
-(define (hydromel-if-signature tc . ts)
+(define (if-impl-signature tc . ts)
   (t/union ts))
 
 ; Parameterized data types are exposed as functions
@@ -55,23 +62,23 @@
 
 ; Returns the minimum width to encode a given number
 ; as an unsigned integer.
-(define unsigned_width l/min-unsigned-width)
+(define-syntax unsigned_width (meta/builtin-function #'min-unsigned-width))
 
-(define (unsigned_width-signature t)
+(define (min-unsigned-width-signature t)
   (t/unsigned 32)) ; TODO set a relevant width here
 
 ; Returns the minimum width to encode a given number
 ; as an signed integer.
-(define signed_width l/min-signed-width)
+(define-syntax signed_width (meta/builtin-function #'min-signed-width))
 
-(define (signed_width-signature t)
+(define (min-signed-width-signature t)
   (t/unsigned 32)) ; TODO set a relevant width here
 
 ; Boolean operators are all bitwise.
-(define hydromel-not bitwise-not)
-(define hydromel-and bitwise-and)
-(define hydromel-or  bitwise-ior)
-(define hydromel-xor bitwise-xor)
+(define-syntax std/not (meta/builtin-function #'bitwise-not))
+(define-syntax std/and (meta/builtin-function #'bitwise-and))
+(define-syntax std/or  (meta/builtin-function #'bitwise-ior))
+(define-syntax std/xor (meta/builtin-function #'bitwise-xor))
 
 (define (bitwise-signature ta tb)
   (match (cons ta tb)
@@ -80,34 +87,38 @@
     [(cons (t/integer  na) (t/signed   nb)) (t/signed   (max na nb))]
     [_ (error "Bitwise operation expects integer operands.")]))
 
-(define (hydromel-not-signature ta) ta)
-(define hydromel-and-signature bitwise-signature)
-(define hydromel-or-signature  bitwise-signature)
-(define hydromel-xor-signature bitwise-signature)
+(define (bitwise-not-signature ta) ta)
+(define bitwise-and-signature bitwise-signature)
+(define bitwise-ior-signature bitwise-signature)
+(define bitwise-xor-signature bitwise-signature)
 
 ; Comparison operations return integers 0 and 1.
-(define (hydromel-== a b)
+(define-syntax std/== (meta/builtin-function #'==-impl))
+(define-syntax std//= (meta/builtin-function #'!=-impl))
+(define-syntax std/>  (meta/builtin-function #'>-impl))
+
+(define (==-impl a b)
   (if (= a b) 1 0))
 
-(define (hydromel-/= a b)
+(define (/=-impl a b)
   (if (= a b) 0 1))
 
-(define (hydromel-> a b)
+(define (>-impl a b)
   (if (> a b) 1 0))
 
 (define (comparison-signature ta tb)
   (t/unsigned 1))
 
-(define hydromel-==-signature comparison-signature)
-(define hydromel-/=-signature comparison-signature)
-(define hydromel->-signature  comparison-signature)
+(define ==-impl-signature comparison-signature)
+(define /=-impl-signature comparison-signature)
+(define >-impl-signature  comparison-signature)
 
 ; Use the built-in arithmetic operators.
-(define hydromel-+ +)
-(define hydromel-- -)
-(define hydromel-* *)
+(define-syntax std/+ (meta/builtin-function #'+))
+(define-syntax std/- (meta/builtin-function #'-))
+(define-syntax std/* (meta/builtin-function #'*))
 
-(define (hydromel-+-signature ta tb)
+(define (+-signature ta tb)
   (match (cons ta tb)
     [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (add1 (max na nb)))]
     [(cons (t/unsigned na) (t/signed   nb)) (t/signed   (add1 (max (add1 na) nb)))]
@@ -115,12 +126,12 @@
     [(cons (t/signed  na)  (t/signed   nb)) (t/signed   (add1 (max na nb)))]
     [_ (error "Arithmetic operation expects integer operands.")]))
 
-(define (hydromel---signature ta [tb #f])
+(define (--signature ta [tb #f])
   (if tb
-    (hydromel-+-signature ta tb)
+    (+-signature ta tb)
     (t/signed (add1 (t/integer-width ta)))))
 
-(define (hydromel-*-signature ta tb)
+(define (*-signature ta tb)
   (match (cons ta tb)
     [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (+ na nb))]
     [(cons (t/integer na)  (t/signed   nb)) (t/signed   (+ na nb))]
@@ -128,10 +139,12 @@
     [_ (error "Arithmetic operation expects integer operands.")]))
 
 ; TODO descending ranges
-(define (hydromel-range a b)
+(define-syntax std/range (meta/builtin-function #'range-impl))
+
+(define (range-impl a b)
   (range a (add1 b)))
 
-(define (hydromel-range-signature ta tb)
+(define (range-impl-signature ta tb)
   (t/range
     (match (cons ta tb)
       [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (max na nb))]

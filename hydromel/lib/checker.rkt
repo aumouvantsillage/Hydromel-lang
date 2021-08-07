@@ -127,10 +127,11 @@
 
       [s:stx/parameter
        #:with name (bind! #'s.name (meta/parameter))
+       (define type^ (make-checker #'s.type))
        (thunk/in-scope
-         ; TODO check type
+         (define/syntax-parse type (type^))
          (syntax/loc stx
-           (parameter name s.type)))]
+           (parameter name type)))]
 
       [s:stx/constant
        #:with name (if (current-design-unit)
@@ -139,7 +140,6 @@
        (define expr^ (make-checker #'s.expr))
        (thunk/in-scope
          (define/syntax-parse expr (expr^))
-         ; TODO check expression type
          ; Check that the expression has a static value.
          (unless (static-value? #'expr)
            (raise-syntax-error #f "Non-static expression cannot be assigned to constant" #'s.expr))
@@ -148,10 +148,11 @@
 
       [s:stx/data-port
        #:with name (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
+       (define type^ (make-checker #'s.type))
        (thunk/in-scope
-         ; TODO check type
+         (define/syntax-parse type (type^))
          (syntax/loc stx
-           (data-port name s.mode s.type)))]
+           (data-port name s.mode type)))]
 
       [s:stx/composite-port
        #:with name (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
@@ -186,13 +187,15 @@
 
       [s:stx/local-signal
        #:with name (bind! #'s.name (meta/local-signal))
+       (define type^ (and (attribute s.type) (make-checker #'s.type)))
        (define expr^ (make-checker #'s.expr))
        (thunk/in-scope
          ; TODO check expression type
          (define/syntax-parse expr (check-assigned-expr (expr^)))
-         (if (attribute s.type)
-           (syntax/loc stx
-             (local-signal name s.type expr))
+         (if type^
+           (syntax-parse (type^)
+             [type (syntax/loc stx
+                     (local-signal name type expr))])
            (syntax/loc stx
              (local-signal name expr))))]
 
@@ -308,20 +311,24 @@
            (register-expr arg ...)))]
 
       [s:stx/when-clause
-       (define expr^ (make-checker #'(call-expr hydromel-true? s.expr)))
+       (define expr^ (make-checker #'(call-expr std/true? s.expr)))
        (thunk
          (define/syntax-parse expr (check-assigned-expr (expr^)))
          (syntax/loc stx
            (when-clause expr)))]
 
       [s:stx/call-expr
-       ; TODO check that fn-name is bound or built-in
        ; TODO typecheck arguments against fn
        (define args^ (map make-checker (attribute s.arg)))
        (thunk
+         ; TODO check that fn is a built-in or custom function.
+         (define fn (lookup #'s.fn-name))
+         (define/syntax-parse fn-name (if (meta/builtin-function? fn)
+                                        (meta/builtin-function-name fn)
+                                        #'s.fn-name))
          (define/syntax-parse (arg ...) (check-all args^))
          (syntax/loc stx
-           (call-expr s.fn-name arg ...)))]
+           (call-expr fn-name arg ...)))]
 
       [s:stx/name-expr
        (thunk
@@ -574,13 +581,13 @@
     (component C6
       (data-port x out (call-expr signed (literal-expr 32)))
       (constant k (literal-expr 10))
-      (assignment (name-expr x) (call-expr hydromel-+ (name-expr k) (literal-expr 1))))
+      (assignment (name-expr x) (add-expr (name-expr k) + (literal-expr 1))))
 
     (component C7
       (data-port x in (call-expr signed (literal-expr 32)))
       (data-port y in (call-expr signed (literal-expr 32)))
       (data-port z out (call-expr signed (literal-expr 32)))
-      (assignment (name-expr z) (call-expr hydromel-+ (name-expr x) (name-expr y))))
+      (assignment (name-expr z) (add-expr (name-expr x) + (name-expr y))))
 
     (component C8
       (data-port x in (call-expr signed (literal-expr 32)))
@@ -588,8 +595,8 @@
       (data-port z in (call-expr signed (literal-expr 32)))
       (data-port u in (call-expr signed (literal-expr 32)))
       (data-port v out (call-expr signed (literal-expr 32)))
-      (assignment (name-expr v) (call-expr hydromel-+ (call-expr hydromel-* (name-expr x) (name-expr y))
-                                                      (call-expr hydromel-* (name-expr z) (name-expr u)))))
+      (assignment (name-expr v) (add-expr (mult-expr (name-expr x) * (name-expr y))
+                                        + (mult-expr (name-expr z) * (name-expr u)))))
 
     (component C9
       (data-port x in (call-expr signed (literal-expr 32)))
@@ -597,9 +604,9 @@
       (data-port z in (call-expr signed (literal-expr 32)))
       (data-port u in (call-expr signed (literal-expr 32)))
       (data-port v out (call-expr signed (literal-expr 32)))
-      (local-signal xy (call-expr hydromel-* (name-expr x) (name-expr y)))
-      (local-signal zu (call-expr hydromel-* (name-expr z) (name-expr u)))
-      (assignment (name-expr v) (call-expr hydromel-+ (name-expr xy) (name-expr zu))))
+      (local-signal xy (mult-expr (name-expr x) * (name-expr y)))
+      (local-signal zu (mult-expr (name-expr z) * (name-expr u)))
+      (assignment (name-expr v) (add-expr (name-expr xy) + (name-expr zu))))
 
     (interface I2
       (data-port x in (call-expr signed (literal-expr 32))))
@@ -615,7 +622,7 @@
       (parameter N (name-expr unsigned))
       (data-port x in (call-expr signed (literal-expr 32)))
       (data-port y out (call-expr signed (literal-expr 32)))
-      (assignment (name-expr y) (call-expr hydromel-* (name-expr x) (name-expr N))))
+      (assignment (name-expr y) (mult-expr (name-expr x) * (name-expr N))))
 
     (component C12
       (data-port x in (call-expr signed (literal-expr 32)))
@@ -631,8 +638,8 @@
       (instance c (multiplicity (literal-expr 2)) C11 (literal-expr 10))
       (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 0)) x) (name-expr x0))
       (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 1)) x) (name-expr x1))
-      (assignment (name-expr y) (call-expr hydromel-+ (field-expr (indexed-expr (name-expr c) (literal-expr 0)) y)
-                                                      (field-expr (indexed-expr (name-expr c) (literal-expr 1)) y))))
+      (assignment (name-expr y) (add-expr (field-expr (indexed-expr (name-expr c) (literal-expr 0)) y)
+                                        + (field-expr (indexed-expr (name-expr c) (literal-expr 1)) y))))
 
     (component C14
       (composite-port i splice I0)
@@ -693,7 +700,7 @@
       (data-port x in (call-expr signed (literal-expr 32)))
       (data-port y in (call-expr signed (literal-expr 32)))
       (data-port z out (call-expr signed (literal-expr 32)))
-      (assignment (name-expr z) (call-expr hydromel-if (call-expr hydromel-> (name-expr x) (name-expr y))
+      (assignment (name-expr z) (if-expr (rel-expr (name-expr x) > (name-expr y))
                                   (name-expr x)
                                   (name-expr y))))
 
@@ -756,8 +763,8 @@
     (define (check-sig-equal? t e n)
       (check-equal? (signal-take t n) (signal-take e n)))
 
-    (define .+ (signal-lift hydromel-+))
-    (define .* (signal-lift hydromel-*))
+    (define .+ (signal-lift +))
+    (define .* (signal-lift *))
 
     (test-case "Can label a simple signal expressions"
       (define c (C0-make))

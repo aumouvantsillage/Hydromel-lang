@@ -151,7 +151,6 @@
 ; expression in a slot.
 ; Like output ports, local signals do not need to be wrapped in a slot, but
 ; it helps expanding expressions without managing several special cases.
-; TODO optional type
 (define-syntax-parse-rule (local-signal name (~optional type) expr)
   #:with type^ (or (attribute type) (type-inference #'expr))
   (define name (slot expr (make-slot-typer type^))))
@@ -193,7 +192,7 @@
 ; An if statement expands to a conditional statement that generates a hash map.
 ; That hash map is assigned to a variable with the same name as the if label.
 (define-syntax-parse-rule (if-statement name (~seq condition then-body) ... else-body)
-  (define name (cond [(hydromel-true? condition) then-body]
+  (define name (cond [(true?-impl condition) then-body]
                      ...
                      [else else-body])))
 
@@ -394,7 +393,7 @@
     (assignment (name-expr z)
                 (lift-expr [x^ (signal-expr (name-expr x))]
                            [y^ (signal-expr (name-expr y))]
-                           (call-expr hydromel-+ (name-expr x^) (name-expr y^)))))
+                           (call-expr + (name-expr x^) (name-expr y^)))))
 
   (component C7
     (data-port x in (call-expr signed (literal-expr 32)))
@@ -404,14 +403,14 @@
     (data-port v out (call-expr signed (literal-expr 32)))
     (local-signal xy (lift-expr [x^ (signal-expr (name-expr x))]
                                 [y^ (signal-expr (name-expr y))]
-                                (call-expr hydromel-* (name-expr x^) (name-expr y^))))
+                                (call-expr * (name-expr x^) (name-expr y^))))
     (local-signal zu (lift-expr [z^ (signal-expr (name-expr z))]
                                 [u^ (signal-expr (name-expr u))]
-                                (call-expr hydromel-* (name-expr z^) (name-expr u^))))
+                                (call-expr * (name-expr z^) (name-expr u^))))
     (assignment (name-expr v)
                 (lift-expr [xy^ (signal-expr (name-expr xy))]
                            [zu^ (signal-expr (name-expr zu))]
-                           (call-expr hydromel-+ (name-expr xy^) (name-expr zu^)))))
+                           (call-expr + (name-expr xy^) (name-expr zu^)))))
 
   (component C8
     (parameter N (name-expr unsigned))
@@ -419,7 +418,7 @@
     (data-port y out (call-expr signed (literal-expr 32)))
     (assignment (name-expr y)
                 (lift-expr [x^ (signal-expr (name-expr x))]
-                           (call-expr hydromel-* (name-expr x^) (name-expr N)))))
+                           (call-expr * (name-expr x^) (name-expr N)))))
   (component C9
     (data-port x in (call-expr signed (literal-expr 32)))
     (data-port y out (call-expr signed (literal-expr 32)))
@@ -436,7 +435,7 @@
     (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 1)) x) (signal-expr (name-expr x1)))
     (assignment (name-expr y) (lift-expr [y0 (signal-expr (field-expr (indexed-expr (name-expr c) (literal-expr 0)) y))]
                                          [y1 (signal-expr (field-expr (indexed-expr (name-expr c) (literal-expr 1)) y))]
-                                         (call-expr hydromel-+ (name-expr y0) (name-expr y1)))))
+                                         (call-expr + (name-expr y0) (name-expr y1)))))
 
   (component C11
     (data-port x in (call-expr signed (literal-expr 32)))
@@ -504,8 +503,8 @@
   (define (check-sig-equal? t e n)
     (check-equal? (signal-take t n) (signal-take e n)))
 
-  (define .+ (signal-lift hydromel-+))
-  (define .* (signal-lift hydromel-*))
+  (define .+ (signal-lift +))
+  (define .* (signal-lift *))
 
   (test-case "Can construct a channel for an interface with simple ports"
     (define i (I0-make 30))
@@ -548,21 +547,21 @@
     (define j (I5-make))
     (check-pred vector? (dict-ref j 'i))
     (check-eq? (vector-length (dict-ref j 'i)) 3)
-    (for ([n (hydromel-range 0 2)])
+    (for ([n (range-impl 0 2)])
       (check-pred dict? (vector-ref (dict-ref j 'i) n))))
 
   (test-case "Can construct a channel for an interface with arguments"
     (define j (I6-make 5))
     (check-pred vector? (dict-ref j 'i))
     (check-eq? (vector-length (dict-ref j 'i)) 5)
-    (for ([n (hydromel-range 0 4)])
+    (for ([n (range-impl 0 4)])
       (check-pred dict? (vector-ref (dict-ref j 'i) n))))
 
   (test-case "Can construct a channel containing a composite port with arguments"
     (define k (I7-make 3))
     (check-pred vector? (dict-ref (dict-ref k 'j) 'i))
     (check-eq? (vector-length (dict-ref (dict-ref k 'j) 'i)) 3)
-    (for ([n (hydromel-range 0 2)])
+    (for ([n (range-impl 0 2)])
       (check-pred dict? (vector-ref (dict-ref (dict-ref k 'j) 'i) n))))
 
   (test-case "Can assign a simple port to another simple port"
