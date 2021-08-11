@@ -2,7 +2,9 @@
 
 (require
   (prefix-in base/ racket/base)
-  (prefix-in l/ "logic.rkt"))
+  (prefix-in l/ "logic.rkt")
+  (for-syntax
+    (prefix-in meta/ "meta.rkt")))
 
 (provide (all-defined-out))
 
@@ -20,6 +22,14 @@
 (struct signed integer ()
   #:transparent
   #:property prop:procedure (λ (t v) (l/signed v (integer-width t))))
+
+; Parameterized data types are exposed as functions
+; whose result is a type.
+(define (signed-signature n)
+  (type))
+
+(define (unsigned-signature n)
+  (type))
 
 (struct unsigned integer ()
   #:transparent
@@ -40,6 +50,18 @@
 
 ; The type of types.
 (struct type datatype () #:transparent)
+
+; Standard derived types.
+
+(define-syntax bit (meta/builtin-function #'bit-impl))
+
+(define (bit-impl)
+  (unsigned 1))
+
+(define (bit-impl-signature)
+  (type))
+
+; Type helpers.
 
 (define (literal-type x)
   (unless (base/integer? x)

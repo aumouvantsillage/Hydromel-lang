@@ -12,8 +12,6 @@
 (provide
   std/true?      true?-impl true?-impl-signature
   std/if         if-impl    if-impl-signature
-                 signed-signature
-                 unsigned-signature
   std/not        bitwise-not-signature
   std/and        bitwise-and-signature
   std/or         bitwise-ior-signature
@@ -51,14 +49,6 @@
 
 (define (if-impl-signature tc . ts)
   (t/union ts))
-
-; Parameterized data types are exposed as functions
-; whose result is a type.
-(define (signed-signature n)
-  (t/type))
-
-(define (unsigned-signature n)
-  (t/type))
 
 ; Returns the minimum width to encode a given number
 ; as an unsigned integer.

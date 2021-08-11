@@ -3,11 +3,11 @@
 import "half_adder.hdrml" as ha
 
 component full_adder
-    port a  : in  unsigned(1)
-    port b  : in  unsigned(1)
-    port ci : in  unsigned(1)
-    port s  : out unsigned(1)
-    port co : out unsigned(1)
+    port a  : in  bit
+    port b  : in  bit
+    port ci : in  bit
+    port s  : out bit
+    port co : out bit
     instance h1 = ha::half_adder
     h1.a = a
     h1.b = b

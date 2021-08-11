@@ -1,8 +1,8 @@
 #lang hydromel
 
 interface producer(T : type)
-    port valid : out unsigned(1)
-    port ready : in  unsigned(1)
+    port valid : out bit
+    port ready : in  bit
     port data  : out T
 end
 
@@ -19,7 +19,7 @@ component fifo1(T : type, I : T)
 
     signal x = not c.valid
 
-    signal write : unsigned(1) = c.valid and not (full xor p.ready)
+    signal write : bit = c.valid and not (full xor p.ready)
     signal full     = register(0, write or not c.ready)
     signal data_reg = register(I, c.data when write)
     p.data          = if full then data_reg else c.data

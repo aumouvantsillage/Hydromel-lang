@@ -318,7 +318,6 @@
            (when-clause expr)))]
 
       [s:stx/call-expr
-       ; TODO typecheck arguments against fn
        (define args^ (map make-checker (attribute s.arg)))
        (thunk
          ; TODO check that fn is a built-in or custom function.
@@ -332,11 +331,18 @@
 
       [s:stx/name-expr
        (thunk
-         (define meta (lookup #'s.name))
-         (if (and (meta/constant? meta) (meta/constant-global? meta))
-           (syntax/loc stx
-             (name-expr s.name -constant))
-           stx))]
+         (match (lookup #'s.name)
+           ; A function name is converted to a function call with no argument.
+           [(meta/builtin-function fn-name)
+            (quasisyntax/loc stx
+              (call-expr #,fn-name))]
+
+           ; For a global constant name, append a suffix to access the actual constant.
+           [(meta/constant #t)
+            (syntax/loc stx
+              (name-expr s.name -constant))]
+
+           [else stx]))]
 
       [_ (thunk stx)]))
 
