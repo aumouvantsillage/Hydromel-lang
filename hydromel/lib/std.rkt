@@ -10,19 +10,19 @@
     (prefix-in meta/ "meta.rkt")))
 
 (provide
-  std/true?      true?-impl true?-impl-signature
-  std/if         if-impl    if-impl-signature
-  std/not        bitwise-not-signature
-  std/and        bitwise-and-signature
-  std/or         bitwise-ior-signature
-  std/xor        bitwise-xor-signature
-  std/==         ==-impl ==-impl-signature
-  std//=         /=-impl /=-impl-signature
-  std/>          >-impl >-impl-signature
-  std/+          +-signature
-  std/-          --signature
-  std/*          *-signature
-  std/range      range-impl range-impl-signature
+  kw-true?      true?-impl true?-impl-signature
+  kw-if         if-impl    if-impl-signature
+  kw-not        bitwise-not-signature
+  kw-and        bitwise-and-signature
+  kw-or         bitwise-ior-signature
+  kw-xor        bitwise-xor-signature
+  kw-==         ==-impl ==-impl-signature
+  kw-/=         /=-impl /=-impl-signature
+  kw->          >-impl >-impl-signature
+  kw-+          +-signature
+  kw--          --signature
+  kw-*          *-signature
+  kw-range      range-impl range-impl-signature
   (all-from-out  "logic.rkt")
   signed_width   min-signed-width-signature
   unsigned_width min-unsigned-width-signature)
@@ -30,7 +30,7 @@
 ; Convert an integer to a boolean.
 ; This function is used in generated conditional statements.
 ; It is not available from Hydromel source code.
-(define-syntax std/true? (meta/builtin-function #'true?-impl))
+(define-syntax kw-true? (meta/builtin-function #'true?-impl))
 
 (define (true?-impl a)
   (not (zero? a)))
@@ -39,8 +39,8 @@
   (t/boolean))
 
 ; The Hydromel if statement is expanded to a call-expr
-; to std/if as if it were a function.
-(define-syntax std/if (meta/builtin-function #'if-impl))
+; to kw-if as if it were a function.
+(define-syntax kw-if (meta/builtin-function #'if-impl))
 
 (define-syntax-parse-rule (if-impl (~seq c t) ... e)
   (cond [(true?-impl c) t]
@@ -65,10 +65,10 @@
   (t/unsigned 32)) ; TODO set a relevant width here
 
 ; Boolean operators are all bitwise.
-(define-syntax std/not (meta/builtin-function #'bitwise-not))
-(define-syntax std/and (meta/builtin-function #'bitwise-and))
-(define-syntax std/or  (meta/builtin-function #'bitwise-ior))
-(define-syntax std/xor (meta/builtin-function #'bitwise-xor))
+(define-syntax kw-not (meta/builtin-function #'bitwise-not))
+(define-syntax kw-and (meta/builtin-function #'bitwise-and))
+(define-syntax kw-or  (meta/builtin-function #'bitwise-ior))
+(define-syntax kw-xor (meta/builtin-function #'bitwise-xor))
 
 (define (bitwise-signature ta tb)
   (match (cons ta tb)
@@ -83,9 +83,9 @@
 (define bitwise-xor-signature bitwise-signature)
 
 ; Comparison operations return integers 0 and 1.
-(define-syntax std/== (meta/builtin-function #'==-impl))
-(define-syntax std//= (meta/builtin-function #'!=-impl))
-(define-syntax std/>  (meta/builtin-function #'>-impl))
+(define-syntax kw-== (meta/builtin-function #'==-impl))
+(define-syntax kw-/= (meta/builtin-function #'!=-impl))
+(define-syntax kw->  (meta/builtin-function #'>-impl))
 
 (define (==-impl a b)
   (if (= a b) 1 0))
@@ -104,9 +104,9 @@
 (define >-impl-signature  comparison-signature)
 
 ; Use the built-in arithmetic operators.
-(define-syntax std/+ (meta/builtin-function #'+))
-(define-syntax std/- (meta/builtin-function #'-))
-(define-syntax std/* (meta/builtin-function #'*))
+(define-syntax kw-+ (meta/builtin-function #'+))
+(define-syntax kw-- (meta/builtin-function #'-))
+(define-syntax kw-* (meta/builtin-function #'*))
 
 (define (+-signature ta tb)
   (match (cons ta tb)
@@ -129,7 +129,7 @@
     [_ (error "Arithmetic operation expects integer operands.")]))
 
 ; TODO descending ranges
-(define-syntax std/range (meta/builtin-function #'range-impl))
+(define-syntax kw-range (meta/builtin-function #'range-impl))
 
 (define (range-impl a b)
   (range a (add1 b)))

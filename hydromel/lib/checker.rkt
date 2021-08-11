@@ -311,7 +311,7 @@
            (register-expr arg ...)))]
 
       [s:stx/when-clause
-       (define expr^ (make-checker #'(call-expr std/true? s.expr)))
+       (define expr^ (make-checker #'(call-expr kw-true? s.expr)))
        (thunk
          (define/syntax-parse expr (check-assigned-expr (expr^)))
          (syntax/loc stx

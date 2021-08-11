@@ -105,15 +105,15 @@
     #:datum-literals [or-expr and-expr rel-expr add-expr mult-expr if-expr prefix-expr range-expr]
     (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
-      #:attr fn-name (format-id #'op "std/~a" #'op))
+      #:attr fn-name (format-id #'op "kw-~a" #'op))
     (pattern (prefix-expr op right)
       #:attr (arg 1) (list #'right)
-      #:attr fn-name (format-id #'op "std/~a" #'op))
+      #:attr fn-name (format-id #'op "kw-~a" #'op))
     (pattern (if-expr arg ...)
-      #:attr fn-name #'std/if)
+      #:attr fn-name #'kw-if)
     (pattern (range-expr left op right)
       #:attr (arg 1) (list #'left #'right)
-      #:attr fn-name #'std/range)
+      #:attr fn-name #'kw-range)
     (pattern (call-expr fn-name arg ...)))
 
   (define-syntax-class lift-expr
