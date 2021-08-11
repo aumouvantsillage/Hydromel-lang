@@ -10,44 +10,44 @@
     (prefix-in meta/ "meta.rkt")))
 
 (provide
-  kw-true?      true?-impl true?-impl-signature
-  kw-if         if-impl    if-impl-signature
-  kw-not        bitwise-not-signature
-  kw-and        bitwise-and-signature
-  kw-or         bitwise-ior-signature
-  kw-xor        bitwise-xor-signature
-  kw-==         ==-impl ==-impl-signature
-  kw-/=         /=-impl /=-impl-signature
-  kw->          >-impl >-impl-signature
-  kw-+          +-signature
-  kw--          --signature
-  kw-*          *-signature
-  kw-range      range-impl range-impl-signature
+  int-to-bool    int-to-bool-impl int-to-bool-impl-signature
+  kw-if          kw-if-impl       kw-if-impl-signature
+  kw-not                          bitwise-not-signature
+  kw-and                          bitwise-and-signature
+  kw-or                           bitwise-ior-signature
+  kw-xor                          bitwise-xor-signature
+  kw-==          kw-==-impl       kw-==-impl-signature
+  kw-/=          kw-/=-impl       kw-/=-impl-signature
+  kw->           kw->-impl        kw->-impl-signature
+  kw-+                            +-signature
+  kw--                            --signature
+  kw-*                            *-signature
+  kw-range       kw-range-impl    kw-range-impl-signature
   (all-from-out  "logic.rkt")
-  signed_width   min-signed-width-signature
-  unsigned_width min-unsigned-width-signature)
+  signed_width                    min-signed-width-signature
+  unsigned_width                  min-unsigned-width-signature)
 
 ; Convert an integer to a boolean.
 ; This function is used in generated conditional statements.
 ; It is not available from Hydromel source code.
-(define-syntax kw-true? (meta/builtin-function #'true?-impl))
+(define-syntax int-to-bool (meta/builtin-function #'int-to-bool-impl))
 
-(define (true?-impl a)
+(define (int-to-bool-impl a)
   (not (zero? a)))
 
-(define (true?-impl-signature t)
+(define (int-to-bool-impl-signature t)
   (t/boolean))
 
 ; The Hydromel if statement is expanded to a call-expr
 ; to kw-if as if it were a function.
-(define-syntax kw-if (meta/builtin-function #'if-impl))
+(define-syntax kw-if (meta/builtin-function #'kw-if-impl))
 
-(define-syntax-parse-rule (if-impl (~seq c t) ... e)
-  (cond [(true?-impl c) t]
+(define-syntax-parse-rule (kw-if-impl (~seq c t) ... e)
+  (cond [(int-to-bool-impl c) t]
         ...
         [else e]))
 
-(define (if-impl-signature tc . ts)
+(define (kw-if-impl-signature tc . ts)
   (t/union ts))
 
 ; Returns the minimum width to encode a given number
@@ -83,25 +83,25 @@
 (define bitwise-xor-signature bitwise-signature)
 
 ; Comparison operations return integers 0 and 1.
-(define-syntax kw-== (meta/builtin-function #'==-impl))
-(define-syntax kw-/= (meta/builtin-function #'!=-impl))
-(define-syntax kw->  (meta/builtin-function #'>-impl))
+(define-syntax kw-== (meta/builtin-function #'kw-==-impl))
+(define-syntax kw-/= (meta/builtin-function #'kw-/=-impl))
+(define-syntax kw->  (meta/builtin-function #'kw->-impl))
 
-(define (==-impl a b)
+(define (kw-==-impl a b)
   (if (= a b) 1 0))
 
-(define (/=-impl a b)
+(define (kw-/=-impl a b)
   (if (= a b) 0 1))
 
-(define (>-impl a b)
+(define (kw->-impl a b)
   (if (> a b) 1 0))
 
 (define (comparison-signature ta tb)
   (t/unsigned 1))
 
-(define ==-impl-signature comparison-signature)
-(define /=-impl-signature comparison-signature)
-(define >-impl-signature  comparison-signature)
+(define kw-==-impl-signature comparison-signature)
+(define kw-/=-impl-signature comparison-signature)
+(define kw->-impl-signature  comparison-signature)
 
 ; Use the built-in arithmetic operators.
 (define-syntax kw-+ (meta/builtin-function #'+))
@@ -129,12 +129,12 @@
     [_ (error "Arithmetic operation expects integer operands.")]))
 
 ; TODO descending ranges
-(define-syntax kw-range (meta/builtin-function #'range-impl))
+(define-syntax kw-range (meta/builtin-function #'kw-range-impl))
 
-(define (range-impl a b)
+(define (kw-range-impl a b)
   (range a (add1 b)))
 
-(define (range-impl-signature ta tb)
+(define (kw-range-impl-signature ta tb)
   (t/range
     (match (cons ta tb)
       [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (max na nb))]
