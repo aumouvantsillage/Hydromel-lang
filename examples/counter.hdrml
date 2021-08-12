@@ -1,10 +1,11 @@
 #lang hydromel
 
 component counter(LIMIT : unsigned)
+    constant WIDTH = unsigned_width(LIMIT)
     port clear  : in  bit
     port up     : in  bit
     port down   : in  bit
-    port value  : out unsigned(unsigned_width(LIMIT))
+    port value  : out unsigned(WIDTH)
     port bottom : out bit
     port top    : out bit
 
@@ -16,12 +17,12 @@ component counter(LIMIT : unsigned)
                     if top then
                         0
                     else
-                        cast(unsigned(unsigned_width(LIMIT)), value + 1)
+                        cast(unsigned(WIDTH), value + 1)
                 else if down then
                     if bottom then
                         LIMIT
                     else
-                        cast(unsigned(unsigned_width(LIMIT)), value - 1)
+                        cast(unsigned(WIDTH), value - 1)
                 else
                     value)
 end

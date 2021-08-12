@@ -3,7 +3,9 @@
 (require
   syntax/parse/define
   "std.rkt"
-  "slot.rkt")
+  "slot.rkt"
+  "signal.rkt"
+  (prefix-in t/ "types.rkt"))
 
 (provide
   port-ref
@@ -41,5 +43,8 @@
        (define path^ (if path (string-append path index) index))
        (signal-table v res path^))]
 
+    [(? integer?)
+     (hash-set parent path (slot (signal inst) (thunk (t/literal-type inst))))]
+
     [_
-     (error "No signal at" path)]))
+     (error "Unsupported data type at" path)]))
