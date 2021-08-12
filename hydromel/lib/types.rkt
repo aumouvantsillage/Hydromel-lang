@@ -25,11 +25,11 @@
 
 ; Parameterized data types are exposed as functions
 ; whose result is a type.
-(define (signed-signature n)
-  (type))
+(define (signed-signature tn)
+  (type (signed (integer-width tn))))
 
-(define (unsigned-signature n)
-  (type))
+(define (unsigned-signature tn)
+  (type (unsigned (integer-width tn))))
 
 (struct unsigned integer ()
   #:transparent
@@ -43,13 +43,14 @@
 
 (struct record datatype (fields) #:transparent)
 
+; The range type is used internally.
 (struct range datatype (type) #:transparent)
 
 ; The boolean type is used internally.
 (struct boolean datatype () #:transparent)
 
 ; The type of types.
-(struct type datatype () #:transparent)
+(struct type datatype (supertype) #:transparent)
 
 ; Standard derived types.
 
@@ -59,7 +60,7 @@
   (unsigned 1))
 
 (define (bit-impl-signature)
-  (type))
+  (type (bit-impl)))
 
 ; Type helpers.
 
@@ -69,3 +70,14 @@
   (if (>= x 0)
     (unsigned (l/min-unsigned-width x))
     (signed   (l/min-signed-width   x))))
+
+(define (subtype? t u)
+  (match (cons t u)
+    [(cons (signed n)     (signed m))   (<= n m)]
+    [(cons (unsigned n)   (unsigned m)) (<= n m)]
+    [(cons (signed n)     (unsigned m)) #f]
+    [(cons (unsigned n)   (signed m))   (<  n m)]
+    [(cons (union vs)     _)            (for/and ([it (in-list vs)])
+                                          (subtype? it u))]
+    ; TODO tuple, array, record
+    [_ #f]))

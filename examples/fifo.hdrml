@@ -20,9 +20,9 @@ component fifo1(T : type, I : T)
     signal x = not c.valid
 
     signal write : bit = c.valid and not (full xor p.ready)
-    signal full     = register(0, write or not c.ready)
-    signal data_reg = register(I, c.data when write)
-    p.data          = if full then data_reg else c.data
+    signal full        = register(0, write or not c.ready)
+    signal data_reg    = register(I, c.data when write)
+    p.data             = if full then data_reg else c.data
 end
 
 # full c.valid p.ready | write full* c.ready p.valid

@@ -25,7 +25,8 @@
   kw-range       kw-range-impl    kw-range-impl-signature
   (all-from-out  "logic.rkt")
   signed_width                    min-signed-width-signature
-  unsigned_width                  min-unsigned-width-signature)
+  unsigned_width                  min-unsigned-width-signature
+  cast           cast-impl        cast-impl-signature)
 
 ; Convert an integer to a boolean.
 ; This function is used in generated conditional statements.
@@ -55,14 +56,17 @@
 (define-syntax unsigned_width (meta/builtin-function #'min-unsigned-width))
 
 (define (min-unsigned-width-signature t)
-  (t/unsigned 32)) ; TODO set a relevant width here
+  (t/unsigned (t/integer-width t)))
 
 ; Returns the minimum width to encode a given number
 ; as an signed integer.
 (define-syntax signed_width (meta/builtin-function #'min-signed-width))
 
 (define (min-signed-width-signature t)
-  (t/unsigned 32)) ; TODO set a relevant width here
+  (t/unsigned (match t
+                [(t/signed   n) n]
+                [(t/unsigned n) (add1 n)]
+                [_ (error "Cannot compute data size.")])))
 
 ; Boolean operators are all bitwise.
 (define-syntax kw-not (meta/builtin-function #'bitwise-not))
@@ -142,3 +146,11 @@
       [(cons (t/signed na)   (t/unsigned nb)) (t/signed   (max na (add1 nb)))]
       [(cons (t/signed   na) (t/signed   nb)) (t/signed   (max na nb))]
       [_ (error "Range expects integer boundaries.")])))
+
+(define-syntax cast (meta/builtin-function #'cast-impl))
+
+(define (cast-impl t e)
+  (t e))
+
+(define (cast-impl-signature ta tb)
+  (t/type-supertype ta))

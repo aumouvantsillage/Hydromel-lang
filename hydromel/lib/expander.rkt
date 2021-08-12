@@ -100,6 +100,9 @@
       ; TODO
       ; [(field-expr expr field-name type-name)]
 
+      [(static-expr x)
+       (type-inference #'x)]
+
       [(signal-expr x)
        (type-inference #'x)]
 
@@ -127,6 +130,7 @@
     (provide ctor-name)
     (define (ctor-name param-name ...)
       body ...
+      (typecheck body) ...
       (make-hash `((field-name . ,field-name) ...)))))
 
 (define-syntax-parse-rule (interface name body ...)
@@ -230,6 +234,23 @@
 (define-syntax-parse-rule (assignment target expr)
   (set-slot-signal! target expr))
 
+; Typecheck an assignment, or a local signal with explicit type.
+(define-syntax-parser typecheck
+  #:literals [assignment local-signal]
+  [(_ (assignment target expr))
+   #:with expr-type   (type-inference #'expr)
+   #:with target-type (type-inference #'target)
+   #'(unless (subtype? expr-type target-type)
+       ; TODO show source code instead of generated code, or source location only.
+       (raise-syntax-error #f (format "Incompatible type in assignment, found ~a, expected ~a" expr-type target-type) #'expr))]
+
+  [(_ (local-signal name _ expr))
+   #'(typecheck (assignment (name-expr name) expr))]
+
+  [_ #'(begin)])
+
+; Connect two interface instances.
+; See std.rkt for the implementation of connect.
 (define-syntax-parse-rule (connection left right)
   (connect left right))
 
