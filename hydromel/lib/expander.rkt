@@ -79,7 +79,7 @@
 
   [(_ (call-expr name arg ...))
    #'(call-expr name (prepare-for-typing arg) ...)]
-   
+
   [(_ other) #'other])
 
 ; Generate type inference code.
@@ -91,7 +91,7 @@
    #'(let ([x expr])
        (if (slot? x)
          (slot-type x)
-         (literal-type x)))]
+         (static-value x)))]
 
   [(_ (literal-expr n))
    #'(static-value n)]
@@ -103,7 +103,7 @@
    #'(let ([x (dict-ref (prepare-for-typing expr) 'field-name)])
        (if (slot? x)
          (slot-type x)
-         (literal-type x)))]
+         (static-value x)))]
 
   [(_ (call-expr name arg ...))
    #:with sig-name (format-id #'here "~a-signature" #'name)
@@ -423,9 +423,11 @@
     (data-port y in (call-expr signed (literal-expr 32)))
     (data-port z out (call-expr signed (literal-expr 32)))
     (assignment (name-expr z)
-                (lift-expr [x^ (signal-expr (name-expr x))]
-                           [y^ (signal-expr (name-expr y))]
-                           (call-expr + (name-expr x^) (name-expr y^)))))
+      (lift-expr [x^ (signal-expr (name-expr x))]
+                 [y^ (signal-expr (name-expr y))]
+        (call-expr cast-impl
+          (call-expr signed (literal-expr 32))
+          (call-expr + (name-expr x^) (name-expr y^))))))
 
   (component C7
     (data-port x in (call-expr signed (literal-expr 32)))
@@ -440,9 +442,11 @@
                                 [u^ (signal-expr (name-expr u))]
                                 (call-expr * (name-expr z^) (name-expr u^))))
     (assignment (name-expr v)
-                (lift-expr [xy^ (signal-expr (name-expr xy))]
-                           [zu^ (signal-expr (name-expr zu))]
-                           (call-expr + (name-expr xy^) (name-expr zu^)))))
+      (lift-expr [xy^ (signal-expr (name-expr xy))]
+                 [zu^ (signal-expr (name-expr zu))]
+        (call-expr cast-impl
+          (call-expr signed (literal-expr 32))
+          (call-expr + (name-expr xy^) (name-expr zu^))))))
 
   (component C8
     (parameter N (name-expr unsigned))
@@ -450,7 +454,10 @@
     (data-port y out (call-expr signed (literal-expr 32)))
     (assignment (name-expr y)
                 (lift-expr [x^ (signal-expr (name-expr x))]
-                           (call-expr * (name-expr x^) (name-expr N)))))
+                  (call-expr cast-impl
+                    (call-expr signed (literal-expr 32))
+                    (call-expr * (name-expr x^) (name-expr N))))))
+
   (component C9
     (data-port x in (call-expr signed (literal-expr 32)))
     (data-port y out (call-expr signed (literal-expr 32)))
@@ -465,9 +472,12 @@
     (instance c (multiplicity (literal-expr 2)) C8 (literal-expr 10))
     (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 0)) x) (signal-expr (name-expr x0)))
     (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 1)) x) (signal-expr (name-expr x1)))
-    (assignment (name-expr y) (lift-expr [y0 (signal-expr (field-expr (indexed-expr (name-expr c) (literal-expr 0)) y))]
-                                         [y1 (signal-expr (field-expr (indexed-expr (name-expr c) (literal-expr 1)) y))]
-                                         (call-expr + (name-expr y0) (name-expr y1)))))
+    (assignment (name-expr y)
+      (lift-expr [y0 (signal-expr (field-expr (indexed-expr (name-expr c) (literal-expr 0)) y))]
+                 [y1 (signal-expr (field-expr (indexed-expr (name-expr c) (literal-expr 1)) y))]
+        (call-expr cast-impl
+          (call-expr signed (literal-expr 32))
+          (call-expr + (name-expr y0) (name-expr y1))))))
 
   (component C11
     (data-port x in (call-expr signed (literal-expr 32)))
@@ -493,8 +503,9 @@
     (data-port y in (call-expr signed (literal-expr 32)))
     (data-port z in (call-expr signed (literal-expr 32)))
     (data-port u out (call-expr signed (literal-expr 32)))
-    (assignment (name-expr u) (register-expr (literal-expr 0) (when-clause (signal-expr (name-expr x)))
-                                             (signal-expr (name-expr z)) (when-clause (signal-expr (name-expr y))))))
+    (assignment (name-expr u)
+      (register-expr (literal-expr 0) (when-clause (signal-expr (name-expr x)))
+                     (signal-expr (name-expr z)) (when-clause (signal-expr (name-expr y))))))
 
   (component C15
     (constant N (literal-expr 56))
@@ -738,4 +749,4 @@
   (test-case "Can infer the type of a local signal that copies a constant"
     (define c (C20-make))
     (check-equal? (slot-type (dict-ref c 'y)) (slot-type (dict-ref c 'x)))
-    (check-equal? (slot-type (dict-ref c 'z)) (unsigned 8))))
+    (check-equal? (slot-type (dict-ref c 'z)) (static-value 255))))
