@@ -65,55 +65,65 @@
   ; Return the list of port and signal names in the given syntax object.
   (define (design-unit-field-names stx-lst)
     (define/syntax-parse ((_ name _ ...) ...) (design-unit-fields stx-lst))
-    (attribute name))
+    (attribute name)))
 
-  ; Generate type inference code.
-  ; TODO defer type inference to support out-of-order dependencies
-  ; TODO handle circular dependencies in register-expr
-  (define (type-inference stx)
-    (syntax-parse stx
-      #:literals [name-expr literal-expr register-expr when-clause field-expr call-expr signal-expr lift-expr]
-      [(name-expr name)
-       (quasisyntax/loc stx
-         (let ([x #,stx])
-           (if (slot? x)
-             (slot-type x)
-             (literal-type x))))]
+; Replace dynamic indices with zeros in indexed expressions.
+(define-syntax-parser prepare-for-typing
+  #:literals [indexed-expr field-expr]
+  [(_ (indexed-expr expr index ...))
+   #:with (index0 ...) (for/list ([it (in-list (attribute index))]) #'0)
+   #'(indexed-expr (prepare-for-typing expr) index0 ...)]
 
-      [(literal-expr n)
-       (quasisyntax/loc stx
-         (literal-type n))]
+  [(_ (field-expr expr field-name))
+   #'(field-expr (prepare-for-typing expr) field-name)]
 
-      [(register-expr _ (~optional (when-clause _)) d (~optional (when-clause _)))
-       (type-inference #'d)]
+  [(_ (call-expr name arg ...))
+   #'(call-expr name (prepare-for-typing arg) ...)]
+   
+  [(_ other) #'other])
 
-      [(field-expr expr field-name)
-       (syntax/loc stx
-         (slot-type (dict-ref expr 'field-name)))]
+; Generate type inference code.
+; TODO defer type inference to support out-of-order dependencies
+; TODO handle circular dependencies in register-expr
+(define-syntax-parser type-inference
+  #:literals [name-expr literal-expr register-expr when-clause field-expr call-expr signal-expr lift-expr]
+  [(_ (~and (name-expr _ ...) expr))
+   #'(let ([x expr])
+       (if (slot? x)
+         (slot-type x)
+         (literal-type x)))]
 
-      [(call-expr name arg ...)
-       #:with sig-name (format-id #'here "~a-signature" #'name)
-       #:with (arg-type ...) (map type-inference (attribute arg))
-       (syntax/loc stx
-         (sig-name arg-type ...))]
+  [(_ (literal-expr n))
+   #'(static-value n)]
 
-      ; TODO
-      ; [(field-expr expr field-name type-name)]
+  [(_ (register-expr _ (~optional (when-clause _)) d (~optional (when-clause _))))
+   #'(type-inference d)]
 
-      [(static-expr x)
-       (type-inference #'x)]
+  [(_ (field-expr expr field-name))
+   #'(let ([x (dict-ref (prepare-for-typing expr) 'field-name)])
+       (if (slot? x)
+         (slot-type x)
+         (literal-type x)))]
 
-      [(signal-expr x)
-       (type-inference #'x)]
+  [(_ (call-expr name arg ...))
+   #:with sig-name (format-id #'here "~a-signature" #'name)
+   #'(sig-name (type-inference arg) ...)]
 
-      [(lift-expr (name sexpr) ...+ expr)
-       #:with (sexpr-type ...) (map type-inference (attribute sexpr))
-       #:with expr-type (type-inference #'expr)
-       (syntax/loc stx
-         (let ([name (slot #f (make-slot-typer sexpr-type))] ...)
-           expr-type))]
+  ; TODO
+  ; [(field-expr expr field-name type-name)]
+  ; [(indexed-expr)]
 
-      [_ #''any])))
+  [(_ (static-expr x))
+   #'(type-inference x)]
+
+  [(_ (signal-expr x))
+   #'(type-inference x)]
+
+  [(_ (lift-expr (name sexpr) ...+ expr))
+   #'(let ([name (slot #f (make-slot-typer (type-inference sexpr)))] ...)
+       (type-inference expr))]
+
+  [_ #''any])
 
 (define-syntax (import stx)
   (raise-syntax-error #f "should not be used outside of begin-tiny-hdl" stx))
@@ -156,7 +166,7 @@
 ; Like output ports, local signals do not need to be wrapped in a slot, but
 ; it helps expanding expressions without managing several special cases.
 (define-syntax-parse-rule (local-signal name (~optional type) expr)
-  #:with type^ (or (attribute type) (type-inference #'expr))
+  #:with type^ (or (attribute type) #'(type-inference expr))
   (define name (slot expr (make-slot-typer type^))))
 
 ; Multiplicity indications are processed in macros composite-port and instance.
@@ -238,9 +248,9 @@
 (define-syntax-parser typecheck
   #:literals [assignment local-signal]
   [(_ (assignment target expr))
-   #:with expr-type   (type-inference #'expr)
-   #:with target-type (type-inference #'target)
-   #'(unless (subtype? expr-type target-type)
+   #:with expr-type   #'(type-inference expr)
+   #:with target-type #'(type-inference target)
+   #'(unless (subtype? (actual-type expr-type) target-type)
        ; TODO show source code instead of generated code, or source location only.
        (raise-syntax-error #f (format "Incompatible type in assignment, found ~a, expected ~a" expr-type target-type) #'expr))]
 
@@ -284,7 +294,8 @@
 ; A call expression expands to a Racket function call.
 ; TODO avoid calling type-inference twice for each subexpression.
 (define-syntax-parse-rule (call-expr fn-name arg ...)
-  #:with type (type-inference this-syntax)
+  #:with expr this-syntax
+  #:with type #'(type-inference expr)
   (type (fn-name arg ...)))
 
 ; When clauses are processed in macro register-expr.

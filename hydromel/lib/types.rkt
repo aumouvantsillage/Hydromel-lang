@@ -26,10 +26,14 @@
 ; Parameterized data types are exposed as functions
 ; whose result is a type.
 (define (signed-signature tn)
-  (type (signed (integer-width tn))))
+  (match tn
+    [(static-value n) (type (signed n))]
+    [_                (error "Signed width must be a static value")]))
 
 (define (unsigned-signature tn)
-  (type (unsigned (integer-width tn))))
+  (match tn
+    [(static-value n) (type (unsigned n))]
+    [_                (error "Unsigned width must be a static value")]))
 
 (struct unsigned integer ()
   #:transparent
@@ -52,6 +56,11 @@
 ; The type of types.
 (struct type datatype (supertype) #:transparent)
 
+; A type to defer the type inference of static values.
+(struct static-value datatype (actual)
+  #:transparent
+  #:property prop:procedure (λ (t v) ((literal-type (static-value-actual t)) v)))
+
 ; Standard derived types.
 
 (define-syntax bit (meta/builtin-function #'bit-impl))
@@ -70,6 +79,11 @@
   (if (>= x 0)
     (unsigned (l/min-unsigned-width x))
     (signed   (l/min-signed-width   x))))
+
+(define (actual-type t)
+  (match t
+    [(static-value n) (literal-type n)]
+    [_                t]))
 
 (define (subtype? t u)
   (match (cons t u)

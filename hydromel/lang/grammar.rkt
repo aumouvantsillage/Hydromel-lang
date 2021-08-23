@@ -112,6 +112,7 @@ prefix-expr: ("-" | "not") simple-expr
   name-expr |
   field-expr |
   indexed-expr |
+  slice-expr |
   register-expr |
   call-expr |
   /"(" expression /")"
@@ -125,6 +126,9 @@ field-expr:
 
 indexed-expr:
   simple-expr /"[" expression ("," expression)* ","? /"]"
+
+slice-expr:
+  simple-expr /"{" expression /"}"
 
 register-expr:
   /"register" /"(" expression when-clause? /"," expression when-clause? /")"

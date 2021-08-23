@@ -468,10 +468,10 @@
 
   (define (lift-if-needed stx)
     (syntax-parse stx
-      #:literals [call-expr indexed-expr field-expr]
-      [(call-expr fn-name arg ...)
-       (lift-if-needed* stx (attribute arg)
-         (λ (lst) (qs/l (call-expr fn-name #,@lst))))]
+      #:literals [indexed-expr field-expr]
+      [s:stx/call-expr
+       (lift-if-needed* stx (attribute s.arg)
+         (λ (lst) (qs/l (call-expr s.fn-name #,@lst))))]
       [(indexed-expr expr ...)
        (lift-if-needed* stx (attribute expr)
          (λ (lst) (qs/l (indexed-expr #,@lst))))]
@@ -593,7 +593,10 @@
       (data-port x in (call-expr signed (literal-expr 32)))
       (data-port y in (call-expr signed (literal-expr 32)))
       (data-port z out (call-expr signed (literal-expr 32)))
-      (assignment (name-expr z) (add-expr (name-expr x) + (name-expr y))))
+      (assignment (name-expr z)
+        (call-expr cast
+          (call-expr signed (literal-expr 32))
+          (add-expr (name-expr x) + (name-expr y)))))
 
     (component C8
       (data-port x in (call-expr signed (literal-expr 32)))
@@ -601,8 +604,11 @@
       (data-port z in (call-expr signed (literal-expr 32)))
       (data-port u in (call-expr signed (literal-expr 32)))
       (data-port v out (call-expr signed (literal-expr 32)))
-      (assignment (name-expr v) (add-expr (mult-expr (name-expr x) * (name-expr y))
-                                        + (mult-expr (name-expr z) * (name-expr u)))))
+      (assignment (name-expr v)
+        (call-expr cast
+          (call-expr signed (literal-expr 32))
+          (add-expr (mult-expr (name-expr x) * (name-expr y))
+                  + (mult-expr (name-expr z) * (name-expr u))))))
 
     (component C9
       (data-port x in (call-expr signed (literal-expr 32)))
@@ -612,7 +618,10 @@
       (data-port v out (call-expr signed (literal-expr 32)))
       (local-signal xy (mult-expr (name-expr x) * (name-expr y)))
       (local-signal zu (mult-expr (name-expr z) * (name-expr u)))
-      (assignment (name-expr v) (add-expr (name-expr xy) + (name-expr zu))))
+      (assignment (name-expr v)
+        (call-expr cast
+          (call-expr signed (literal-expr 32))
+          (add-expr (name-expr xy) + (name-expr zu)))))
 
     (interface I2
       (data-port x in (call-expr signed (literal-expr 32))))
@@ -628,7 +637,10 @@
       (parameter N (name-expr unsigned))
       (data-port x in (call-expr signed (literal-expr 32)))
       (data-port y out (call-expr signed (literal-expr 32)))
-      (assignment (name-expr y) (mult-expr (name-expr x) * (name-expr N))))
+      (assignment (name-expr y)
+        (call-expr cast
+          (call-expr signed (literal-expr 32))
+          (mult-expr (name-expr x) * (name-expr N)))))
 
     (component C12
       (data-port x in (call-expr signed (literal-expr 32)))
@@ -644,8 +656,11 @@
       (instance c (multiplicity (literal-expr 2)) C11 (literal-expr 10))
       (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 0)) x) (name-expr x0))
       (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 1)) x) (name-expr x1))
-      (assignment (name-expr y) (add-expr (field-expr (indexed-expr (name-expr c) (literal-expr 0)) y)
-                                        + (field-expr (indexed-expr (name-expr c) (literal-expr 1)) y))))
+      (assignment (name-expr y)
+        (call-expr cast
+          (call-expr signed (literal-expr 32))
+          (add-expr (field-expr (indexed-expr (name-expr c) (literal-expr 0)) y)
+                  + (field-expr (indexed-expr (name-expr c) (literal-expr 1)) y)))))
 
     (component C14
       (composite-port i splice I0)
@@ -765,6 +780,13 @@
     (component C33
       (data-port y out (call-expr signed (literal-expr 32)))
       (assignment (name-expr y) (name-expr K)))
+
+    (component C34
+      (constant N (literal-expr 240))
+      (data-port y out (call-expr unsigned (literal-expr 1)))
+      (data-port z out (call-expr unsigned (literal-expr 1)))
+      (assignment (name-expr y) (slice-expr (name-expr N) (literal-expr 3)))
+      (assignment (name-expr z) (slice-expr (name-expr N) (literal-expr 4))))
 
     (define (check-sig-equal? t e n)
       (check-equal? (signal-take t n) (signal-take e n)))
@@ -997,4 +1019,9 @@
 
     (test-case "Can read a global constant"
       (define c (C33-make))
-      (check-sig-equal? (port-ref c y) (signal 44) 1))))
+      (check-sig-equal? (port-ref c y) (signal 44) 1))
+
+    (test-case "Can read a bit in an integer value"
+      (define c (C34-make))
+      (check-sig-equal? (port-ref c y) (signal 0) 1)
+      (check-sig-equal? (port-ref c z) (signal 1) 1))))

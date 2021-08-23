@@ -102,7 +102,7 @@
 
   (define-syntax-class call-expr
     #:literals [call-expr not]
-    #:datum-literals [or-expr and-expr rel-expr add-expr mult-expr if-expr prefix-expr range-expr]
+    #:datum-literals [or-expr and-expr rel-expr add-expr mult-expr if-expr prefix-expr range-expr slice-expr]
     (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
       #:attr fn-name (format-id #'op "kw-~a" #'op))
@@ -114,6 +114,11 @@
     (pattern (range-expr left op right)
       #:attr (arg 1) (list #'left #'right)
       #:attr fn-name #'kw-range)
+    (pattern (slice-expr expr (range-expr left op right))
+      #:attr (arg 1) (list #'expr #'left #'right)
+      #:attr fn-name #'kw-slice)
+    (pattern (slice-expr arg ...)
+      #:attr fn-name #'kw-bit-ref)
     (pattern (call-expr fn-name arg ...)))
 
   (define-syntax-class lift-expr

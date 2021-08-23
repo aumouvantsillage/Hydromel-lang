@@ -23,6 +23,7 @@
   kw--                            --signature
   kw-*                            *-signature
   kw-range       kw-range-impl    kw-range-impl-signature
+  kw-bit-ref     kw-bit-ref-impl  kw-bit-ref-impl-signature
   (all-from-out  "logic.rkt")
   signed_width                    min-signed-width-signature
   unsigned_width                  min-unsigned-width-signature
@@ -56,14 +57,16 @@
 (define-syntax unsigned_width (meta/builtin-function #'min-unsigned-width))
 
 (define (min-unsigned-width-signature t)
-  (t/unsigned (t/integer-width t)))
+  (define t^ (t/actual-type t))
+  (t/unsigned (t/integer-width t^)))
 
 ; Returns the minimum width to encode a given number
 ; as an signed integer.
 (define-syntax signed_width (meta/builtin-function #'min-signed-width))
 
 (define (min-signed-width-signature t)
-  (t/unsigned (match t
+  (define t^ (t/actual-type t))
+  (t/unsigned (match t^
                 [(t/signed   n) n]
                 [(t/unsigned n) (add1 n)]
                 [_ (error "Cannot compute data size.")])))
@@ -75,7 +78,9 @@
 (define-syntax kw-xor (meta/builtin-function #'bitwise-xor))
 
 (define (bitwise-signature ta tb)
-  (match (cons ta tb)
+  (define ta^ (t/actual-type ta))
+  (define tb^ (t/actual-type tb))
+  (match (cons ta^ tb^)
     [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (max na nb))]
     [(cons (t/signed   na) (t/integer  nb)) (t/signed   (max na nb))]
     [(cons (t/integer  na) (t/signed   nb)) (t/signed   (max na nb))]
@@ -113,20 +118,24 @@
 (define-syntax kw-* (meta/builtin-function #'*))
 
 (define (+-signature ta tb)
-  (match (cons ta tb)
+  (define ta^ (t/actual-type ta))
+  (define tb^ (t/actual-type tb))
+  (match (cons ta^ tb^)
     [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (add1 (max na nb)))]
     [(cons (t/unsigned na) (t/signed   nb)) (t/signed   (add1 (max (add1 na) nb)))]
     [(cons (t/signed   na) (t/unsigned nb)) (t/signed   (add1 (max na (add1 nb))))]
-    [(cons (t/signed  na)  (t/signed   nb)) (t/signed   (add1 (max na nb)))]
+    [(cons (t/signed   na) (t/signed   nb)) (t/signed   (add1 (max na nb)))]
     [_ (error "Arithmetic operation expects integer operands.")]))
 
 (define (--signature ta [tb #f])
   (if tb
     (+-signature ta tb)
-    (t/signed (add1 (t/integer-width ta)))))
+    (t/signed (add1 (t/integer-width (t/actual-type ta))))))
 
 (define (*-signature ta tb)
-  (match (cons ta tb)
+  (define ta^ (t/actual-type ta))
+  (define tb^ (t/actual-type tb))
+  (match (cons ta^ tb^)
     [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (+ na nb))]
     [(cons (t/integer na)  (t/signed   nb)) (t/signed   (+ na nb))]
     [(cons (t/signed na)   (t/integer  nb)) (t/signed   (+ na nb))]
@@ -139,18 +148,32 @@
   (range a (add1 b)))
 
 (define (kw-range-impl-signature ta tb)
+  (define ta^ (t/actual-type ta))
+  (define tb^ (t/actual-type tb))
   (t/range
-    (match (cons ta tb)
+    (match (cons ta^ tb^)
       [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (max na nb))]
       [(cons (t/unsigned na) (t/signed   nb)) (t/signed   (max (add1 na) nb))]
-      [(cons (t/signed na)   (t/unsigned nb)) (t/signed   (max na (add1 nb)))]
+      [(cons (t/signed   na) (t/unsigned nb)) (t/signed   (max na (add1 nb)))]
       [(cons (t/signed   na) (t/signed   nb)) (t/signed   (max na nb))]
       [_ (error "Range expects integer boundaries.")])))
+
+(define-syntax kw-bit-ref (meta/builtin-function #'kw-bit-ref-impl))
+
+(define (kw-bit-ref-impl a b)
+  (if (bitwise-bit-set? a b) 1 0))
+
+(define (kw-bit-ref-impl-signature ta tb)
+  (match (t/actual-type ta)
+    [(t/unsigned _) (t/unsigned 1)]
+    [(t/signed   _) (t/signed   1)]
+    [_ (error "Slice expects integer value.")]))
 
 (define-syntax cast (meta/builtin-function #'cast-impl))
 
 (define (cast-impl t e)
-  (t e))
+  e)
+  ;(t e))
 
 (define (cast-impl-signature ta tb)
   (t/type-supertype ta))
