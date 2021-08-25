@@ -86,12 +86,14 @@
     [_                t]))
 
 (define (subtype? t u)
-  (match (cons t u)
-    [(cons (signed n)     (signed m))   (<= n m)]
-    [(cons (unsigned n)   (unsigned m)) (<= n m)]
-    [(cons (signed n)     (unsigned m)) #f]
-    [(cons (unsigned n)   (signed m))   (<  n m)]
-    [(cons (union vs)     _)            (for/and ([it (in-list vs)])
-                                          (subtype? it u))]
+  (match (cons (actual-type t) (actual-type u))
+    [(cons (signed n)   (signed m))   (<= n m)]
+    [(cons (unsigned n) (unsigned m)) (<= n m)]
+    [(cons (signed n)   (unsigned m)) #f]
+    [(cons (unsigned n) (signed m))   (<  n m)]
+    [(cons (union vs)   _)            (for/and ([it (in-list vs)])
+                                        (subtype? it u))]
+    [(cons _            (union vs))   (for/or (it (in-list vs))
+                                        (subtype? t it))]
     ; TODO tuple, array, record
     [_ #f]))

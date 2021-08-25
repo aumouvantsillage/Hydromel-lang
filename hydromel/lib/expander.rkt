@@ -250,7 +250,7 @@
   [(_ (assignment target expr))
    #:with expr-type   #'(type-inference expr)
    #:with target-type #'(type-inference target)
-   #'(unless (subtype? (actual-type expr-type) target-type)
+   #'(unless (subtype? expr-type target-type)
        ; TODO show source code instead of generated code, or source location only.
        (raise-syntax-error #f (format "Incompatible type in assignment, found ~a, expected ~a" expr-type target-type) #'expr))]
 
