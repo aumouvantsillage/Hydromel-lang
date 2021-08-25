@@ -4,7 +4,11 @@
   "signal.rkt"
   "slot.rkt"
   (prefix-in t/ "types.rkt")
-  (only-in "logic.rkt" min-unsigned-width min-signed-width)
+  (only-in "logic.rkt"
+    min-unsigned-width min-signed-width
+    min-signed-value   max-signed-value
+    min-unsigned-value max-unsigned-value
+    unsigned-slice)
   syntax/parse/define
   (for-syntax
     (prefix-in meta/ "meta.rkt")))
@@ -23,7 +27,7 @@
   kw--                            --signature
   kw-*                            *-signature
   kw-range       kw-range-impl    kw-range-impl-signature
-  kw-bit-ref     kw-bit-ref-impl  kw-bit-ref-impl-signature
+  kw-slice                        unsigned-slice-signature
   (all-from-out  "logic.rkt")
   signed_width                    min-signed-width-signature
   unsigned_width                  min-unsigned-width-signature
@@ -158,22 +162,36 @@
       [(cons (t/signed   na) (t/signed   nb)) (t/signed   (max na nb))]
       [_ (error "Range expects integer boundaries.")])))
 
-(define-syntax kw-bit-ref (meta/builtin-function #'kw-bit-ref-impl))
+; The slicing operation defaults to the unsigned version.
+; The signed case is handled automatically because the expander inserts
+; a conversion to the type returned by the signature.
+(define-syntax kw-slice (meta/builtin-function #'unsigned-slice))
 
-(define (kw-bit-ref-impl a b)
-  (if (bitwise-bit-set? a b) 1 0))
-
-(define (kw-bit-ref-impl-signature ta tb)
+(define (unsigned-slice-signature ta tb tc)
+  (define left (match tb
+                 [(t/static-value n) n]
+                 [(t/unsigned     n) (max-unsigned-value n)]
+                 [(t/signed       n) (max-signed-value   n)]
+                 [_                  (error "Invalid type for left slice index.")]))
+  (define right (match tc
+                 [(t/static-value n) n]
+                 [(t/unsigned     n) (min-unsigned-value n)]
+                 [(t/signed       n) (min-signed-value   n)]
+                 [_                  (error "Invalid type for right slice index.")]))
+  (define width (add1 (- left right)))
+  (when (< width 1)
+    (error "Slice indices must be in decreasing order."))
   (match (t/actual-type ta)
-    [(t/unsigned _) (t/unsigned 1)]
-    [(t/signed   _) (t/signed   1)]
+    [(t/unsigned _) (t/unsigned width)]
+    [(t/signed   _) (t/signed   width)]
     [_ (error "Slice expects integer value.")]))
 
 (define-syntax cast (meta/builtin-function #'cast-impl))
 
+; cast does not actually convert the given value because
+; a call to the conversion function is already inserted by the expander.
 (define (cast-impl t e)
   e)
-  ;(t e))
 
 (define (cast-impl-signature ta tb)
   (t/type-supertype ta))

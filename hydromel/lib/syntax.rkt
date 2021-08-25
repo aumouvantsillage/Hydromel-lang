@@ -117,8 +117,9 @@
     (pattern (slice-expr expr (range-expr left op right))
       #:attr (arg 1) (list #'expr #'left #'right)
       #:attr fn-name #'kw-slice)
-    (pattern (slice-expr arg ...)
-      #:attr fn-name #'kw-bit-ref)
+    (pattern (slice-expr expr index)
+      #:attr (arg 1) (list #'expr #'index #'index)
+      #:attr fn-name #'kw-slice)
     (pattern (call-expr fn-name arg ...)))
 
   (define-syntax-class lift-expr

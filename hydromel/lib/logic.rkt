@@ -10,8 +10,10 @@
 
 (provide
   min-unsigned-width min-signed-width
+  min-signed-value   max-signed-value
+  min-unsigned-value max-unsigned-value
   unsigned unsigned-slice unsigned-concat
-  signed signed-slice signed-concat
+  signed   signed-slice   signed-concat
   integer->bit-string)
 
 ; Returns the minimum bit width to store the integer `v`
@@ -26,6 +28,18 @@
 (define (min-signed-width v)
   (define w (min-unsigned-width v))
   (if (negative? v) w (add1 w)))
+
+(define (min-unsigned-value w)
+  0)
+
+(define (max-unsigned-value w)
+  (sub1 (arithmetic-shift 1 w)))
+
+(define (min-signed-value w)
+  (arithmetic-shift -1 (sub1 w)))
+
+(define (max-signed-value w)
+  (sub1 (arithmetic-shift 1 (sub1 w))))
 
 ; Returns a slice of a value.
 ; left is the index of the most significant bit to keep in the result.

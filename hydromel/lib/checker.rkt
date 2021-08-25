@@ -783,10 +783,15 @@
 
     (component C34
       (constant N (literal-expr 240))
+      (constant M (literal-expr -16))
       (data-port y out (call-expr unsigned (literal-expr 1)))
       (data-port z out (call-expr unsigned (literal-expr 1)))
+      (data-port t out (call-expr unsigned (literal-expr 4)))
+      (data-port u out (call-expr signed   (literal-expr 4)))
       (assignment (name-expr y) (slice-expr (name-expr N) (literal-expr 3)))
-      (assignment (name-expr z) (slice-expr (name-expr N) (literal-expr 4))))
+      (assignment (name-expr z) (slice-expr (name-expr N) (literal-expr 4)))
+      (assignment (name-expr t) (slice-expr (name-expr N) (range-expr (literal-expr 5) .. (literal-expr 2))))
+      (assignment (name-expr u) (slice-expr (name-expr M) (range-expr (literal-expr 5) .. (literal-expr 2)))))
 
     (define (check-sig-equal? t e n)
       (check-equal? (signal-take t n) (signal-take e n)))
@@ -1024,4 +1029,12 @@
     (test-case "Can read a bit in an integer value"
       (define c (C34-make))
       (check-sig-equal? (port-ref c y) (signal 0) 1)
-      (check-sig-equal? (port-ref c z) (signal 1) 1))))
+      (check-sig-equal? (port-ref c z) (signal 1) 1))
+
+    (test-case "Can read a signed slice in an integer value"
+      (define c (C34-make))
+      (check-sig-equal? (port-ref c t) (signal 12) 1))
+
+    (test-case "Can read an unsigned slice in an integer value"
+      (define c (C34-make))
+      (check-sig-equal? (port-ref c u) (signal -4) 1))))
