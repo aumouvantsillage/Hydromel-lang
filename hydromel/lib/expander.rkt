@@ -344,8 +344,6 @@
   (define (check-sig-equal? t e n)
     (check-equal? (signal-take t n) (signal-take e n)))
 
-  (define .+ (signal-lift +))
-  (define .* (signal-lift *))
 
   (interface I0
     (parameter N (name-expr unsigned))
@@ -365,15 +363,14 @@
     (assignment (name-expr y) (signal-expr (name-expr x))))
 
   (define c0-inst (C0-make 30))
+  (port-set! (c0-inst x) (signal 23))
 
   (test-case "Can construct a channel for a component with simple ports"
     (check-pred slot? (dict-ref c0-inst 'x))
     (check-pred slot? (dict-ref c0-inst 'y)))
 
   (test-case "Can assign a simple port to another simple port"
-    (define x (signal 23))
-    (port-set! (c0-inst x) x)
-    (check-sig-equal? (port-ref c0-inst y) x 5))
+    (check-sig-equal? (port-ref c0-inst y) (port-ref c0-inst x) 5))
 
   (test-case "Can infer the type of a port"
     (check-equal? (slot-type (dict-ref c0-inst 'x)) (signed 30)))
@@ -467,11 +464,11 @@
     (assignment (field-expr (name-expr i) y)
                 (signal-expr (field-expr (name-expr i) x))))
 
+  (define c2-inst (C2-make))
+  (port-set! (c2-inst i x) (signal 23))
+
   (test-case "Can access simple ports in a composite port"
-    (define c2-inst (C2-make))
-    (define x (signal 23))
-    (port-set! (c2-inst i x) x)
-    (check-sig-equal? (port-ref c2-inst i y) x 5))
+    (check-sig-equal? (port-ref c2-inst i y) (port-ref c2-inst i x) 5))
 
   (component C3
     (composite-port i (multiplicity (literal-expr 3)) I1)
@@ -482,17 +479,15 @@
     (assignment (field-expr (indexed-expr (name-expr i) (literal-expr 2)) y)
                 (signal-expr (field-expr (indexed-expr (name-expr i) (literal-expr 2)) x))))
 
+  (define c3-inst (C3-make))
+  (port-set! (c3-inst i 0 x) (signal 10))
+  (port-set! (c3-inst i 1 x) (signal 20))
+  (port-set! (c3-inst i 2 x) (signal 30))
+
   (test-case "Can access simple ports in a vector composite port with static indices"
-    (define c3-inst (C3-make))
-    (define x0 (signal 10))
-    (define x1 (signal 20))
-    (define x2 (signal 30))
-    (port-set! (c3-inst i 0 x) x0)
-    (port-set! (c3-inst i 1 x) x1)
-    (port-set! (c3-inst i 2 x) x2)
-    (check-sig-equal? (port-ref c3-inst i 0 x) x0 5)
-    (check-sig-equal? (port-ref c3-inst i 1 x) x1 5)
-    (check-sig-equal? (port-ref c3-inst i 2 x) x2 5))
+    (check-sig-equal? (port-ref c3-inst i 0 y) (port-ref c3-inst i 0 x) 5)
+    (check-sig-equal? (port-ref c3-inst i 1 y) (port-ref c3-inst i 1 x) 5)
+    (check-sig-equal? (port-ref c3-inst i 2 y) (port-ref c3-inst i 2 x) 5))
 
   (interface I7
     (data-port x in (call-expr signed (literal-expr 32))))
@@ -505,18 +500,14 @@
                 (lift-expr [y^ (signal-expr (name-expr y))]
                            (signal-expr (field-expr (indexed-expr (name-expr i) (name-expr y^)) x)))))
 
+  (define c4-inst (C4-make))
+  (port-set! (c4-inst i 0 x) (signal 10))
+  (port-set! (c4-inst i 1 x) (signal 20))
+  (port-set! (c4-inst i 2 x) (signal 30))
+  (port-set! (c4-inst y)     (signal 0 1 2 1 0 2))
+
   (test-case "Can access simple ports in a vector composite port with dynamic indices"
-    (define c4-inst (C4-make))
-    (define x0 (signal 10))
-    (define x1 (signal 20))
-    (define x2 (signal 30))
-    (define y (signal 0 1 2 1 0 2))
-    (port-set! (c4-inst i 0 x) x0)
-    (port-set! (c4-inst i 1 x) x1)
-    (port-set! (c4-inst i 2 x) x2)
-    (port-set! (c4-inst y)     y)
-    (define z (signal 10 20 30 20 10 30))
-    (check-sig-equal? (port-ref c4-inst z) z 5))
+    (check-sig-equal? (port-ref c4-inst z) (signal 10 20 30 20 10 30) 6))
 
   (component C5
     (data-port x in (call-expr signed (literal-expr 32)))
@@ -529,13 +520,12 @@
           (call-expr signed (literal-expr 32))
           (call-expr + (name-expr x^) (name-expr y^))))))
 
+  (define c5-inst (C5-make))
+  (port-set! (c5-inst x) (signal 1  2  3  4  5))
+  (port-set! (c5-inst y) (signal 10 20 30 40 50))
+
   (test-case "Can perform an operation between signals"
-    (define c5-inst (C5-make))
-    (define x (signal 1  2  3  4  5))
-    (define y (signal 10 20 30 40 50))
-    (port-set! (c5-inst x) x)
-    (port-set! (c5-inst y) y)
-    (check-sig-equal? (port-ref c5-inst z) (.+ x y) 5))
+    (check-sig-equal? (port-ref c5-inst z) (signal 11 22 33 44 55) 5))
 
   (component C6
     (data-port x in (call-expr signed (literal-expr 32)))
@@ -556,17 +546,14 @@
           (call-expr signed (literal-expr 32))
           (call-expr + (name-expr xy^) (name-expr zu^))))))
 
+  (define c6-inst (C6-make))
+  (port-set! (c6-inst x) (signal 10 20 30 40 50))
+  (port-set! (c6-inst y) (signal 2))
+  (port-set! (c6-inst z) (signal 1 2 3 4 5))
+  (port-set! (c6-inst u) (signal 3))
+
   (test-case "Can use local signals"
-    (define c6-inst (C6-make))
-    (define x (signal 10 20 30 40 50))
-    (define y (signal 2))
-    (define z (signal 1 2 3 4 5))
-    (define u (signal 3))
-    (port-set! (c6-inst x) x)
-    (port-set! (c6-inst y) y)
-    (port-set! (c6-inst z) z)
-    (port-set! (c6-inst u) u)
-    (check-sig-equal? (port-ref c6-inst v) (.+ (.* x y) (.* z u)) 5))
+    (check-sig-equal? (port-ref c6-inst v) (signal 23 46 69 92 115) 5))
 
   (component C7
     (parameter N (name-expr unsigned))
@@ -586,11 +573,10 @@
     (assignment (name-expr y) (signal-expr (field-expr (name-expr c) y))))
 
   (define c8-inst (C8-make))
+  (port-set! (c8-inst x) (signal 10 20 30 40 50))
 
   (test-case "Can instantiate a component"
-    (define x (signal 10 20 30 40 50))
-    (port-set! (c8-inst x) x)
-    (check-sig-equal? (port-ref c8-inst y) (.* x (signal 10)) 5))
+    (check-sig-equal? (port-ref c8-inst y) (signal 100 200 300 400 500) 5))
 
   (component C9
     (data-port x0 in (call-expr signed (literal-expr 32)))
@@ -607,13 +593,11 @@
           (call-expr + (name-expr y0) (name-expr y1))))))
 
   (define c9-inst (C9-make))
+  (port-set! (c9-inst x0) (signal 10 20 30 40 50))
+  (port-set! (c9-inst x1) (signal 1 2 3 4 5))
 
   (test-case "Can instantiate a multiple component"
-    (define x0 (signal 10 20 30 40 50))
-    (define x1 (signal 1 2 3 4 5))
-    (port-set! (c9-inst x0) x0)
-    (port-set! (c9-inst x1) x1)
-    (check-sig-equal? (port-ref c9-inst y) (.* (.+ x0 x1) (signal 10)) 5))
+    (check-sig-equal? (port-ref c9-inst y) (signal 110 220 330 440 550) 5))
 
   (component C10
     (data-port x in (call-expr signed (literal-expr 32)))
@@ -621,12 +605,10 @@
     (assignment (name-expr y) (register-expr (literal-expr 0) (signal-expr (name-expr x)))))
 
   (define c10-inst (C10-make))
+  (port-set! (c10-inst x) (signal 10 20 30 40 50))
 
   (test-case "Can register a signal"
-    (define x (signal 10 20 30 40 50))
-    (define y (signal 0  10 20 30 40 50))
-    (port-set! (c10-inst x) x)
-    (check-sig-equal? (port-ref c10-inst y) y 6))
+    (check-sig-equal? (port-ref c10-inst y) (signal 0  10 20 30 40 50) 6))
 
   (component C11
     (data-port x in (call-expr signed (literal-expr 32)))
@@ -636,14 +618,11 @@
                                              (signal-expr (name-expr y)))))
 
   (define c11-inst (C11-make))
+  (port-set! (c11-inst x) (signal #f #f #f #t #f))
+  (port-set! (c11-inst y) (signal 10 20 30 40 50))
 
   (test-case "Can register a signal with reset"
-    (define x (signal #f #f #f #t #f))
-    (define y (signal 10 20 30 40 50))
-    (define z (signal 0  10 20 30 0  50))
-    (port-set! (c11-inst x) x)
-    (port-set! (c11-inst y) y)
-    (check-sig-equal? (port-ref c11-inst z) z 6))
+    (check-sig-equal? (port-ref c11-inst z) (signal 0  10 20 30 0  50) 6))
 
   (component C12
     (data-port x in (call-expr signed (literal-expr 32)))
@@ -653,14 +632,11 @@
                                              (signal-expr (name-expr y)) (when-clause (signal-expr (name-expr x))))))
 
   (define c12-inst (C12-make))
+  (port-set! (c12-inst x) (signal #f #t #f #t #f))
+  (port-set! (c12-inst y) (signal 10 20 30 40 50))
 
   (test-case "Can register a signal with enable"
-    (define x (signal #f #t #f #t #f))
-    (define y (signal 10 20 30 40 50))
-    (define z (signal 0  0  20 20 40))
-    (port-set! (c12-inst x) x)
-    (port-set! (c12-inst y) y)
-    (check-sig-equal? (port-ref c12-inst z) z 6))
+    (check-sig-equal? (port-ref c12-inst z) (signal 0  0  20 20 40) 6))
 
   (component C13
     (data-port x in (call-expr signed (literal-expr 32)))
@@ -672,16 +648,12 @@
                      (signal-expr (name-expr z)) (when-clause (signal-expr (name-expr y))))))
 
   (define c13-inst (C13-make))
+  (port-set! (c13-inst x) (signal #f #f #t #f #f))
+  (port-set! (c13-inst y) (signal #f #t #f #t #f))
+  (port-set! (c13-inst z) (signal 10 20 30 40 50))
 
   (test-case "Can register a signal with reset and enable"
-    (define x (signal #f #f #t #f #f))
-    (define y (signal #f #t #f #t #f))
-    (define z (signal 10 20 30 40 50))
-    (define u (signal 0  0  20 0  40))
-    (port-set! (c13-inst x) x)
-    (port-set! (c13-inst y) y)
-    (port-set! (c13-inst z) z)
-    (check-sig-equal? (port-ref c13-inst u) u 6))
+    (check-sig-equal? (port-ref c13-inst u) (signal 0  0  20 0  40) 6))
 
   (component C14
     (constant N (literal-expr 56))
