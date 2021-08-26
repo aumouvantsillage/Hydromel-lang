@@ -341,10 +341,22 @@
     "signal.rkt"
     "types.rkt")
 
+  (define (check-sig-equal? t e n)
+    (check-equal? (signal-take t n) (signal-take e n)))
+
+  (define .+ (signal-lift +))
+  (define .* (signal-lift *))
+
   (interface I0
     (parameter N (name-expr unsigned))
     (data-port x in  (call-expr signed (name-expr N)))
     (data-port y out (call-expr signed (name-expr N))))
+
+  (define i0-inst (I0-make 30))
+
+  (test-case "Can construct a channel for an interface with simple ports"
+    (check-pred slot? (dict-ref i0-inst 'x))
+    (check-pred slot? (dict-ref i0-inst 'y)))
 
   (component C0
     (parameter N (name-expr unsigned))
@@ -352,53 +364,117 @@
     (data-port y out (call-expr signed (name-expr N)))
     (assignment (name-expr y) (signal-expr (name-expr x))))
 
+  (define c0-inst (C0-make 30))
+
+  (test-case "Can construct a channel for a component with simple ports"
+    (check-pred slot? (dict-ref c0-inst 'x))
+    (check-pred slot? (dict-ref c0-inst 'y)))
+
+  (test-case "Can assign a simple port to another simple port"
+    (define x (signal 23))
+    (port-set! (c0-inst x) x)
+    (check-sig-equal? (port-ref c0-inst y) x 5))
+
+  (test-case "Can infer the type of a port"
+    (check-equal? (slot-type (dict-ref c0-inst 'x)) (signed 30)))
+
   (interface I1
-    (composite-port i I0 8)
-    (data-port z in (call-expr signed (literal-expr 32))))
-
-  (component C1
-    (composite-port i I0 8)
-    (data-port z in (call-expr signed (literal-expr 32)))
-    (assignment (field-expr (name-expr i) y) (signal-expr (field-expr (name-expr i) x))))
-
-  (interface I2
     (data-port x in  (call-expr signed (literal-expr 32)))
     (data-port y out (call-expr signed (literal-expr 32))))
 
-  (interface I3
+  (interface I2
     (data-port z in (call-expr signed (literal-expr 32)))
-    (composite-port i I2)
+    (composite-port i I1)
     (data-port u out (call-expr signed (literal-expr 32))))
 
-  (interface I4
+  (interface I3
     (data-port v in (call-expr signed (literal-expr 32)))
-    (composite-port j I3)
+    (composite-port j I2)
     (data-port w out (call-expr signed (literal-expr 32))))
 
-  (component C2
+  (define i2-inst (I2-make))
+  (define i3-inst (I3-make))
+
+  (test-case "Can construct a channel for an interface with composite ports and no parameters"
+    (check-pred slot? (dict-ref i2-inst 'z))
+    (check-pred dict? (dict-ref i2-inst 'i))
+    (check-pred slot? (dict-ref (dict-ref i2-inst 'i) 'x))
+    (check-pred slot? (dict-ref (dict-ref i2-inst 'i) 'y))
+    (check-pred slot? (dict-ref i2-inst 'u))
+
+    (check-pred slot? (dict-ref i3-inst 'v))
+    (check-pred dict? (dict-ref i3-inst 'j))
+    (check-pred slot? (dict-ref (dict-ref i3-inst 'j) 'z))
+    (check-pred slot? (dict-ref (dict-ref (dict-ref i3-inst 'j) 'i) 'x))
+    (check-pred slot? (dict-ref (dict-ref (dict-ref i3-inst 'j) 'i) 'y))
+    (check-pred slot? (dict-ref (dict-ref i3-inst 'j) 'u))
+    (check-pred slot? (dict-ref i3-inst 'w)))
+
+  (component C1
     (data-port v in (call-expr signed (literal-expr 32)))
-    (composite-port j I3)
+    (composite-port j I2)
     (data-port w out (call-expr signed (literal-expr 32)))
     (assignment (name-expr w) (signal-expr (name-expr v))))
 
+  (define c1-inst (C1-make))
+
+  (test-case "Can construct a channel for a component with composite ports and no parameters"
+    (check-pred slot? (dict-ref c1-inst 'v))
+    (check-pred dict? (dict-ref c1-inst 'j))
+    (check-pred slot? (dict-ref (dict-ref c1-inst 'j) 'z))
+    (check-pred slot? (dict-ref (dict-ref (dict-ref c1-inst 'j) 'i) 'x))
+    (check-pred slot? (dict-ref (dict-ref (dict-ref c1-inst 'j) 'i) 'y))
+    (check-pred slot? (dict-ref (dict-ref c1-inst 'j) 'u))
+    (check-pred slot? (dict-ref c1-inst 'w)))
+
+  (interface I4
+    (composite-port i (multiplicity (literal-expr 3)) I1))
+
+  (define i4-inst (I4-make))
+
+  (test-case "Can construct a channel for an interface with a vector port"
+    (check-pred vector? (dict-ref i4-inst 'i))
+    (check-eq? (vector-length (dict-ref i4-inst 'i)) 3)
+    (for ([n (kw-range-impl 0 2)])
+      (check-pred dict? (vector-ref (dict-ref i4-inst 'i) n))))
+
   (interface I5
-    (composite-port i (multiplicity (literal-expr 3)) I2))
+    (parameter N (name-expr unsigned))
+    (composite-port i (multiplicity (name-expr N)) I1))
+
+  (define i5-inst (I5-make 5))
+
+  (test-case "Can construct a channel for an interface with arguments"
+    (check-pred vector? (dict-ref i5-inst 'i))
+    (check-eq? (vector-length (dict-ref i5-inst 'i)) 5)
+    (for ([n (kw-range-impl 0 4)])
+      (check-pred dict? (vector-ref (dict-ref i5-inst 'i) n))))
 
   (interface I6
-    (parameter N (name-expr unsigned))
-    (composite-port i (multiplicity (name-expr N)) I2))
-
-  (interface I7
     (parameter M (name-expr unsigned))
-    (composite-port j I6 (name-expr M)))
+    (composite-port j I5 (name-expr M)))
 
-  (component C3
-    (composite-port i I2)
+  (define i6-inst (I6-make 3))
+
+  (test-case "Can construct a channel containing a composite port with arguments"
+    (check-pred vector? (dict-ref (dict-ref i6-inst 'j) 'i))
+    (check-eq? (vector-length (dict-ref (dict-ref i6-inst 'j) 'i)) 3)
+    (for ([n (kw-range-impl 0 2)])
+      (check-pred dict? (vector-ref (dict-ref (dict-ref i6-inst 'j) 'i) n))))
+
+  (component C2
+    (composite-port i I1)
     (assignment (field-expr (name-expr i) y)
                 (signal-expr (field-expr (name-expr i) x))))
 
-  (component C4
-    (composite-port i (multiplicity (literal-expr 3)) I2)
+  (test-case "Can access simple ports in a composite port"
+    (define c2-inst (C2-make))
+    (define x (signal 23))
+    (port-set! (c2-inst i x) x)
+    (check-sig-equal? (port-ref c2-inst i y) x 5))
+
+  (component C3
+    (composite-port i (multiplicity (literal-expr 3)) I1)
     (assignment (field-expr (indexed-expr (name-expr i) (literal-expr 0)) y)
                 (signal-expr (field-expr (indexed-expr (name-expr i) (literal-expr 0)) x)))
     (assignment (field-expr (indexed-expr (name-expr i) (literal-expr 1)) y)
@@ -406,18 +482,43 @@
     (assignment (field-expr (indexed-expr (name-expr i) (literal-expr 2)) y)
                 (signal-expr (field-expr (indexed-expr (name-expr i) (literal-expr 2)) x))))
 
-  (interface I8
+  (test-case "Can access simple ports in a vector composite port with static indices"
+    (define c3-inst (C3-make))
+    (define x0 (signal 10))
+    (define x1 (signal 20))
+    (define x2 (signal 30))
+    (port-set! (c3-inst i 0 x) x0)
+    (port-set! (c3-inst i 1 x) x1)
+    (port-set! (c3-inst i 2 x) x2)
+    (check-sig-equal? (port-ref c3-inst i 0 x) x0 5)
+    (check-sig-equal? (port-ref c3-inst i 1 x) x1 5)
+    (check-sig-equal? (port-ref c3-inst i 2 x) x2 5))
+
+  (interface I7
     (data-port x in (call-expr signed (literal-expr 32))))
 
-  (component C5
-    (composite-port i (multiplicity (literal-expr 3)) I8)
+  (component C4
+    (composite-port i (multiplicity (literal-expr 3)) I7)
     (data-port y in (call-expr signed (literal-expr 32)))
     (data-port z out (call-expr signed (literal-expr 32)))
     (assignment (name-expr z)
                 (lift-expr [y^ (signal-expr (name-expr y))]
                            (signal-expr (field-expr (indexed-expr (name-expr i) (name-expr y^)) x)))))
 
-  (component C6
+  (test-case "Can access simple ports in a vector composite port with dynamic indices"
+    (define c4-inst (C4-make))
+    (define x0 (signal 10))
+    (define x1 (signal 20))
+    (define x2 (signal 30))
+    (define y (signal 0 1 2 1 0 2))
+    (port-set! (c4-inst i 0 x) x0)
+    (port-set! (c4-inst i 1 x) x1)
+    (port-set! (c4-inst i 2 x) x2)
+    (port-set! (c4-inst y)     y)
+    (define z (signal 10 20 30 20 10 30))
+    (check-sig-equal? (port-ref c4-inst z) z 5))
+
+  (component C5
     (data-port x in (call-expr signed (literal-expr 32)))
     (data-port y in (call-expr signed (literal-expr 32)))
     (data-port z out (call-expr signed (literal-expr 32)))
@@ -428,7 +529,15 @@
           (call-expr signed (literal-expr 32))
           (call-expr + (name-expr x^) (name-expr y^))))))
 
-  (component C7
+  (test-case "Can perform an operation between signals"
+    (define c5-inst (C5-make))
+    (define x (signal 1  2  3  4  5))
+    (define y (signal 10 20 30 40 50))
+    (port-set! (c5-inst x) x)
+    (port-set! (c5-inst y) y)
+    (check-sig-equal? (port-ref c5-inst z) (.+ x y) 5))
+
+  (component C6
     (data-port x in (call-expr signed (literal-expr 32)))
     (data-port y in (call-expr signed (literal-expr 32)))
     (data-port z in (call-expr signed (literal-expr 32)))
@@ -447,7 +556,19 @@
           (call-expr signed (literal-expr 32))
           (call-expr + (name-expr xy^) (name-expr zu^))))))
 
-  (component C8
+  (test-case "Can use local signals"
+    (define c6-inst (C6-make))
+    (define x (signal 10 20 30 40 50))
+    (define y (signal 2))
+    (define z (signal 1 2 3 4 5))
+    (define u (signal 3))
+    (port-set! (c6-inst x) x)
+    (port-set! (c6-inst y) y)
+    (port-set! (c6-inst z) z)
+    (port-set! (c6-inst u) u)
+    (check-sig-equal? (port-ref c6-inst v) (.+ (.* x y) (.* z u)) 5))
+
+  (component C7
     (parameter N (name-expr unsigned))
     (data-port x in (call-expr signed (literal-expr 32)))
     (data-port y out (call-expr signed (literal-expr 32)))
@@ -457,18 +578,25 @@
                     (call-expr signed (literal-expr 32))
                     (call-expr * (name-expr x^) (name-expr N))))))
 
-  (component C9
+  (component C8
     (data-port x in (call-expr signed (literal-expr 32)))
     (data-port y out (call-expr signed (literal-expr 32)))
-    (instance c C8 (literal-expr 10))
+    (instance c C7 (literal-expr 10))
     (assignment (field-expr (name-expr c) x) (signal-expr (name-expr x)))
     (assignment (name-expr y) (signal-expr (field-expr (name-expr c) y))))
 
-  (component C10
+  (define c8-inst (C8-make))
+
+  (test-case "Can instantiate a component"
+    (define x (signal 10 20 30 40 50))
+    (port-set! (c8-inst x) x)
+    (check-sig-equal? (port-ref c8-inst y) (.* x (signal 10)) 5))
+
+  (component C9
     (data-port x0 in (call-expr signed (literal-expr 32)))
     (data-port x1 in (call-expr signed (literal-expr 32)))
     (data-port y out (call-expr signed (literal-expr 32)))
-    (instance c (multiplicity (literal-expr 2)) C8 (literal-expr 10))
+    (instance c (multiplicity (literal-expr 2)) C7 (literal-expr 10))
     (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 0)) x) (signal-expr (name-expr x0)))
     (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 1)) x) (signal-expr (name-expr x1)))
     (assignment (name-expr y)
@@ -478,26 +606,63 @@
           (call-expr signed (literal-expr 32))
           (call-expr + (name-expr y0) (name-expr y1))))))
 
-  (component C11
+  (define c9-inst (C9-make))
+
+  (test-case "Can instantiate a multiple component"
+    (define x0 (signal 10 20 30 40 50))
+    (define x1 (signal 1 2 3 4 5))
+    (port-set! (c9-inst x0) x0)
+    (port-set! (c9-inst x1) x1)
+    (check-sig-equal? (port-ref c9-inst y) (.* (.+ x0 x1) (signal 10)) 5))
+
+  (component C10
     (data-port x in (call-expr signed (literal-expr 32)))
     (data-port y out (call-expr signed (literal-expr 32)))
     (assignment (name-expr y) (register-expr (literal-expr 0) (signal-expr (name-expr x)))))
 
-  (component C12
+  (define c10-inst (C10-make))
+
+  (test-case "Can register a signal"
+    (define x (signal 10 20 30 40 50))
+    (define y (signal 0  10 20 30 40 50))
+    (port-set! (c10-inst x) x)
+    (check-sig-equal? (port-ref c10-inst y) y 6))
+
+  (component C11
     (data-port x in (call-expr signed (literal-expr 32)))
     (data-port y in (call-expr signed (literal-expr 32)))
     (data-port z out (call-expr signed (literal-expr 32)))
     (assignment (name-expr z) (register-expr (literal-expr 0) (when-clause (signal-expr (name-expr x)))
                                              (signal-expr (name-expr y)))))
 
-  (component C13
+  (define c11-inst (C11-make))
+
+  (test-case "Can register a signal with reset"
+    (define x (signal #f #f #f #t #f))
+    (define y (signal 10 20 30 40 50))
+    (define z (signal 0  10 20 30 0  50))
+    (port-set! (c11-inst x) x)
+    (port-set! (c11-inst y) y)
+    (check-sig-equal? (port-ref c11-inst z) z 6))
+
+  (component C12
     (data-port x in (call-expr signed (literal-expr 32)))
     (data-port y in (call-expr signed (literal-expr 32)))
     (data-port z out (call-expr signed (literal-expr 32)))
     (assignment (name-expr z) (register-expr (literal-expr 0)
                                              (signal-expr (name-expr y)) (when-clause (signal-expr (name-expr x))))))
 
-  (component C14
+  (define c12-inst (C12-make))
+
+  (test-case "Can register a signal with enable"
+    (define x (signal #f #t #f #t #f))
+    (define y (signal 10 20 30 40 50))
+    (define z (signal 0  0  20 20 40))
+    (port-set! (c12-inst x) x)
+    (port-set! (c12-inst y) y)
+    (check-sig-equal? (port-ref c12-inst z) z 6))
+
+  (component C13
     (data-port x in (call-expr signed (literal-expr 32)))
     (data-port y in (call-expr signed (literal-expr 32)))
     (data-port z in (call-expr signed (literal-expr 32)))
@@ -506,246 +671,86 @@
       (register-expr (literal-expr 0) (when-clause (signal-expr (name-expr x)))
                      (signal-expr (name-expr z)) (when-clause (signal-expr (name-expr y))))))
 
-  (component C15
+  (define c13-inst (C13-make))
+
+  (test-case "Can register a signal with reset and enable"
+    (define x (signal #f #f #t #f #f))
+    (define y (signal #f #t #f #t #f))
+    (define z (signal 10 20 30 40 50))
+    (define u (signal 0  0  20 0  40))
+    (port-set! (c13-inst x) x)
+    (port-set! (c13-inst y) y)
+    (port-set! (c13-inst z) z)
+    (check-sig-equal? (port-ref c13-inst u) u 6))
+
+  (component C14
     (constant N (literal-expr 56))
     (data-port y out (call-expr signed (literal-expr 32)))
     (assignment (name-expr y) (signal (name-expr N))))
 
-  (interface I9
+  (define c14-inst (C14-make))
+
+  (test-case "Can read a local constant"
+    (check-sig-equal? (port-ref c14-inst y) (signal 56) 1))
+
+  (test-case "Can read a constant as a channel field"
+    (check-equal? (dict-ref c14-inst 'N) 56))
+
+  (interface I8
     (constant N (literal-expr 56))
     (data-port y out (call-expr signed (literal-expr 32))))
 
-  (component C16
-    (composite-port p I9)
+  (component C15
+    (composite-port p I8)
     (assignment (field-expr (name-expr p) y) (signal (field-expr (name-expr p) N))))
+
+  (define c15-inst (C15-make))
+
+  (test-case "Can read a constant from a port"
+    (check-sig-equal? (port-ref c15-inst p y) (signal 56) 1))
+
+  (component C16
+    (data-port y out (call-expr signed (literal-expr 32)))
+    (instance c C14)
+    (assignment (name-expr y) (signal (field-expr (name-expr c) N))))
+
+  (define c16-inst (C16-make))
+
+  (test-case "Can read a constant from an instance"
+    (check-sig-equal? (port-ref c16-inst y) (signal 56) 1))
 
   (component C17
     (data-port y out (call-expr signed (literal-expr 32)))
     (instance c C15)
-    (assignment (name-expr y) (signal (field-expr (name-expr c) N))))
+    (assignment (name-expr y) (signal (field-expr (field-expr (name-expr c) p) N))))
+
+  (define c17-inst (C17-make))
+
+  (test-case "Can read a constant from an instance port"
+    (check-sig-equal? (port-ref c17-inst y) (signal 56) 1))
+
+  (constant K0 (literal-expr 44))
 
   (component C18
     (data-port y out (call-expr signed (literal-expr 32)))
-    (instance c C16)
-    (assignment (name-expr y) (signal (field-expr (field-expr (name-expr c) p) N))))
+    (assignment (name-expr y) (signal (name-expr K0 -constant))))
 
-  (constant K (literal-expr 44))
+  (define c18-inst (C18-make))
+
+  (test-case "Can read a global constant"
+    (check-sig-equal? (port-ref c18-inst y) (signal 44) 1))
 
   (component C19
-    (data-port y out (call-expr signed (literal-expr 32)))
-    (assignment (name-expr y) (signal (name-expr K -constant))))
-
-  (component C20
     (constant N (literal-expr 255))
     (data-port x in (call-expr signed (literal-expr 32)))
     (local-signal y (name-expr x))
     (local-signal z (name-expr N)))
 
-
-  (define (check-sig-equal? t e n)
-    (check-equal? (signal-take t n) (signal-take e n)))
-
-  (define .+ (signal-lift +))
-  (define .* (signal-lift *))
-
-  (test-case "Can construct a channel for an interface with simple ports"
-    (define i (I0-make 30))
-    (check-pred slot? (dict-ref i 'x))
-    (check-pred slot? (dict-ref i 'y)))
-
-  (test-case "Can construct a channel for a component with simple ports"
-    (define c (C0-make 30))
-    (check-pred slot? (dict-ref c 'x))
-    (check-pred slot? (dict-ref c 'y)))
-
-  (test-case "Can construct a channel for an interface with composite ports and no parameters"
-    (define i3 (I3-make))
-    (check-pred slot? (dict-ref i3 'z))
-    (check-pred dict? (dict-ref i3 'i))
-    (check-pred slot? (dict-ref (dict-ref i3 'i) 'x))
-    (check-pred slot? (dict-ref (dict-ref i3 'i) 'y))
-    (check-pred slot? (dict-ref i3 'u))
-
-    (define i4 (I4-make))
-    (check-pred slot? (dict-ref i4 'v))
-    (check-pred dict? (dict-ref i4 'j))
-    (check-pred slot? (dict-ref (dict-ref i4 'j) 'z))
-    (check-pred slot? (dict-ref (dict-ref (dict-ref i4 'j) 'i) 'x))
-    (check-pred slot? (dict-ref (dict-ref (dict-ref i4 'j) 'i) 'y))
-    (check-pred slot? (dict-ref (dict-ref i4 'j) 'u))
-    (check-pred slot? (dict-ref i4 'w)))
-
-  (test-case "Can construct a channel for a component with composite ports and no parameters"
-    (define c (C2-make))
-    (check-pred slot? (dict-ref c 'v))
-    (check-pred dict? (dict-ref c 'j))
-    (check-pred slot? (dict-ref (dict-ref c 'j) 'z))
-    (check-pred slot? (dict-ref (dict-ref (dict-ref c 'j) 'i) 'x))
-    (check-pred slot? (dict-ref (dict-ref (dict-ref c 'j) 'i) 'y))
-    (check-pred slot? (dict-ref (dict-ref c 'j) 'u))
-    (check-pred slot? (dict-ref c 'w)))
-
-  (test-case "Can construct a channel for an interface with a vector port"
-    (define j (I5-make))
-    (check-pred vector? (dict-ref j 'i))
-    (check-eq? (vector-length (dict-ref j 'i)) 3)
-    (for ([n (kw-range-impl 0 2)])
-      (check-pred dict? (vector-ref (dict-ref j 'i) n))))
-
-  (test-case "Can construct a channel for an interface with arguments"
-    (define j (I6-make 5))
-    (check-pred vector? (dict-ref j 'i))
-    (check-eq? (vector-length (dict-ref j 'i)) 5)
-    (for ([n (kw-range-impl 0 4)])
-      (check-pred dict? (vector-ref (dict-ref j 'i) n))))
-
-  (test-case "Can construct a channel containing a composite port with arguments"
-    (define k (I7-make 3))
-    (check-pred vector? (dict-ref (dict-ref k 'j) 'i))
-    (check-eq? (vector-length (dict-ref (dict-ref k 'j) 'i)) 3)
-    (for ([n (kw-range-impl 0 2)])
-      (check-pred dict? (vector-ref (dict-ref (dict-ref k 'j) 'i) n))))
-
-  (test-case "Can assign a simple port to another simple port"
-    (define c (C0-make 32))
-    (define x (signal 23))
-    (port-set! (c x) x)
-    (check-sig-equal? (port-ref c y) x 5))
-
-  (test-case "Can access simple ports in a composite port"
-    (define c (C3-make))
-    (define x (signal 23))
-    (port-set! (c i x) x)
-    (check-sig-equal? (port-ref c i y) x 5))
-
-  (test-case "Can access simple ports in a vector composite port with static indices"
-    (define c (C4-make))
-    (define x0 (signal 10))
-    (define x1 (signal 20))
-    (define x2 (signal 30))
-    (port-set! (c i 0 x) x0)
-    (port-set! (c i 1 x) x1)
-    (port-set! (c i 2 x) x2)
-    (check-sig-equal? (port-ref c i 0 x) x0 5)
-    (check-sig-equal? (port-ref c i 1 x) x1 5)
-    (check-sig-equal? (port-ref c i 2 x) x2 5))
-
-  (test-case "Can access simple ports in a vector composite port with dynamic indices"
-    (define c (C5-make))
-    (define x0 (signal 10))
-    (define x1 (signal 20))
-    (define x2 (signal 30))
-    (define y (signal 0 1 2 1 0 2))
-    (port-set! (c i 0 x) x0)
-    (port-set! (c i 1 x) x1)
-    (port-set! (c i 2 x) x2)
-    (port-set! (c y)     y)
-    (define z (signal 10 20 30 20 10 30))
-    (check-sig-equal? (port-ref c z) z 5))
-
-  (test-case "Can perform an operation between signals"
-    (define c (C6-make))
-    (define x (signal 1  2  3  4  5))
-    (define y (signal 10 20 30 40 50))
-    (port-set! (c x) x)
-    (port-set! (c y) y)
-    (check-sig-equal? (port-ref c z) (.+ x y) 5))
-
-  (test-case "Can use local signals"
-    (define c (C7-make))
-    (define x (signal 10 20 30 40 50))
-    (define y (signal 2))
-    (define z (signal 1 2 3 4 5))
-    (define u (signal 3))
-    (port-set! (c x) x)
-    (port-set! (c y) y)
-    (port-set! (c z) z)
-    (port-set! (c u) u)
-    (check-sig-equal? (port-ref c v) (.+ (.* x y) (.* z u)) 5))
-
-  (test-case "Can instantiate a component"
-    (define c (C9-make))
-    (define x (signal 10 20 30 40 50))
-    (port-set! (c x) x)
-    (check-sig-equal? (port-ref c y) (.* x (signal 10)) 5))
-
-  (test-case "Can instantiate a multiple component"
-    (define c (C10-make))
-    (define x0 (signal 10 20 30 40 50))
-    (define x1 (signal 1 2 3 4 5))
-    (port-set! (c x0) x0)
-    (port-set! (c x1) x1)
-    (check-sig-equal? (port-ref c y) (.* (.+ x0 x1) (signal 10)) 5))
-
-  (test-case "Can register a signal"
-    (define c (C11-make))
-    (define x (signal 10 20 30 40 50))
-    (define y (signal 0  10 20 30 40 50))
-    (port-set! (c x) x)
-    (check-sig-equal? (port-ref c y) y 6))
-
-  (test-case "Can register a signal with reset"
-    (define c (C12-make))
-    (define x (signal #f #f #f #t #f))
-    (define y (signal 10 20 30 40 50))
-    (define z (signal 0  10 20 30 0  50))
-    (port-set! (c x) x)
-    (port-set! (c y) y)
-    (check-sig-equal? (port-ref c z) z 6))
-
-  (test-case "Can register a signal with enable"
-    (define c (C13-make))
-    (define x (signal #f #t #f #t #f))
-    (define y (signal 10 20 30 40 50))
-    (define z (signal 0  0  20 20 40))
-    (port-set! (c x) x)
-    (port-set! (c y) y)
-    (check-sig-equal? (port-ref c z) z 6))
-
-  (test-case "Can register a signal with reset and enable"
-    (define c (C14-make))
-    (define x (signal #f #f #t #f #f))
-    (define y (signal #f #t #f #t #f))
-    (define z (signal 10 20 30 40 50))
-    (define u (signal 0  0  20 0  40))
-    (port-set! (c x) x)
-    (port-set! (c y) y)
-    (port-set! (c z) z)
-    (check-sig-equal? (port-ref c u) u 6))
-
-  (test-case "Can read a local constant"
-    (define c (C15-make))
-    (check-sig-equal? (port-ref c y) (signal 56) 1))
-
-  (test-case "Can read a constant as a channel field"
-    (define c (C15-make))
-    (check-equal? (dict-ref c 'N) 56))
-
-  (test-case "Can read a constant from a port"
-    (define c (C16-make))
-    (check-sig-equal? (port-ref c p y) (signal 56) 1))
-
-  (test-case "Can read a constant from an instance"
-    (define c (C17-make))
-    (check-sig-equal? (port-ref c y) (signal 56) 1))
-
-  (test-case "Can read a constant from an instance port"
-    (define c (C18-make))
-    (check-sig-equal? (port-ref c y) (signal 56) 1))
-
-  (test-case "Can read a global constant"
-    (define c (C19-make))
-    (check-sig-equal? (port-ref c y) (signal 44) 1))
-
-  (test-case "Can infer the type of a port"
-    (define c (C0-make 30))
-    (check-equal? (slot-type (dict-ref c 'x)) (signed 30)))
+  (define c19-inst (C19-make))
 
   (test-case "Can infer the type of a local signal that copies a port"
-    (define c (C20-make))
-    (check-equal? (slot-type (dict-ref c 'y)) (slot-type (dict-ref c 'x))))
+    (check-equal? (slot-type (dict-ref c19-inst 'y)) (slot-type (dict-ref c19-inst 'x))))
 
   (test-case "Can infer the type of a local signal that copies a constant"
-    (define c (C20-make))
-    (check-equal? (slot-type (dict-ref c 'y)) (slot-type (dict-ref c 'x)))
-    (check-equal? (slot-type (dict-ref c 'z)) (static-value 255))))
+    (check-equal? (slot-type (dict-ref c19-inst 'y)) (slot-type (dict-ref c19-inst 'x)))
+    (check-equal? (slot-type (dict-ref c19-inst 'z)) (static-value 255))))
