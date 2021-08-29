@@ -8,7 +8,7 @@
     min-unsigned-width min-signed-width
     min-signed-value   max-signed-value
     min-unsigned-value max-unsigned-value
-    unsigned-slice)
+    unsigned-slice     unsigned-concat)
   syntax/parse/define
   (for-syntax
     (prefix-in meta/ "meta.rkt")))
@@ -26,8 +26,10 @@
   kw-+                            +-signature
   kw--                            --signature
   kw-*                            *-signature
+  kw-/                            quotient-signature
   kw-range       kw-range-impl    kw-range-impl-signature
   kw-slice                        unsigned-slice-signature
+  kw-concat      kw-concat-impl   kw-concat-impl-signature
   (all-from-out  "logic.rkt")
   signed_width                    min-signed-width-signature
   unsigned_width                  min-unsigned-width-signature
@@ -120,6 +122,7 @@
 (define-syntax kw-+ (meta/builtin-function #'+))
 (define-syntax kw-- (meta/builtin-function #'-))
 (define-syntax kw-* (meta/builtin-function #'*))
+(define-syntax kw-/ (meta/builtin-function #'quotient))
 
 (define (+-signature ta tb)
   (define ta^ (t/actual-type ta))
@@ -144,6 +147,9 @@
     [(cons (t/integer na)  (t/signed   nb)) (t/signed   (+ na nb))]
     [(cons (t/signed na)   (t/integer  nb)) (t/signed   (+ na nb))]
     [_ (error "Arithmetic operation expects integer operands.")]))
+
+(define (quotient-signature ta tb)
+  ta)
 
 ; TODO descending ranges
 (define-syntax kw-range (meta/builtin-function #'kw-range-impl))
@@ -185,6 +191,26 @@
     [(t/unsigned _) (t/unsigned width)]
     [(t/signed   _) (t/signed   width)]
     [_ (error "Slice expects integer value.")]))
+
+(define-syntax kw-concat (meta/builtin-function #'kw-concat-impl))
+
+; The binary concatenetion operation defaults to the unsigned version.
+; The signed case is handled automatically because the expander inserts
+; a conversion to the type returned by the signature.
+; Since this function needs to know the width of its arguments,
+; their types are inserted by the checker.
+(define-syntax-parse-rule (kw-concat-impl (~seq v t) ...)
+  (unsigned-concat [v (sub1 (t/integer-width (t/actual-type t))) 0] ...))
+
+(define (kw-concat-impl-signature . ts)
+  (define ts^ (map t/actual-type ts))
+  (define w (for/sum ([t (in-list ts^)]
+                      [i (in-naturals)] #:when (even? i))
+              ; TODO assert that t is an integer type
+              (t/integer-width t)))
+  (match (first ts^)
+    [(t/signed _)   (t/signed w)]
+    [(t/unsigned _) (t/unsigned w)]))
 
 (define-syntax cast (meta/builtin-function #'cast-impl))
 

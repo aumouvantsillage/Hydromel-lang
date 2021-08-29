@@ -107,12 +107,14 @@ add-expr:    maybe-add-expr ("+" | "-") maybe-mult-expr
 mult-expr:   maybe-mult-expr ("*" | "/") maybe-prefix-expr
 prefix-expr: ("-" | "not") simple-expr
 
+; TODO Add comprehensions
 @simple-expr:
   literal-expr |
   name-expr |
   field-expr |
   indexed-expr |
   slice-expr |
+  concat-expr |
   register-expr |
   call-expr |
   /"(" expression /")"
@@ -125,10 +127,13 @@ field-expr:
   simple-expr /"." ID
 
 indexed-expr:
-  simple-expr /"[" expression ("," expression)* ","? /"]"
+  simple-expr /"[" expression (/"," expression)* /","? /"]"
 
 slice-expr:
   simple-expr /"{" expression /"}"
+
+concat-expr:
+  /"{" expression (/"," expression)* /","? /"}"
 
 register-expr:
   /"register" /"(" expression when-clause? /"," expression when-clause? /")"

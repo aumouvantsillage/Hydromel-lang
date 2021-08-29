@@ -326,8 +326,14 @@
                                         (meta/builtin-function-name fn)
                                         #'s.fn-name))
          (define/syntax-parse (arg ...) (check-all args^))
+         ; Bitwise concatenation is a special case where we interleave
+         ; argument values with their inferred types.
+         (define/syntax-parse (arg+ ...)
+           (if (equal? (syntax->datum #'s.fn-name) 'kw-concat)
+             #'((~@ arg (infer-type arg)) ...)
+             #'(arg ...)))
          (syntax/loc stx
-           (call-expr fn-name arg ...)))]
+           (call-expr fn-name arg+ ...)))]
 
       [s:stx/name-expr
        (thunk
@@ -468,16 +474,19 @@
 
   (define (lift-if-needed stx)
     (syntax-parse stx
-      #:literals [indexed-expr field-expr]
-      [s:stx/call-expr
-       (lift-if-needed* stx (attribute s.arg)
-         (λ (lst) (qs/l (call-expr s.fn-name #,@lst))))]
+      #:literals [indexed-expr field-expr concat-expr]
       [(indexed-expr expr ...)
        (lift-if-needed* stx (attribute expr)
          (λ (lst) (qs/l (indexed-expr #,@lst))))]
       [(field-expr expr sel ...)
        (lift-if-needed* stx (list #'expr)
          (λ (lst) (qs/l (field-expr #,(first lst) sel ...))))]
+      ; [(concat-expr arg ...)
+      ;  (lift-if-needed* stx (attribute arg)
+      ;    (λ (lst) (qs/l (call-expr kw-concat #,@lst))))]
+      [s:stx/call-expr
+       (lift-if-needed* stx (attribute s.arg)
+         (λ (lst) (qs/l (call-expr s.fn-name #,@lst))))]
       [_
        stx]))
 
@@ -542,11 +551,6 @@
 
   (define (check-sig-equal? t e n)
     (check-equal? (signal-take t n) (signal-take e n)))
-
-  (define .+ (signal-lift +))
-  (define .* (signal-lift *))
-
-
 
   (begin-hydromel
     (component C0
@@ -1023,8 +1027,22 @@
     (check-sig-equal? (port-ref c31-inst y) (signal 0) 1)
     (check-sig-equal? (port-ref c31-inst z) (signal 1) 1))
 
-  (test-case "Can read a signed slice in an integer value"
+  (test-case "Can read an unsigned slice in an integer value"
     (check-sig-equal? (port-ref c31-inst t) (signal 12) 1))
 
-  (test-case "Can read an unsigned slice in an integer value"
-    (check-sig-equal? (port-ref c31-inst u) (signal -4) 1)))
+  (test-case "Can read a signed slice in an integer value"
+    (check-sig-equal? (port-ref c31-inst u) (signal -4) 2))
+
+  (begin-hydromel
+    (component C32
+      (data-port x in  (call-expr signed (literal-expr 4)))
+      (data-port y in  (call-expr signed (literal-expr 4)))
+      (data-port z out (call-expr signed (literal-expr 8)))
+      (assignment (name-expr z) (concat-expr (name-expr x) (name-expr y)))))
+
+  (define c32-inst (C32-make))
+  (port-set! (c32-inst x) (signal 0 5 -2))
+  (port-set! (c32-inst y) (signal 0 3 -4))
+
+  (test-case "Can concatenate two integers"
+    (check-sig-equal? (port-ref c32-inst z) (signal 0 83 -20) 3)))

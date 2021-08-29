@@ -1,0 +1,74 @@
+#lang hydromel
+
+import "full_adder.hdrml"
+
+interface adder(WIDTH : unsigned)
+    port a  : in  unsigned(WIDTH)
+    port b  : in  unsigned(WIDTH)
+    port ci : in  bit
+    port s  : out unsigned(WIDTH)
+    port co : out bit
+end
+
+component ripple_carry_adder_rec(WIDTH : unsigned)
+    port io : splice adder(WIDTH)
+
+    instance head = full_adder
+    head.a  = a{0}
+    head.b  = b{0}
+    head.ci = ci
+
+    if WIDTH > 1 then
+        instance tail = ripple_carry_adder_rec(WIDTH - 1)
+        tail.a  = a{WIDTH-1 .. 1}
+        tail.b  = b{WIDTH-1 .. 1}
+        tail.ci = head.co
+        s  = {tail.s, head.s}
+        co = tail.co
+    else
+        s  = head.s
+        co = head.co
+    end
+end
+
+# component ripple_carry_adder_iter(WIDTH : unsigned)
+#     port io : splice adder(WIDTH)
+#
+#     instance fa[WIDTH] = full_adder
+#     fa[0].a  = a{0}
+#     fa[0].b  = b{0}
+#     fa[0].ci = ci
+#
+#     for n in 1 .. WIDTH-1 loop
+#         fa[n].a  = a{n}
+#         fa[n].b  = b{n}
+#         fa[n].ci = fa[n-1].co
+#     end
+#
+#     s  = {fa[n].s for n in WIDTH-1 .. 0}
+#     co = fa[WIDTH-1].co
+# end
+
+component carry_lookahead_adder(WIDTH : unsigned)
+    port io : splice adder(WIDTH)
+
+    constant RIGHT_WIDTH = WIDTH / 2
+    constant LEFT_WIDTH  = WIDTH - RIGHT_WIDTH
+
+    instance right = ripple_carry_adder_rec(RIGHT_WIDTH)
+    right.a = a{RIGHT_WIDTH-1 .. 0}
+    right.b = b{RIGHT_WIDTH-1 .. 0}
+
+    instance left0 = ripple_carry_adder_rec(LEFT_WIDTH)
+    left0.a  = a{WIDTH-1 .. RIGHT_WIDTH}
+    left0.b  = b{WIDTH-1 .. RIGHT_WIDTH}
+    left0.ci = 0
+
+    instance left1 = ripple_carry_adder_rec(LEFT_WIDTH)
+    left1.a  = a{WIDTH-1 .. RIGHT_WIDTH}
+    left1.b  = b{WIDTH-1 .. RIGHT_WIDTH}
+    left1.ci = 1
+
+    s  = {if right.co then left1.s else left0.s, right.s}
+    co = if right.co then left1.co else left0.co
+end

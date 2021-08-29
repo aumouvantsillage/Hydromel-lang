@@ -41,7 +41,9 @@
   when-clause
   signal-expr
   static-expr
-  lift-expr)
+  lift-expr concat-expr
+  or-expr and-expr rel-expr add-expr mult-expr if-expr prefix-expr range-expr slice-expr
+  infer-type)
 
 (begin-for-syntax
   (define (stx-filter stx-lst id-lst)
@@ -65,7 +67,13 @@
   ; Return the list of port and signal names in the given syntax object.
   (define (design-unit-field-names stx-lst)
     (define/syntax-parse ((_ name _ ...) ...) (design-unit-fields stx-lst))
-    (attribute name)))
+    (attribute name))
+
+  (define (stx-key stx)
+    (datum->syntax stx (format "~a$~a$~a"
+                         (syntax-source stx)
+                         (syntax-position stx)
+                         (syntax-span stx)))))
 
 ; Replace dynamic indices with zeros in indexed expressions.
 ; This only concerns access to interface ports with multiplicity > 1,
@@ -81,10 +89,10 @@
 
   [(_ other) #'other])
 
-; Generate type inference code.
+; Generate type inference code for an expression.
 ; TODO defer type inference to support out-of-order dependencies
 ; TODO handle circular dependencies in register-expr
-(define-syntax-parser infer-type
+(define-syntax-parser infer-type*
   #:literals [name-expr literal-expr register-expr when-clause field-expr call-expr signal-expr lift-expr]
   [(_ (~and (name-expr _ ...) expr))
    #'(let ([x expr])
@@ -104,7 +112,7 @@
          (slot-type x)
          (static-value x)))]
 
-  [(_ (call-expr name arg ...))
+  [(_ (~and (call-expr name arg ...) expr))
    #:with sig-name (format-id #'here "~a-signature" #'name)
    #'(sig-name (infer-type arg) ...)]
 
@@ -124,8 +132,25 @@
 
   [_ #''any])
 
-(define-syntax (import stx)
-  (raise-syntax-error #f "should not be used outside of begin-tiny-hdl" stx))
+; Generate type inference code and memoize the computed type.
+(define-syntax-parse-rule (infer-type expr)
+  #:with key (stx-key #'expr)
+  (dict-ref inferred-types key
+    (thunk
+      (let ([t (infer-type* expr)])
+        (dict-set! inferred-types key t)
+        t))))
+
+; Retrieve the memoized inferred type of a given expression.
+(define-syntax-parse-rule (inferred-type expr)
+  #:with key (stx-key #'expr)
+  (dict-ref inferred-types key (thunk identity)))
+
+(define-syntax-parameter in-design-unit #f)
+
+(define-syntax-parameter inferred-types
+  (λ (stx)
+    (raise-syntax-error (syntax-e stx) "can only be used inside design-unit")))
 
 ; An interface or a component expands to a constructor function
 ; that returns a hash-map with public or debug data.
@@ -138,8 +163,11 @@
   (begin
     (provide ctor-name)
     (define (ctor-name param-name ...)
-      body ...
-      (check-type body) ...
+      (define types (make-hash))
+      (splicing-syntax-parameterize ([in-design-unit #t]
+                                     [inferred-types (make-rename-transformer #'types)])
+        body ...
+        (check-type body) ...)
       (make-hash `((field-name . ,field-name) ...)))))
 
 (define-syntax-parse-rule (interface name body ...)
@@ -165,20 +193,11 @@
 ; Like output ports, local signals do not need to be wrapped in a slot, but
 ; it helps expanding expressions without managing several special cases.
 (define-syntax-parse-rule (local-signal name (~optional type) expr)
-  #:with type^ (or (attribute type) #'(infer-type expr))
-  (define name (slot expr (make-slot-typer type^))))
-
-; Multiplicity indications are processed in macros composite-port and instance.
-(define-syntax (multiplicity stx)
-  (raise-syntax-error #f "should be used inside a composite port declaration" stx))
-
-; Splice mode indication is processed in macro composite-port.
-(define-syntax (splice stx)
-  (raise-syntax-error #f "should be used inside a composite port declaration" stx))
-
-; Flip mode indication is processed in macro composite-port.
-(define-syntax (flip stx)
-  (raise-syntax-error #f "should be used inside a composite port declaration" stx))
+  #:with slot-type (or (attribute type) #'(inferred-type expr))
+  (begin
+    ; Always infer the type of the expression for later use.
+    (infer-type expr)
+    (define name (slot expr (make-slot-typer slot-type)))))
 
 ; A composite port expands to a variable that stores the result of a constructor
 ; call for the corresponding interface.
@@ -224,9 +243,14 @@
 ; A constant expands to a variable definition.
 (define-syntax-parser constant
   ; In an internal definition context, expand to a define.
-  [(constant name expr) #:when (list? (syntax-local-context))
-   #'(define name expr)]
+  [(constant name expr) #:when (syntax-parameter-value #'in-design-unit)
+   #'(begin
+       ; Always infer the type of the expression for later use.
+       (infer-type expr)
+       (define name expr))]
   ; In a module-level context, expand to a suffixed define.
+  ; FIXME Type of expressions cannot be memoized outside of design units.
+  ;       This can be a problem if the expression is a call-expr.
   [(constant name expr)
    #:with name^ (format-id #'name "~a-constant" #'name)
    #'(begin
@@ -241,14 +265,17 @@
 ; An assignment fills the target port's slot with the signal
 ; from the right-hand side.
 (define-syntax-parse-rule (assignment target expr)
-  (set-slot-signal! target expr))
+  (begin
+    ; Always infer the type of the expression for later use.*
+    (infer-type expr)
+    (set-slot-signal! target expr)))
 
 ; Typecheck an assignment, or a local signal with explicit type.
 (define-syntax-parser check-type
   #:literals [assignment local-signal]
   [(_ (assignment target expr))
-   #:with expr-type   #'(infer-type expr)
-   #:with target-type #'(infer-type target)
+   #:with expr-type   #'(inferred-type expr)
+   #:with target-type #'(infer-type    target)
    #'(unless (subtype? expr-type target-type)
        ; TODO show source code instead of generated code, or source location only.
        (raise-syntax-error #f (format "Incompatible type in assignment, found ~a, expected ~a" expr-type target-type) #'expr))]
@@ -291,15 +318,14 @@
    #'expr])
 
 ; A call expression expands to a Racket function call.
-; TODO avoid calling infer-type twice for each subexpression.
 (define-syntax-parse-rule (call-expr fn-name arg ...)
   #:with expr this-syntax
-  #:with type #'(infer-type expr)
-  (type (fn-name arg ...)))
-
-; When clauses are processed in macro register-expr.
-(define-syntax (when-clause stx)
-  (raise-syntax-error #f "should be used inside a register expression" stx))
+  ; Attempt to retrieve the type of the result from the dictionary inferred-types
+  ; filled during type inference (see function infer-type for call-expr).
+  ; The type acts as a function that casts its argument.
+  ; If no type was found, use the identity function.
+  (let ([type (inferred-type expr)])
+    (type (fn-name arg ...))))
 
 (define-syntax-parser register-expr
   #:literals [when-clause]
@@ -333,7 +359,27 @@
   [(_ (name sexpr) ...+ expr)
    #'(for/signal ([name sexpr] ...) expr)])
 
-; TODO test functions
+; Disabled forms.
+
+(define-syntax-parse-rule (disable-forms id ... msg)
+  (begin
+    (define-syntax (id stx)
+      (raise-syntax-error #f msg stx))
+    ...))
+
+; Multiplicity indications are processed in macros composite-port and instance.
+(disable-forms multiplicity splice flip
+  "should be used inside a composite port declaration")
+
+; When clauses are processed in macro register-expr.
+(disable-forms when-clause
+  "should be used inside a register expression")
+
+; Concatenation expressions are converted to function calls in the checker.
+(disable-forms import or-expr and-expr rel-expr add-expr mult-expr
+  if-expr prefix-expr range-expr slice-expr concat-expr
+  "should not be used outside of begin-tiny-hdl")
+
 (module+ test
   (require
     rackunit
@@ -725,4 +771,21 @@
 
   (test-case "Can infer the type of a local signal that copies a constant"
     (check-equal? (slot-type (dict-ref c19-inst 'y)) (slot-type (dict-ref c19-inst 'x)))
-    (check-equal? (slot-type (dict-ref c19-inst 'z)) (static-value 255))))
+    (check-equal? (slot-type (dict-ref c19-inst 'z)) (static-value 255)))
+
+  (component C20
+    (data-port x in  (call-expr signed (literal-expr 4)))
+    (data-port y in  (call-expr signed (literal-expr 4)))
+    (data-port z out (call-expr signed (literal-expr 8)))
+    (assignment (name-expr z)
+      (lift-expr [x^ (signal-expr (name-expr x))]
+                 [y^ (signal-expr (name-expr y))]
+        (call-expr kw-concat-impl (name-expr x^) (call-expr signed (literal-expr 4))
+                                  (name-expr y^) (call-expr signed (literal-expr 4))))))
+
+  (define c20-inst (C20-make))
+  (port-set! (c20-inst x) (signal 0 5 -2))
+  (port-set! (c20-inst y) (signal 0 3 -4))
+
+  (test-case "Can concatenate two integers"
+    (check-sig-equal? (port-ref c20-inst z) (signal 0 83 -20) 3)))
