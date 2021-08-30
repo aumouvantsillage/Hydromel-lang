@@ -18,10 +18,10 @@
   [(port-ref* x n:number i ...)     #'(port-ref* (vector-ref x n)  i ...)])
 
 (define-syntax-parse-rule (port-ref path ...)
-  (slot-signal (port-ref* path ...)))
+  (slot-data (port-ref* path ...)))
 
 (define-syntax-parse-rule (port-set! (path ...) value)
-  (set-slot-signal! (port-ref* path ...) value))
+  (set-slot-data! (port-ref* path ...) value))
 
 (define (signal-table inst [parent #hash()] [path #f])
   (match inst

@@ -17,7 +17,7 @@
 (define (vcd table duration ts [out (current-output-port)])
   (define wavs (for/hash ([(name slt) (in-dict table)]
                           [index      (in-naturals)])
-                 (define samples (signal-take (slot-signal slt) duration))
+                 (define samples (signal-take (slot-data slt) duration))
                  (values name (waveform (format "s~a" index)
                                         (t/integer-width (slot-type slt))
                                         samples))))

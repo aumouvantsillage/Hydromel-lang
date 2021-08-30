@@ -8,9 +8,9 @@
   slot-type
   connect)
 
-; A slot contains a signal and its type.
+; A slot contains a value and its type.
 ; The make-slot-typer field is a function that returns the type of the current signal.
-(struct slot (signal typer) #:mutable #:transparent)
+(struct slot (data typer) #:mutable #:transparent)
 
 (define-syntax-parse-rule (make-slot-typer expr)
   (let ([res #f]
@@ -33,15 +33,15 @@
     (define vr (dict-ref right k))
     (cond
       [(slot? vl)
-       (let ([sl (slot-signal vl)]
-             [sr (slot-signal vr)])
+       (let ([sl (slot-data vl)]
+             [sr (slot-data vr)])
          ; If one of the current items is a non-empty slot,
          ; copy the content of the non-empty slot into the empty one.
          ; If both items are empty slots, copy the left slot itself
          ; into the right dictionary.
          (cond [(and sl sr) (error "Cannot overwrite an existing connection at" k)]
-               [sl          (set-slot-signal! vr sl)]
-               [sr          (set-slot-signal! vl sr)]
+               [sl          (set-slot-data! vr sl)]
+               [sr          (set-slot-data! vl sr)]
                [else        (dict-set! right k vl)]))]
 
       ; If both items are dictionaries, connect their contents.

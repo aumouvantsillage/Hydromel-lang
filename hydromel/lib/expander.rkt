@@ -268,7 +268,7 @@
   (begin
     ; Always infer the type of the expression for later use.*
     (infer-type expr)
-    (set-slot-signal! target expr)))
+    (set-slot-data! target expr)))
 
 ; Typecheck an assignment, or a local signal with explicit type.
 (define-syntax-parser check-type
@@ -338,7 +338,7 @@
 ; identify an expression that refers to a port or local signal for reading.
 ; It expands to a deferred signal read.
 (define-syntax-parse-rule (signal-expr expr)
-  (signal-defer (slot-signal expr)))
+  (signal-defer (slot-data expr)))
 
 ; A static expression wraps a constant into a signal.
 (define-syntax-parse-rule (static-expr expr)
