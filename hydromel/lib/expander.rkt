@@ -796,8 +796,11 @@
     (check-sig-equal? (port-ref c20-inst z) (signal 0 83 -20) 3)))
 
   ; (component C21
-  ;   (local-signal u s)
-  ;   (local-signal s (literal-expr 255)))
+  ;   (data-port x in  (call-expr unsigned (literal-expr 8)))
+  ;   (data-port y out (call-expr unsigned (literal-expr 8)))
+  ;   (assignment (name-expr y) (signal-expr (name-expr u)))
+  ;   (local-signal u (register-expr (literal-expr 0) (signal-expr (name-expr s))))
+  ;   (local-signal s (register-expr (literal-expr 0) (signal-expr (name-expr x)))))
   ;
   ; (define c21-inst (C21-make))
   ;

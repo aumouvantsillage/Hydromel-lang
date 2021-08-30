@@ -547,7 +547,8 @@
     "helpers.rkt"
     "signal.rkt"
     "std.rkt"
-    "types.rkt")
+    "types.rkt"
+    "slot.rkt")
 
   (define (check-sig-equal? t e n)
     (check-equal? (signal-take t n) (signal-take e n)))
@@ -1046,3 +1047,16 @@
 
   (test-case "Can concatenate two integers"
     (check-sig-equal? (port-ref c32-inst z) (signal 0 83 -20) 3)))
+
+  ; (begin-hydromel
+  ;   (component C33
+  ;     (data-port x in  (call-expr unsigned (literal-expr 8)))
+  ;     (data-port y out (call-expr unsigned (literal-expr 8)))
+  ;     (assignment (name-expr y) (name-expr u))
+  ;     (local-signal u (register-expr (literal-expr 0) (name-expr s)))
+  ;     (local-signal s (register-expr (literal-expr 0) (name-expr x)))))
+  ;
+  ; (define c33-inst (C33-make))
+  ;
+  ; (test-case "Can infer types when assignments are in reverse order"
+  ;   (check-equal? (slot-type (dict-ref c33-inst 'u) (dict-ref c33-inst 's)))))
