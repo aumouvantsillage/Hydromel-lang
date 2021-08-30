@@ -195,7 +195,6 @@
 (define-syntax-parse-rule (local-signal name (~optional type) expr)
   #:with slot-type (or (attribute type) #'(inferred-type expr))
   (begin
-    ; Always infer the type of the expression for later use.
     (infer-type expr)
     (define name (slot expr (make-slot-typer slot-type)))))
 
@@ -241,21 +240,27 @@
     (make-hash `((field-name . ,field-name) ...))))
 
 ; A constant expands to a variable definition.
+; TODO Should we wrap constant values in slots to capture their types as
+; inferred from their expressions vs their values.
 (define-syntax-parser constant
   ; In an internal definition context, expand to a define.
   [(constant name expr) #:when (syntax-parameter-value #'in-design-unit)
    #'(begin
-       ; Always infer the type of the expression for later use.
+       ; The type of expr can be used in its expansion.
        (infer-type expr)
        (define name expr))]
+
   ; In a module-level context, expand to a suffixed define.
-  ; FIXME Type of expressions cannot be memoized outside of design units.
-  ;       This can be a problem if the expression is a call-expr.
   [(constant name expr)
    #:with name^ (format-id #'name "~a-constant" #'name)
    #'(begin
        (provide name^)
-       (define name^ expr))])
+       ; The type of expr can be used in its expansion.
+       ; We create a temporary type dictionary that will be used only once.
+       (define name^ (let ([types (make-hash)])
+                       (syntax-parameterize ([inferred-types (make-rename-transformer #'types)])
+                         (infer-type expr)
+                         expr))))])
 
 ; An alias expands to a partial access to the target port.
 ; The alias and the corresponding port must refer to the same slot.
@@ -266,7 +271,7 @@
 ; from the right-hand side.
 (define-syntax-parse-rule (assignment target expr)
   (begin
-    ; Always infer the type of the expression for later use.*
+    ; Infer the type of the expression for later use.
     (infer-type expr)
     (set-slot-data! target expr)))
 
@@ -789,3 +794,12 @@
 
   (test-case "Can concatenate two integers"
     (check-sig-equal? (port-ref c20-inst z) (signal 0 83 -20) 3)))
+
+  ; (component C21
+  ;   (local-signal u s)
+  ;   (local-signal s (literal-expr 255)))
+  ;
+  ; (define c21-inst (C21-make))
+  ;
+  ; (test-case "Can infer types when assignments are in reverse order"
+  ;   (check-equal? (slot-type (dict-ref c21-inst 'u) (dict-ref c21-inst 's)))))
