@@ -90,8 +90,7 @@
   [(_ other) #'other])
 
 ; Generate type inference code for an expression.
-; TODO defer type inference to support out-of-order dependencies
-; TODO handle circular dependencies in register-expr
+; TODO Warn on circular dependencies in register-expr
 (define-syntax-parser infer-type*
   #:literals [name-expr literal-expr register-expr when-clause field-expr call-expr signal-expr lift-expr]
   [(_ (~and (name-expr _ ...) expr))
@@ -133,6 +132,9 @@
   [_ #''any])
 
 ; Generate type inference code and memoize the computed type.
+; This code is meant to be deferred, either in a slot type (via make-slot-type)
+; or inside a signal, so that out-of-order dependencies are correctly handled.
+; At the moment, only constants infer their types immediately.
 (define-syntax-parse-rule (infer-type expr)
   #:with key (stx-key #'expr)
   (dict-ref inferred-types key
@@ -140,11 +142,6 @@
       (let ([t (infer-type* expr)])
         (dict-set! inferred-types key t)
         t))))
-
-; Retrieve the memoized inferred type of a given expression.
-(define-syntax-parse-rule (inferred-type expr)
-  #:with key (stx-key #'expr)
-  (dict-ref inferred-types key (thunk identity)))
 
 (define-syntax-parameter in-design-unit #f)
 
@@ -193,10 +190,8 @@
 ; Like output ports, local signals do not need to be wrapped in a slot, but
 ; it helps expanding expressions without managing several special cases.
 (define-syntax-parse-rule (local-signal name (~optional type) expr)
-  #:with slot-type (or (attribute type) #'(inferred-type expr))
-  (begin
-    (infer-type expr)
-    (define name (slot expr (make-slot-typer slot-type)))))
+  #:with slot-type (or (attribute type) #'(infer-type expr))
+  (define name (slot expr (make-slot-typer slot-type))))
 
 ; A composite port expands to a variable that stores the result of a constructor
 ; call for the corresponding interface.
@@ -240,13 +235,13 @@
     (make-hash `((field-name . ,field-name) ...))))
 
 ; A constant expands to a variable definition.
-; TODO Should we wrap constant values in slots to capture their types as
-; inferred from their expressions vs their values.
+; TODO Should we wrap constant values in slots to capture their types (as
+; inferred from their expressions) vs their values.
 (define-syntax-parser constant
   ; In an internal definition context, expand to a define.
   [(constant name expr) #:when (syntax-parameter-value #'in-design-unit)
    #'(begin
-       ; The type of expr can be used in its expansion.
+       ; Infer the type of expr immediately because it can be used in its expansion.
        (infer-type expr)
        (define name expr))]
 
@@ -255,10 +250,10 @@
    #:with name^ (format-id #'name "~a-constant" #'name)
    #'(begin
        (provide name^)
-       ; The type of expr can be used in its expansion.
        ; We create a temporary type dictionary that will be used only once.
        (define name^ (let ([types (make-hash)])
                        (syntax-parameterize ([inferred-types (make-rename-transformer #'types)])
+                         ; Infer the type of expr immediately because it can be used in its expansion.
                          (infer-type expr)
                          expr))))])
 
@@ -270,17 +265,14 @@
 ; An assignment fills the target port's slot with the signal
 ; from the right-hand side.
 (define-syntax-parse-rule (assignment target expr)
-  (begin
-    ; Infer the type of the expression for later use.
-    (infer-type expr)
-    (set-slot-data! target expr)))
+  (set-slot-data! target expr))
 
 ; Typecheck an assignment, or a local signal with explicit type.
 (define-syntax-parser check-type
   #:literals [assignment local-signal]
   [(_ (assignment target expr))
-   #:with expr-type   #'(inferred-type expr)
-   #:with target-type #'(infer-type    target)
+   #:with expr-type   #'(infer-type expr)
+   #:with target-type #'(infer-type target)
    #'(unless (subtype? expr-type target-type)
        ; TODO show source code instead of generated code, or source location only.
        (raise-syntax-error #f (format "Incompatible type in assignment, found ~a, expected ~a" expr-type target-type) #'expr))]
@@ -325,11 +317,9 @@
 ; A call expression expands to a Racket function call.
 (define-syntax-parse-rule (call-expr fn-name arg ...)
   #:with expr this-syntax
-  ; Attempt to retrieve the type of the result from the dictionary inferred-types
-  ; filled during type inference (see function infer-type for call-expr).
   ; The type acts as a function that casts its argument.
   ; If no type was found, use the identity function.
-  (let ([type (inferred-type expr)])
+  (let ([type (infer-type expr)])
     (type (fn-name arg ...))))
 
 (define-syntax-parser register-expr
@@ -384,6 +374,7 @@
 (disable-forms import or-expr and-expr rel-expr add-expr mult-expr
   if-expr prefix-expr range-expr slice-expr concat-expr
   "should not be used outside of begin-tiny-hdl")
+
 
 (module+ test
   (require
@@ -793,16 +784,17 @@
   (port-set! (c20-inst y) (signal 0 3 -4))
 
   (test-case "Can concatenate two integers"
-    (check-sig-equal? (port-ref c20-inst z) (signal 0 83 -20) 3)))
+    (check-sig-equal? (port-ref c20-inst z) (signal 0 83 -20) 3))
 
-  ; (component C21
-  ;   (data-port x in  (call-expr unsigned (literal-expr 8)))
-  ;   (data-port y out (call-expr unsigned (literal-expr 8)))
-  ;   (assignment (name-expr y) (signal-expr (name-expr u)))
-  ;   (local-signal u (register-expr (literal-expr 0) (signal-expr (name-expr s))))
-  ;   (local-signal s (register-expr (literal-expr 0) (signal-expr (name-expr x)))))
-  ;
-  ; (define c21-inst (C21-make))
-  ;
-  ; (test-case "Can infer types when assignments are in reverse order"
-  ;   (check-equal? (slot-type (dict-ref c21-inst 'u) (dict-ref c21-inst 's)))))
+  (component C21
+    (data-port x in  (call-expr unsigned (literal-expr 8)))
+    (data-port y out (call-expr unsigned (literal-expr 8)))
+    (assignment (name-expr y) (signal-expr (name-expr u)))
+    (local-signal u (register-expr (literal-expr 0) (signal-expr (name-expr s))))
+    (local-signal s (register-expr (literal-expr 0) (signal-expr (name-expr x)))))
+
+  (define c21-inst (C21-make))
+
+  (test-case "Can infer types when assignments are in reverse order"
+    (check-equal? (slot-type (dict-ref c21-inst 's)) (slot-type (dict-ref c21-inst 'x)))
+    (check-equal? (slot-type (dict-ref c21-inst 'u)) (slot-type (dict-ref c21-inst 's)))))
