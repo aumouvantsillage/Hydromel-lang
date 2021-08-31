@@ -15,4 +15,4 @@
 (define duration 19)
 
 (for ([(name slt) (in-dict (signal-table inst))])
-  (printf "~a : ~a = ~a\n" name (slot-type slt) (signal-take (slot-data slt) duration)))
+  (printf "~a : ~v = ~a\n" name (slot-type slt) (signal-take (slot-data slt) duration)))

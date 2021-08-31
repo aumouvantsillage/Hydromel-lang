@@ -275,7 +275,7 @@
    #:with target-type #'(infer-type target)
    #'(unless (subtype? expr-type target-type)
        ; TODO show source code instead of generated code, or source location only.
-       (raise-syntax-error #f (format "Incompatible type in assignment, found ~a, expected ~a" expr-type target-type) #'expr))]
+       (raise-syntax-error #f (format "Incompatible type in assignment, found ~v, expected ~v" expr-type target-type) #'expr))]
 
   [(_ (local-signal name _ expr))
    #'(check-type (assignment (name-expr name) expr))]

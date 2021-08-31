@@ -18,7 +18,7 @@
 (define tbl (signal-table inst))
 
 (for ([(name slt) (in-dict tbl)])
-  (printf "~a : ~a = ~a\n" name (slot-type slt) (signal-take (slot-data slt) duration)))
+  (printf "~a : ~v = ~a\n" name (slot-type slt) (signal-take (slot-data slt) duration)))
 
 (vcd tbl duration "10 ns"
   (open-output-file "fifo2.vcd" #:exists 'replace))
