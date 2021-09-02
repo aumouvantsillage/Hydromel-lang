@@ -141,7 +141,7 @@
        (thunk/in-scope
          (define/syntax-parse expr (expr^))
          ; Check that the expression has a static value.
-         (unless (static-value? #'expr)
+         (unless (static? #'expr)
            (raise-syntax-error #f "Non-static expression cannot be assigned to constant" #'s.expr))
          (syntax/loc stx
            (constant name expr)))]
@@ -161,7 +161,7 @@
        (thunk/in-scope
          ; Check that the multiplicity has a static value.
          (define/syntax-parse mult (mult^))
-         (unless (static-value? #'mult)
+         (unless (static? #'mult)
            (raise-syntax-error #f "Non-static expression cannot be used as instance multiplicity" #'s.mult))
          ; Check that intf-name refers to an existing interface
          (lookup #'s.intf-name meta/interface?)
@@ -177,7 +177,7 @@
        (thunk/in-scope
          ; Check that the multiplicity has a static value.
          (define/syntax-parse mult (mult^))
-         (unless (static-value? #'mult)
+         (unless (static? #'mult)
            (raise-syntax-error #f "Non-static expression cannot be used as instance multiplicity" #'s.mult))
          ; Check that comp-name refers to an existing component
          ; Check arguments
@@ -230,7 +230,7 @@
        (thunk/in-scope
          (define/syntax-parse (condition ...) (check-all conditions^))
          (for ([it (in-list (attribute condition))]
-               #:unless (static-value? it))
+               #:unless (static? it))
            (raise-syntax-error #f "Non-static expression cannot be used in range" it))
          (define/syntax-parse (then-body ...) (check-all then-bodies^))
          (define/syntax-parse else-body       (else-body^))
@@ -252,7 +252,7 @@
        (thunk/in-scope
          (define/syntax-parse expr (expr^))
          (define/syntax-parse body (body^))
-         (unless (static-value? #'expr)
+         (unless (static? #'expr)
            (raise-syntax-error #f "Non-static expression cannot be used as loop range" #'expr))
          (quasisyntax/loc stx
            (for-statement name #,iter-name expr body)))]
@@ -299,7 +299,7 @@
        (define update-cond^ (and (attribute s.update-cond) (make-checker #'s.update-cond)))
        (thunk
          (define init-expr (init-expr^))
-         (unless (static-value? init-expr)
+         (unless (static? init-expr)
            (raise-syntax-error #f "Non-static expression cannot be used as an initial register value" #'s.init-expr))
          (define/syntax-parse (arg ...) (filter identity
                                           (list
@@ -385,13 +385,13 @@
   ; - a field expression whose left-hand side has a static value,
   ; - an indexed expression whose left-hand side and indices have static values,
   ; - a call whose arguments have static values.
-  (define (static-value? stx)
+  (define (static? stx)
     (syntax-parse stx
       [s:stx/literal-expr #t]
       [s:stx/name-expr    (define c (lookup #'s.name)) (or (meta/constant? c) (meta/parameter? c))]
-      [s:stx/field-expr   (or (static-value? #'s.expr) (meta/constant? (resolve stx)))]
-      [s:stx/indexed-expr (and (static-value? #'s.expr) (andmap static-value? (attribute s.index)))]
-      [s:stx/call-expr    (andmap static-value? (attribute s.arg))]
+      [s:stx/field-expr   (or  (static? #'s.expr) (meta/constant? (resolve stx)))]
+      [s:stx/indexed-expr (and (static? #'s.expr) (andmap static? (attribute s.index)))]
+      [s:stx/call-expr    (andmap static? (attribute s.arg))]
       [_                  #f]))
 
   ; Find the metadata of the given expression result.
@@ -468,7 +468,7 @@
       [_
        ; If stx has a static value, wrap it in a static-expr.
        ; If stx resolves to a signal, wrap it in a signal-expr.
-       (cond [(static-value? stx)          (qs/l (static-expr #,stx))]
+       (cond [(static? stx)                (qs/l (static-expr #,stx))]
              [(meta/signal? (resolve stx)) (qs/l (signal-expr #,stx))]
              [else                         stx])]))
 
