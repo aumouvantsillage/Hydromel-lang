@@ -186,7 +186,7 @@
                  [_                   (error "Invalid type for right slice index.")]))
   (define width (add1 (- left right)))
   (when (< width 1)
-    (error "Slice indices must be in decreasing order."))
+    (error "Slice indices must be in decreasing order." left right))
   (match (t/actual-type ta)
     [(t/unsigned _) (t/unsigned width)]
     [(t/signed   _) (t/signed   width)]
