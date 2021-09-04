@@ -64,7 +64,7 @@
 
 (define (min-unsigned-width-signature t)
   (define t^ (t/actual-type t))
-  (t/unsigned (t/integer-width t^)))
+  (t/unsigned (t/abstract-integer-width t^)))
 
 ; Returns the minimum width to encode a given number
 ; as an signed integer.
@@ -87,9 +87,9 @@
   (define ta^ (t/actual-type ta))
   (define tb^ (t/actual-type tb))
   (match (cons ta^ tb^)
-    [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (max na nb))]
-    [(cons (t/signed   na) (t/integer  nb)) (t/signed   (max na nb))]
-    [(cons (t/integer  na) (t/signed   nb)) (t/signed   (max na nb))]
+    [(cons (t/unsigned na)          (t/unsigned nb))          (t/unsigned (max na nb))]
+    [(cons (t/signed   na)          (t/abstract-integer  nb)) (t/signed   (max na nb))]
+    [(cons (t/abstract-integer  na) (t/signed   nb))          (t/signed   (max na nb))]
     [_ (error "Bitwise operation expects integer operands.")]))
 
 (define (bitwise-not-signature ta) ta)
@@ -132,20 +132,20 @@
     [(cons (t/unsigned na) (t/signed   nb)) (t/signed   (add1 (max (add1 na) nb)))]
     [(cons (t/signed   na) (t/unsigned nb)) (t/signed   (add1 (max na (add1 nb))))]
     [(cons (t/signed   na) (t/signed   nb)) (t/signed   (add1 (max na nb)))]
-    [_ (error "Arithmetic operation expects integer operands.")]))
+    [_ (error "Arithmetic operation expects integer operands." ta^ tb^)]))
 
 (define (--signature ta [tb #f])
   (if tb
     (+-signature ta tb)
-    (t/signed (add1 (t/integer-width (t/actual-type ta))))))
+    (t/signed (add1 (t/abstract-integer-width (t/actual-type ta))))))
 
 (define (*-signature ta tb)
   (define ta^ (t/actual-type ta))
   (define tb^ (t/actual-type tb))
   (match (cons ta^ tb^)
-    [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (+ na nb))]
-    [(cons (t/integer na)  (t/signed   nb)) (t/signed   (+ na nb))]
-    [(cons (t/signed na)   (t/integer  nb)) (t/signed   (+ na nb))]
+    [(cons (t/unsigned na)         (t/unsigned nb))          (t/unsigned (+ na nb))]
+    [(cons (t/abstract-integer na) (t/signed   nb))          (t/signed   (+ na nb))]
+    [(cons (t/signed na)           (t/abstract-integer  nb)) (t/signed   (+ na nb))]
     [_ (error "Arithmetic operation expects integer operands.")]))
 
 (define (quotient-signature ta tb)
@@ -175,15 +175,15 @@
 
 (define (unsigned-slice-signature ta tb tc)
   (define left (match tb
-                 [(t/static-value n) n]
-                 [(t/unsigned     n) (max-unsigned-value n)]
-                 [(t/signed       n) (max-signed-value   n)]
-                 [_                  (error "Invalid type for left slice index.")]))
+                 [(t/static-data n _) n]
+                 [(t/unsigned    n)   (max-unsigned-value n)]
+                 [(t/signed      n)   (max-signed-value   n)]
+                 [_                   (error "Invalid type for left slice index.")]))
   (define right (match tc
-                 [(t/static-value n) n]
-                 [(t/unsigned     n) (min-unsigned-value n)]
-                 [(t/signed       n) (min-signed-value   n)]
-                 [_                  (error "Invalid type for right slice index.")]))
+                 [(t/static-data n _) n]
+                 [(t/unsigned    n)   (min-unsigned-value n)]
+                 [(t/signed      n)   (min-signed-value   n)]
+                 [_                   (error "Invalid type for right slice index.")]))
   (define width (add1 (- left right)))
   (when (< width 1)
     (error "Slice indices must be in decreasing order."))
@@ -200,14 +200,14 @@
 ; Since this function needs to know the width of its arguments,
 ; their types are inserted by the checker.
 (define-syntax-parse-rule (kw-concat-impl (~seq v t) ...)
-  (unsigned-concat [v (sub1 (t/integer-width (t/actual-type t))) 0] ...))
+  (unsigned-concat [v (sub1 (t/abstract-integer-width (t/actual-type t))) 0] ...))
 
 (define (kw-concat-impl-signature . ts)
   (define ts^ (map t/actual-type ts))
   (define w (for/sum ([t (in-list ts^)]
                       [i (in-naturals)] #:when (even? i))
               ; TODO assert that t is an integer type
-              (t/integer-width t)))
+              (t/abstract-integer-width t)))
   (match (first ts^)
     [(t/signed _)   (t/signed w)]
     [(t/unsigned _) (t/unsigned w)]))
@@ -220,4 +220,4 @@
   e)
 
 (define (cast-impl-signature ta tb)
-  (t/type-supertype ta))
+  (t/type-supertype (t/actual-type ta)))

@@ -5,6 +5,7 @@
 #lang racket
 
 (require
+  threading
   "logic.rkt"
   (prefix-in t/ "types.rkt")
   "signal.rkt"
@@ -17,9 +18,9 @@
 (define (vcd table duration ts [out (current-output-port)])
   (define wavs (for/hash ([(name slt) (in-dict table)]
                           [index      (in-naturals)])
-                 (define samples (signal-take (slot-data slt) duration))
+                 (define samples (~> slt (slot-data) (signal-take duration)))
                  (values name (waveform (format "s~a" index)
-                                        (t/integer-width (slot-type slt))
+                                        (~> slt (slot-type) (t/actual-type) (t/abstract-integer-width))
                                         samples))))
 
   ; VCD header.

@@ -456,20 +456,20 @@
   ; - the expression assigned to a local signal,
   ; - the update clause of a register expression,
   ; - the when clauses of a register expression.
-  ; Returns an expression wrapped in lift-expr, static-expr, or signal-expr.
+  ; Returns an expression wrapped in lift-expr, signal-expr, or slot-expr.
   (define (check-assigned-expr stx)
     (syntax-parse (lift-if-needed stx)
       [s:stx/lift-expr
-       ; If a lift-expr wraps a signal read, wrap it also in a signal-expr.
+       ; If a lift-expr wraps a signal read, wrap it also in a slot-expr.
        (if (meta/signal? (resolve #'s.expr))
-         #'(lift-expr s.binding ... (signal-expr s.expr))
+         #'(lift-expr s.binding ... (slot-expr s.expr))
          this-syntax)]
 
       [_
-       ; If stx has a static value, wrap it in a static-expr.
-       ; If stx resolves to a signal, wrap it in a signal-expr.
-       (cond [(static? stx)                (qs/l (static-expr #,stx))]
-             [(meta/signal? (resolve stx)) (qs/l (signal-expr #,stx))]
+       ; If stx has a static value, wrap it in a signal-expr.
+       ; If stx resolves to a signal, wrap it in a slot-expr.
+       (cond [(static? stx)                (qs/l (signal-expr #,stx))]
+             [(meta/signal? (resolve stx)) (qs/l (slot-expr #,stx))]
              [else                         stx])]))
 
   (define (lift-if-needed stx)
@@ -509,10 +509,10 @@
                  (cons   #'s.expr              a-lst))]
 
         [_ #:when (meta/signal? (resolve a))
-         ; If the argument resolves to a signal, wrap it in a signal-expr,
+         ; If the argument resolves to a signal, wrap it in a slot-expr,
          ; create a binding and replace it with a name-expr.
          #:with bname (gensym "lift")
-         (values (cons #`(bname (signal-expr #,a)) b-lst)
+         (values (cons #`(bname (slot-expr #,a)) b-lst)
                  (cons #'(name-expr bname)         a-lst))]
 
         [_
@@ -560,10 +560,10 @@
       (assignment (name-expr y) (name-expr x))))
 
   (define c0-inst (C0-make))
-  (port-set! (c0-inst x) (signal 10))
+  (slot-set! (c0-inst x) (signal 10))
 
   (test-case "Can label a simple signal expressions"
-    (check-sig-equal? (port-ref c0-inst y) (port-ref c0-inst x) 5))
+    (check-sig-equal? (slot-ref c0-inst y) (slot-ref c0-inst x) 5))
 
   (begin-hydromel
     (interface I0
@@ -575,10 +575,10 @@
       (assignment (field-expr (name-expr i) y) (field-expr (name-expr i) x))))
 
   (define c1-inst (C1-make))
-  (port-set! (c1-inst i x) (signal 10))
+  (slot-set! (c1-inst i x) (signal 10))
 
   (test-case "Can resolve ports in field expressions"
-    (check-sig-equal? (port-ref c1-inst i y) (port-ref c1-inst i x) 5))
+    (check-sig-equal? (slot-ref c1-inst i y) (slot-ref c1-inst i x) 5))
 
   (begin-hydromel
     (component C2
@@ -589,12 +589,12 @@
                   (field-expr (indexed-expr (name-expr i) (literal-expr 1)) x))))
 
   (define c2-inst (C2-make))
-  (port-set! (c2-inst i 0 x) (signal 10))
-  (port-set! (c2-inst i 1 x) (signal 20))
+  (slot-set! (c2-inst i 0 x) (signal 10))
+  (slot-set! (c2-inst i 1 x) (signal 20))
 
   (test-case "Can resolve ports in indexed expressions"
-    (check-sig-equal? (port-ref c2-inst i 0 y) (port-ref c2-inst i 0 x) 5)
-    (check-sig-equal? (port-ref c2-inst i 1 y) (port-ref c2-inst i 1 x) 5))
+    (check-sig-equal? (slot-ref c2-inst i 0 y) (slot-ref c2-inst i 0 x) 5)
+    (check-sig-equal? (slot-ref c2-inst i 1 y) (slot-ref c2-inst i 1 x) 5))
 
   (begin-hydromel
     (interface I1
@@ -612,16 +612,16 @@
                   (field-expr (indexed-expr (field-expr (indexed-expr (name-expr j) (literal-expr 1)) i) (literal-expr 1)) x))))
 
   (define c3-inst (C3-make))
-  (port-set! (c3-inst j 0 i 0 x) (signal 10))
-  (port-set! (c3-inst j 0 i 1 x) (signal 20))
-  (port-set! (c3-inst j 1 i 0 x) (signal 30))
-  (port-set! (c3-inst j 1 i 1 x) (signal 40))
+  (slot-set! (c3-inst j 0 i 0 x) (signal 10))
+  (slot-set! (c3-inst j 0 i 1 x) (signal 20))
+  (slot-set! (c3-inst j 1 i 0 x) (signal 30))
+  (slot-set! (c3-inst j 1 i 1 x) (signal 40))
 
   (test-case "Can resolve ports in a hierarchy of expressions"
-    (check-sig-equal? (port-ref c3-inst j 0 i 0 y) (port-ref c3-inst j 0 i 0 x) 5)
-    (check-sig-equal? (port-ref c3-inst j 0 i 1 y) (port-ref c3-inst j 0 i 1 x) 5)
-    (check-sig-equal? (port-ref c3-inst j 1 i 0 y) (port-ref c3-inst j 1 i 0 x) 5)
-    (check-sig-equal? (port-ref c3-inst j 1 i 1 y) (port-ref c3-inst j 1 i 1 x) 5))
+    (check-sig-equal? (slot-ref c3-inst j 0 i 0 y) (slot-ref c3-inst j 0 i 0 x) 5)
+    (check-sig-equal? (slot-ref c3-inst j 0 i 1 y) (slot-ref c3-inst j 0 i 1 x) 5)
+    (check-sig-equal? (slot-ref c3-inst j 1 i 0 y) (slot-ref c3-inst j 1 i 0 x) 5)
+    (check-sig-equal? (slot-ref c3-inst j 1 i 1 y) (slot-ref c3-inst j 1 i 1 x) 5))
 
   (begin-hydromel
     (component C4
@@ -631,7 +631,7 @@
   (define c4-inst (C4-make))
 
   (test-case "Can assign a literal to a signal"
-    (check-sig-equal? (port-ref c4-inst x) (signal 10) 5))
+    (check-sig-equal? (slot-ref c4-inst x) (signal 10) 5))
 
   (begin-hydromel
     (component C5
@@ -642,7 +642,7 @@
   (define c5-inst (C5-make))
 
   (test-case "Can assign a constant to a signal"
-    (check-sig-equal? (port-ref c5-inst x) (signal 10) 5))
+    (check-sig-equal? (slot-ref c5-inst x) (signal 10) 5))
 
   (begin-hydromel
     (component C6
@@ -653,7 +653,7 @@
   (define c6-inst (C6-make))
 
   (test-case "Can assign a static expression to a signal"
-    (check-sig-equal? (port-ref c6-inst x) (signal 11) 5))
+    (check-sig-equal? (slot-ref c6-inst x) (signal 11) 5))
 
   (begin-hydromel
     (component C7
@@ -666,11 +666,11 @@
           (add-expr (name-expr x) + (name-expr y))))))
 
   (define c7-inst (C7-make))
-  (port-set! (c7-inst x) (signal 10 20 30))
-  (port-set! (c7-inst y) (signal 40 50 60))
+  (slot-set! (c7-inst x) (signal 10 20 30))
+  (slot-set! (c7-inst y) (signal 40 50 60))
 
   (test-case "Can lift an operation"
-    (check-sig-equal? (port-ref c7-inst z) (signal 50 70 90) 5))
+    (check-sig-equal? (slot-ref c7-inst z) (signal 50 70 90) 5))
 
   (begin-hydromel
     (component C8
@@ -686,13 +686,13 @@
                   + (mult-expr (name-expr z) * (name-expr u)))))))
 
   (define c8-inst (C8-make))
-  (port-set! (c8-inst x) (signal 10 20 30 40 50))
-  (port-set! (c8-inst y) (signal 2))
-  (port-set! (c8-inst z) (signal 1 2 3 4 5))
-  (port-set! (c8-inst u) (signal 3))
+  (slot-set! (c8-inst x) (signal 10 20 30 40 50))
+  (slot-set! (c8-inst y) (signal 2))
+  (slot-set! (c8-inst z) (signal 1 2 3 4 5))
+  (slot-set! (c8-inst u) (signal 3))
 
   (test-case "Can lift nested calls"
-    (check-sig-equal? (port-ref c8-inst v) (signal 23 46 69 92 115) 5))
+    (check-sig-equal? (slot-ref c8-inst v) (signal 23 46 69 92 115) 5))
 
   (begin-hydromel
     (component C9
@@ -709,13 +709,13 @@
           (add-expr (name-expr xy) + (name-expr zu))))))
 
   (define c9-inst (C9-make))
-  (port-set! (c9-inst x) (signal 10 20 30 40 50))
-  (port-set! (c9-inst y) (signal 2))
-  (port-set! (c9-inst z) (signal 1 2 3 4 5))
-  (port-set! (c9-inst u) (signal 3))
+  (slot-set! (c9-inst x) (signal 10 20 30 40 50))
+  (slot-set! (c9-inst y) (signal 2))
+  (slot-set! (c9-inst z) (signal 1 2 3 4 5))
+  (slot-set! (c9-inst u) (signal 3))
 
   (test-case "Can use local signals"
-    (check-sig-equal? (port-ref c9-inst v) (signal 23 46 69 92 115) 5))
+    (check-sig-equal? (slot-ref c9-inst v) (signal 23 46 69 92 115) 5))
 
   (begin-hydromel
     (interface I2
@@ -729,17 +729,17 @@
                   (field-expr (indexed-expr (name-expr i) (name-expr y)) x))))
 
   (define c10-inst (C10-make))
-  (port-set! (c10-inst i 0 x) (signal 10))
-  (port-set! (c10-inst i 1 x) (signal 20))
-  (port-set! (c10-inst i 2 x) (signal 30))
-  (port-set! (c10-inst y)     (signal 0 1 2 1 0 2))
+  (slot-set! (c10-inst i 0 x) (signal 10))
+  (slot-set! (c10-inst i 1 x) (signal 20))
+  (slot-set! (c10-inst i 2 x) (signal 30))
+  (slot-set! (c10-inst y)     (signal 0 1 2 1 0 2))
 
   (test-case "Can access simple ports in a vector composite port with dynamic indices"
-    (check-sig-equal? (port-ref c10-inst z) (signal 10 20 30 20 10 30) 5))
+    (check-sig-equal? (slot-ref c10-inst z) (signal 10 20 30 20 10 30) 5))
 
   (begin-hydromel
     (component C11
-      (parameter N (name-expr unsigned))
+      (parameter N (call-expr unsigned (literal-expr 32)))
       (data-port x in (call-expr signed (literal-expr 32)))
       (data-port y out (call-expr signed (literal-expr 32)))
       (assignment (name-expr y)
@@ -755,10 +755,10 @@
       (assignment (name-expr y) (field-expr (name-expr c) y))))
 
   (define c12-inst (C12-make))
-  (port-set! (c12-inst x) (signal 10 20 30 40 50))
+  (slot-set! (c12-inst x) (signal 10 20 30 40 50))
 
   (test-case "Can instantiate a component"
-    (check-sig-equal? (port-ref c12-inst y) (signal 100 200 300 400 500) 5))
+    (check-sig-equal? (slot-ref c12-inst y) (signal 100 200 300 400 500) 5))
 
   (begin-hydromel
     (component C13
@@ -775,11 +775,11 @@
                   + (field-expr (indexed-expr (name-expr c) (literal-expr 1)) y))))))
 
   (define c13-inst (C13-make))
-  (port-set! (c13-inst x0) (signal 10 20 30 40 50))
-  (port-set! (c13-inst x1) (signal 1  2  3  4  5))
+  (slot-set! (c13-inst x0) (signal 10 20 30 40 50))
+  (slot-set! (c13-inst x1) (signal 1  2  3  4  5))
 
   (test-case "Can instantiate a multiple component"
-    (check-sig-equal? (port-ref c13-inst y) (signal 110 220 330 440 550) 5))
+    (check-sig-equal? (slot-ref c13-inst y) (signal 110 220 330 440 550) 5))
 
   (begin-hydromel
     (component C14
@@ -787,10 +787,10 @@
       (assignment (name-expr y) (name-expr x))))
 
   (define c14-inst (C14-make))
-  (port-set! (c14-inst x) (signal 10))
+  (slot-set! (c14-inst x) (signal 10))
 
   (test-case "Can resolve ports in a spliced interface"
-    (check-sig-equal? (port-ref c14-inst y) (port-ref c14-inst x) 5))
+    (check-sig-equal? (slot-ref c14-inst y) (slot-ref c14-inst x) 5))
 
   (begin-hydromel
     (component C15
@@ -798,10 +798,10 @@
       (assignment (name-expr x) (name-expr y))))
 
   (define c15-inst (C15-make))
-  (port-set! (c15-inst y) (signal 10))
+  (slot-set! (c15-inst y) (signal 10))
 
   (test-case "Can resolve ports in a spliced flipped interface"
-    (check-sig-equal? (port-ref c15-inst x) (port-ref c15-inst y) 5))
+    (check-sig-equal? (slot-ref c15-inst x) (slot-ref c15-inst y) 5))
 
   (begin-hydromel
     (component C16
@@ -812,12 +812,12 @@
                   (field-expr (indexed-expr (name-expr i) (literal-expr 1)) x))))
 
   (define c16-inst (C16-make))
-  (port-set! (c16-inst i 0 x) (signal 10))
-  (port-set! (c16-inst i 1 x) (signal 20))
+  (slot-set! (c16-inst i 0 x) (signal 10))
+  (slot-set! (c16-inst i 1 x) (signal 20))
 
   (test-case "Can resolve ports in a hierarchy from a spliced interface"
-    (check-sig-equal? (port-ref c16-inst i 0 y) (port-ref c16-inst i 0 x) 5)
-    (check-sig-equal? (port-ref c16-inst i 1 y) (port-ref c16-inst i 1 x) 5))
+    (check-sig-equal? (slot-ref c16-inst i 0 y) (slot-ref c16-inst i 0 x) 5)
+    (check-sig-equal? (slot-ref c16-inst i 1 y) (slot-ref c16-inst i 1 x) 5))
 
   (begin-hydromel
     (interface I3
@@ -828,13 +828,13 @@
       (assignment (name-expr y) (name-expr x))))
 
   (define c17-inst (C17-make))
-  (port-set! (c17-inst j x) (signal 10))
+  (slot-set! (c17-inst j x) (signal 10))
 
   (test-case "Can resolve ports in an interface with a spliced composite port"
-    (check-sig-equal? (port-ref c17-inst j y) (port-ref c17-inst j x) 5))
+    (check-sig-equal? (slot-ref c17-inst j y) (slot-ref c17-inst j x) 5))
 
   (test-case "Can resolve ports in a doubly spliced composite port"
-    (check-sig-equal? (port-ref c17-inst y) (port-ref c17-inst x) 5))
+    (check-sig-equal? (slot-ref c17-inst y) (slot-ref c17-inst x) 5))
 
   (begin-hydromel
     (component C18
@@ -842,10 +842,10 @@
       (assignment (name-expr x) (name-expr y))))
 
   (define c18-inst (C18-make))
-  (port-set! (c18-inst y) (signal 10))
+  (slot-set! (c18-inst y) (signal 10))
 
   (test-case "Can resolve ports in a doubly spliced flipped-last composite port"
-    (check-sig-equal? (port-ref c18-inst x) (port-ref c18-inst y) 5))
+    (check-sig-equal? (slot-ref c18-inst x) (slot-ref c18-inst y) 5))
 
   (begin-hydromel
     (interface I4
@@ -856,10 +856,10 @@
       (assignment (name-expr x) (name-expr y))))
 
   (define c19-inst (C19-make))
-  (port-set! (c19-inst y) (signal 10))
+  (slot-set! (c19-inst y) (signal 10))
 
   (test-case "Can resolve ports in a doubly spliced flipped-first composite port"
-    (check-sig-equal? (port-ref c19-inst x) (port-ref c19-inst y) 5))
+    (check-sig-equal? (slot-ref c19-inst x) (slot-ref c19-inst y) 5))
 
   (begin-hydromel
     (component C20
@@ -867,10 +867,10 @@
       (assignment (name-expr y) (name-expr x))))
 
   (define c20-inst (C20-make))
-  (port-set! (c20-inst x) (signal 10))
+  (slot-set! (c20-inst x) (signal 10))
 
   (test-case "Can resolve ports in a doubly spliced doubly-flipped composite port"
-    (check-sig-equal? (port-ref c20-inst y) (port-ref c20-inst x) 5))
+    (check-sig-equal? (slot-ref c20-inst y) (slot-ref c20-inst x) 5))
 
   (begin-hydromel
     (component C21
@@ -882,11 +882,11 @@
                                   (name-expr y)))))
 
   (define c21-inst (C21-make))
-  (port-set! (c21-inst x) (signal 10 20  30  40 50))
-  (port-set! (c21-inst y) (signal 1  200 300 4  5))
+  (slot-set! (c21-inst x) (signal 10 20  30  40 50))
+  (slot-set! (c21-inst y) (signal 1  200 300 4  5))
 
   (test-case "Can compute a conditional signal"
-    (check-sig-equal? (port-ref c21-inst z) (signal 10 200 300 40 50) 5))
+    (check-sig-equal? (slot-ref c21-inst z) (signal 10 200 300 40 50) 5))
 
   (begin-hydromel
     (component C22
@@ -895,10 +895,10 @@
       (assignment (name-expr y) (register-expr (literal-expr 0) (name-expr x)))))
 
   (define c22-inst (C22-make))
-  (port-set! (c22-inst x) (signal 10 20  30 40 50))
+  (slot-set! (c22-inst x) (signal 10 20  30 40 50))
 
   (test-case "Can register a signal"
-    (check-sig-equal? (port-ref c22-inst y) (signal 0  10 20 30 40 50) 6))
+    (check-sig-equal? (slot-ref c22-inst y) (signal 0  10 20 30 40 50) 6))
 
   (begin-hydromel
     (component C23
@@ -909,11 +909,11 @@
                                                (name-expr y)))))
 
   (define c23-inst (C23-make))
-  (port-set! (c23-inst x) (signal 0  0  0  1  0))
-  (port-set! (c23-inst y) (signal 10 20 30 40 50))
+  (slot-set! (c23-inst x) (signal 0  0  0  1  0))
+  (slot-set! (c23-inst y) (signal 10 20 30 40 50))
 
   (test-case "Can register a signal with reset"
-    (check-sig-equal? (port-ref c23-inst z) (signal 0  10 20 30 0  50) 6))
+    (check-sig-equal? (slot-ref c23-inst z) (signal 0  10 20 30 0  50) 6))
 
   (begin-hydromel
     (component C24
@@ -924,11 +924,11 @@
                                                (name-expr y) (when-clause (name-expr x))))))
 
   (define c24-inst (C24-make))
-  (port-set! (c24-inst x) (signal 0  1  0  1  0))
-  (port-set! (c24-inst y) (signal 10 20 30 40 50))
+  (slot-set! (c24-inst x) (signal 0  1  0  1  0))
+  (slot-set! (c24-inst y) (signal 10 20 30 40 50))
 
   (test-case "Can register a signal with enable"
-    (check-sig-equal? (port-ref c24-inst z) (signal 0  0  20 20 40) 6))
+    (check-sig-equal? (slot-ref c24-inst z) (signal 0  0  20 20 40) 6))
 
   (begin-hydromel
     (component C25
@@ -940,12 +940,12 @@
                                                (name-expr z) (when-clause (name-expr y))))))
 
   (define c25-inst (C25-make))
-  (port-set! (c25-inst x) (signal 0  0   1  0  0))
-  (port-set! (c25-inst y) (signal 0  1   0  1  0))
-  (port-set! (c25-inst z) (signal 10 20  30 40 50))
+  (slot-set! (c25-inst x) (signal 0  0   1  0  0))
+  (slot-set! (c25-inst y) (signal 0  1   0  1  0))
+  (slot-set! (c25-inst z) (signal 10 20  30 40 50))
 
   (test-case "Can register a signal with reset and enable"
-    (check-sig-equal? (port-ref c25-inst u) (signal 0  0  20 0  40) 6))
+    (check-sig-equal? (slot-ref c25-inst u) (signal 0  0  20 0  40) 6))
 
   (begin-hydromel
     (component C26
@@ -956,10 +956,10 @@
   (define c26-inst (C26-make))
 
   (test-case "Can read a local constant"
-    (check-sig-equal? (port-ref c26-inst y) (signal 56) 1))
+    (check-sig-equal? (slot-ref c26-inst y) (signal 56) 1))
 
   (test-case "Can read a constant as a channel field"
-    (check-equal? (dict-ref c26-inst 'N) 56))
+    (check-equal? (slot-ref c26-inst N) 56))
 
   (begin-hydromel
     (interface I5
@@ -973,7 +973,7 @@
   (define c27-inst (C27-make))
 
   (test-case "Can read a constant from a port"
-    (check-sig-equal? (port-ref c27-inst p y) (signal 56) 1))
+    (check-sig-equal? (slot-ref c27-inst p y) (signal 56) 1))
 
   (begin-hydromel
     (component C28
@@ -984,7 +984,7 @@
   (define c28-inst (C28-make))
 
   (test-case "Can read a constant from an instance"
-    (check-sig-equal? (port-ref c28-inst y) (signal 56) 1))
+    (check-sig-equal? (slot-ref c28-inst y) (signal 56) 1))
 
   (begin-hydromel
     (component C29
@@ -995,7 +995,7 @@
   (define c29-inst (C29-make))
 
   (test-case "Can read a constant from an instance port"
-    (check-sig-equal? (port-ref c29-inst y) (signal 56) 1))
+    (check-sig-equal? (slot-ref c29-inst y) (signal 56) 1))
 
   (begin-hydromel
     (constant K0 (literal-expr 44))
@@ -1007,7 +1007,7 @@
   (define c30-inst (C30-make))
 
   (test-case "Can read a global constant"
-    (check-sig-equal? (port-ref c30-inst y) (signal 44) 1))
+    (check-sig-equal? (slot-ref c30-inst y) (signal 44) 1))
 
   (begin-hydromel
     (component C31
@@ -1025,14 +1025,14 @@
   (define c31-inst (C31-make))
 
   (test-case "Can read a bit in an integer value"
-    (check-sig-equal? (port-ref c31-inst y) (signal 0) 1)
-    (check-sig-equal? (port-ref c31-inst z) (signal 1) 1))
+    (check-sig-equal? (slot-ref c31-inst y) (signal 0) 1)
+    (check-sig-equal? (slot-ref c31-inst z) (signal 1) 1))
 
   (test-case "Can read an unsigned slice in an integer value"
-    (check-sig-equal? (port-ref c31-inst t) (signal 12) 1))
+    (check-sig-equal? (slot-ref c31-inst t) (signal 12) 1))
 
   (test-case "Can read a signed slice in an integer value"
-    (check-sig-equal? (port-ref c31-inst u) (signal -4) 2))
+    (check-sig-equal? (slot-ref c31-inst u) (signal -4) 2))
 
   (begin-hydromel
     (component C32
@@ -1042,11 +1042,11 @@
       (assignment (name-expr z) (concat-expr (name-expr x) (name-expr y)))))
 
   (define c32-inst (C32-make))
-  (port-set! (c32-inst x) (signal 0 5 -2))
-  (port-set! (c32-inst y) (signal 0 3 -4))
+  (slot-set! (c32-inst x) (signal 0 5 -2))
+  (slot-set! (c32-inst y) (signal 0 3 -4))
 
   (test-case "Can concatenate two integers"
-    (check-sig-equal? (port-ref c32-inst z) (signal 0 83 -20) 3))
+    (check-sig-equal? (slot-ref c32-inst z) (signal 0 83 -20) 3))
 
   (begin-hydromel
     (component C33
@@ -1059,5 +1059,5 @@
   (define c33-inst (C33-make))
 
   (test-case "Can infer types when assignments are in reverse order"
-    (check-equal? (slot-type (dict-ref c33-inst 's)) (slot-type (dict-ref c33-inst 'x)))
-    (check-equal? (slot-type (dict-ref c33-inst 'u)) (slot-type (dict-ref c33-inst 's)))))
+    (check-equal? (actual-type (slot-type (dict-ref c33-inst 's))) (actual-type (slot-type (dict-ref c33-inst 'x))))
+    (check-equal? (actual-type (slot-type (dict-ref c33-inst 'u))) (actual-type (slot-type (dict-ref c33-inst 's))))))

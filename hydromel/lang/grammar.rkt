@@ -35,7 +35,7 @@ component: /"component" ID parameter-list? component-item* /"end"
   if-statement |
   for-statement
 
-parameter: ID /":" ("type" | type-expression)
+parameter: ID /":" type-expression
 
 constant: /"constant" ID /"=" expression
 
@@ -148,6 +148,7 @@ call-expr:
 
 ; Array and tuple types are included in call-expr
 @type-expression:
+  "type" |
   name-expr |
   call-expr |
   record-type

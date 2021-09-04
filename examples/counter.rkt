@@ -8,11 +8,10 @@
 
 (define inst (counter-make 3))
 
-(port-set! (inst clear) (signal 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0))
-(port-set! (inst up)    (signal 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0))
-(port-set! (inst down)  (signal 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 0 0 0))
+(slot-set! (inst clear) (signal 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0))
+(slot-set! (inst up)    (signal 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0))
+(slot-set! (inst down)  (signal 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 0 0 0))
 
 (define duration 19)
 
-(for ([(name slt) (in-dict (signal-table inst))])
-  (printf "~a : ~v = ~a\n" name (slot-type slt) (signal-take (slot-data slt) duration)))
+(print-slot-table (slot-table inst) duration)

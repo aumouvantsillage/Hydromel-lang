@@ -63,7 +63,7 @@ component fifo2b(T : type, I : T)
     p    = f1.p
 end
 
-component fifo_rec(T : type, I : T, N : unsigned)
+component fifo_rec(T : type, I : T, N : natural)
     port io : splice consumer_producer(T)
 
     instance f0 = fifo1(T, I)
@@ -86,7 +86,7 @@ component fifo_rec(T : type, I : T, N : unsigned)
     end
 end
 
-component fifo_rec_b(T : type, I : T, N : unsigned)
+component fifo_rec_b(T : type, I : T, N : natural)
     port io : splice consumer_producer(T)
 
     instance f0 = fifo1(T, I)
@@ -101,7 +101,7 @@ component fifo_rec_b(T : type, I : T, N : unsigned)
     end
 end
 
-component fifo_iter(T : type, I : T, N : unsigned)
+component fifo_iter(T : type, I : T, N : natural)
     port io : splice consumer_producer(T)
 
     instance f[N] = fifo1(T, I)
@@ -121,7 +121,7 @@ component fifo_iter(T : type, I : T, N : unsigned)
     f[N-1].p.ready = p.ready
 end
 
-component fifo_iter_b(T : type, I : T, N : unsigned)
+component fifo_iter_b(T : type, I : T, N : natural)
     port io : splice consumer_producer(T)
 
     instance f[N] = fifo1(T, I)

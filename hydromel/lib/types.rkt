@@ -17,27 +17,27 @@
 (struct any datatype () #:transparent)
 
 ; Abstract type for signed and unsigned integers.
-(struct integer datatype (width) #:transparent)
+(struct abstract-integer datatype (width) #:transparent)
 
-(struct signed integer ()
+(struct signed abstract-integer ()
   #:transparent
-  #:property prop:procedure (λ (t v) (l/signed v (integer-width t))))
+  #:property prop:procedure (λ (t v) (l/signed v (abstract-integer-width t))))
 
 ; Parameterized data types are exposed as functions
 ; whose result is a type.
 (define (signed-signature tn)
   (match tn
-    [(static-value n) (type (signed n))]
-    [_                (error "Signed width must be a static value")]))
+    [(static-data n _) (type (signed n))]
+    [_                 (error "Signed width must be a static integer" tn)]))
 
 (define (unsigned-signature tn)
   (match tn
-    [(static-value n) (type (unsigned n))]
-    [_                (error "Unsigned width must be a static value")]))
+    [(static-data n _) (type (unsigned n))]
+    [_                 (error "Unsigned width must be a static integer" tn)]))
 
-(struct unsigned integer ()
+(struct unsigned abstract-integer ()
   #:transparent
-  #:property prop:procedure (λ (t v) (l/unsigned v (integer-width t))))
+  #:property prop:procedure (λ (t v) (l/unsigned v (abstract-integer-width t))))
 
 (struct tuple datatype (elt-types) #:transparent)
 
@@ -56,10 +56,10 @@
 ; The type of types.
 (struct type datatype (supertype) #:transparent)
 
-; A type to defer the type inference of static values.
-(struct static-value datatype (actual)
+; A type to keep a literal value with its type.
+(struct static-data datatype (value type)
   #:transparent
-  #:property prop:procedure (λ (t v) ((literal-type (static-value-actual t)) v)))
+  #:property prop:procedure (λ (t v) ((static-data-type t) v)))
 
 ; Standard derived types.
 
@@ -70,6 +70,22 @@
 
 (define (bit-impl-signature)
   (type (bit-impl)))
+
+(define-syntax natural (meta/builtin-function #'natural-impl))
+
+(define (natural-impl)
+  (unsigned #f))
+
+(define (natural-impl-signature)
+  (type (natural-impl)))
+
+(define-syntax integer (meta/builtin-function #'integer-impl))
+
+(define (integer-impl)
+  (signed #f))
+
+(define (integer-impl-signature)
+  (type (integer-impl)))
 
 ; Type helpers.
 
@@ -82,8 +98,20 @@
 
 (define (actual-type t)
   (match t
-    [(static-value n) (literal-type n)]
-    [_                t]))
+    [(static-data n (unsigned #f)) (unsigned (l/min-unsigned-width n))]
+    [(static-data n (signed   #f)) (signed   (l/min-unsigned-width n))]
+    [(static-data _ t)             (actual-type t)]
+    [(union ts)                    (foldl merge-types #f (map actual-type ts))]
+    [_                             t]))
+
+(define (merge-types t u)
+  (match (cons t u)
+    [(cons _            #f)           t]
+    [(cons (unsigned m) (unsigned n)) (unsigned (max m n))]
+    [(cons (signed   m) (signed   n)) (signed   (max m n))]
+    [(cons (unsigned m) (signed   n)) (signed   (max (add1 m) n))]
+    [(cons (signed   m) (unsigned n)) (signed   (max m (add1 n)))]
+    [_                                (error "types cannot be merged" t u)]))
 
 (define (subtype? t u)
   (match (cons (actual-type t) (actual-type u))

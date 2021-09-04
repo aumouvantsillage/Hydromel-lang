@@ -8,11 +8,10 @@
 
 (define inst (full_adder-make))
 
-(port-set! (inst a)  (signal 0 0 0 0 1 1 1 1))
-(port-set! (inst b)  (signal 0 0 1 1 0 0 1 1))
-(port-set! (inst ci) (signal 0 1 0 1 0 1 0 1))
+(slot-set! (inst a)  (signal 0 0 0 0 1 1 1 1))
+(slot-set! (inst b)  (signal 0 0 1 1 0 0 1 1))
+(slot-set! (inst ci) (signal 0 1 0 1 0 1 0 1))
 
 (define duration 8)
 
-(for ([(name slt) (in-dict (signal-table inst))])
-  (printf "~a : ~v = ~a\n" name (slot-type slt) (signal-take (slot-data slt) duration)))
+(print-slot-table (slot-table inst) duration)

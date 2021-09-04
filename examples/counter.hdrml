@@ -1,6 +1,6 @@
 #lang hydromel
 
-component counter(LIMIT : unsigned)
+component counter(LIMIT : unsigned(2)) # TODO should accept any size
     constant WIDTH = unsigned_width(LIMIT)
     port clear  : in  bit
     port up     : in  bit
