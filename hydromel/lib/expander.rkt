@@ -102,7 +102,7 @@
       (define types (make-hash))
       (splicing-syntax-parameterize ([in-design-unit #t]
                                      [inferred-types (make-rename-transformer #'types)])
-        (define param-name (slot arg-name (make-slot-typer (static-data arg-name param-type)))) ...
+        (define param-name (make-slot arg-name (static-data arg-name param-type))) ...
         body ...
         (check-type body) ...)
       (make-hash `((field-name . ,field-name) ...)))))
@@ -144,7 +144,7 @@
 ; static-data where the expression has already been evaluated.
 (define-syntax-parse-rule (constant-to-slot expr)
   (let ([t (infer-type expr)])
-    (slot (static-data-value t) (make-slot-typer t))))
+    (make-slot (static-data-value t) t)))
 
 ; An alias expands to a partial access to the target port.
 ; The alias and the corresponding port must refer to the same slot.
@@ -156,7 +156,7 @@
 ; the current component instance.
 ; We use a slot for output ports as well to keep a simple port access mechanism.
 (define-syntax-parse-rule (data-port name _ type)
-  (define name (slot #f (make-slot-typer type))))
+  (define name (make-slot #f type)))
 
 ; A local signal expands to a variable containing the result of the given
 ; expression in a slot.
@@ -164,7 +164,7 @@
 ; it helps expanding expressions without managing several special cases.
 (define-syntax-parse-rule (local-signal name (~optional type) expr)
   #:with slot-type (or (attribute type) #'(infer-type expr))
-  (define name (slot expr (make-slot-typer slot-type))))
+  (define name (make-slot expr slot-type)))
 
 ; A composite port expands to a variable that stores the result of a constructor
 ; call for the corresponding interface.
@@ -215,7 +215,7 @@
 (define-syntax-parse-rule (for-statement name iter-name expr body ...)
   #:with iter-name^ (generate-temporary #'iter-name)
   (define name (for/vector ([iter-name^ (in-list expr)])
-                 (define iter-name (slot iter-name^ (make-slot-typer (static-data iter-name^ (literal-type iter-name^)))))
+                 (define iter-name (make-slot iter-name^ (static-data iter-name^ (literal-type iter-name^))))
                  body ...)))
 
 ; A statement block executes statements and returns a hash map that exposes
@@ -376,7 +376,7 @@
    #'(infer-type x)]
 
   [(_ (lift-expr (name sexpr) ...+ expr))
-   #'(let ([name (slot #f (make-slot-typer (infer-type sexpr)))] ...)
+   #'(let ([name (make-slot #f (infer-type sexpr))] ...)
        (infer-type expr))]
 
   [_ #''any])

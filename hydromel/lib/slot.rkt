@@ -4,26 +4,26 @@
 
 (provide
   (struct-out slot)
-  make-slot-typer
+  make-slot
   slot-type
   connect)
 
-; A slot contains a value and its type.
-; The make-slot-typer field is a function that returns the type of the current signal.
+; A slot contains a value and a function that computes its type.
+; In most cases, use make-slot to construct a slot instance.
 (struct slot (data typer) #:mutable #:transparent)
 
-(define-syntax-parse-rule (make-slot-typer expr)
+(define-syntax-parse-rule (make-slot data type)
   (let ([res #f]
         [visiting #f])
-    (thunk
-      (when visiting
-        ; TODO display signal names, locate error in source code
-        (error "Could not infer type due to cross-dependencies"))
-      (unless res
-        (set! visiting #t)
-        (set! res expr)
-        (set! visiting #f))
-      res)))
+    (slot data (thunk
+                 (when visiting
+                   ; TODO display signal names, locate error in source code
+                   (error "Could not infer type due to cross-dependencies"))
+                 (unless res
+                   (set! visiting #t)
+                   (set! res type)
+                   (set! visiting #f))
+                 res))))
 
 (define (slot-type slt)
   ((slot-typer slt)))
