@@ -30,7 +30,7 @@
   for-statement
   statement-block
   assignment
-  connection
+  connect-statement
   literal-expr
   alias
   name-expr
@@ -44,6 +44,10 @@
   lift-expr concat-expr
   or-expr and-expr rel-expr add-expr mult-expr if-expr prefix-expr range-expr slice-expr
   infer-type)
+
+; ------------------------------------------------------------------------------
+; Design units
+; ------------------------------------------------------------------------------
 
 (begin-for-syntax
   (define (stx-filter stx-lst id-lst)
@@ -71,27 +75,265 @@
   ; Return the list of port and signal names in the given syntax object.
   (define (design-unit-field-names stx-lst)
     (define/syntax-parse ((_ name _ ...) ...) (design-unit-fields stx-lst))
-    (attribute name))
+    (attribute name)))
 
-  (define (stx-key stx)
-    (datum->syntax stx (format "~a$~a$~a"
-                         (syntax-source stx)
-                         (syntax-position stx)
-                         (syntax-span stx)))))
+; A flag that allows to check whether a given form is part of a design unit body,
+; or whether it appears at the module level.
+(define-syntax-parameter in-design-unit #f)
 
-; Replace dynamic indices with zeros in indexed expressions.
-; This only concerns access to interface ports with multiplicity > 1,
-; which is expressed as a combination of field and indexed expressions.
-(define-syntax-parser remove-dynamic-indices
-  #:literals [indexed-expr field-expr]
-  [(_ (indexed-expr expr index ...))
-   #:with (index0 ...) (for/list ([it (in-list (attribute index))]) #'0)
-   #'(indexed-expr (remove-dynamic-indices expr) index0 ...)]
+; A hash table of inferred types for expressions in a given context.
+(define-syntax-parameter inferred-types
+  (λ (stx)
+    (raise-syntax-error (syntax-e stx) "can only be used inside design-unit")))
 
-  [(_ (field-expr expr field-name))
-   #'(field-expr (remove-dynamic-indices expr) field-name)]
+; An interface or a component expands to a constructor function
+; that returns a hash-map with public or debug data.
+; Interfaces and components differ by the element types they are allowed
+; to contain, but the expansion rule is exactly the same.
+(define-syntax-parse-rule (design-unit name body ...)
+  #:with ctor-name        (design-unit-ctor-name #'name)
+  #:with (param-name ...) (design-unit-parameter-names (attribute body))
+  #:with (param-type ...) (design-unit-parameter-types (attribute body))
+  #:with (arg-name   ...) (generate-temporaries        (attribute param-name))
+  #:with (field-name ...) (design-unit-field-names     (attribute body))
+  (begin
+    (provide ctor-name)
+    (define (ctor-name arg-name ...)
+      (define types (make-hash))
+      (splicing-syntax-parameterize ([in-design-unit #t]
+                                     [inferred-types (make-rename-transformer #'types)])
+        (define param-name (slot arg-name (make-slot-typer (static-data arg-name param-type)))) ...
+        body ...
+        (check-type body) ...)
+      (make-hash `((field-name . ,field-name) ...)))))
 
-  [(_ other) #'other])
+(define-syntax-parse-rule (interface name body ...)
+  (design-unit name body ...))
+
+(define-syntax-parse-rule (component name body ...)
+  (design-unit name body ...))
+
+; ------------------------------------------------------------------------------
+; Declarations
+; ------------------------------------------------------------------------------
+
+; Parameters are expanded in macro design-unit.
+; TODO add type checking
+(define-syntax-parse-rule (parameter _ ...)
+  (begin))
+
+; A constant expands to a slot assigned to a variable.
+(define-syntax-parser constant
+  ; Local constant in an interface or component.
+  [(constant name expr) #:when (syntax-parameter-value #'in-design-unit)
+   #'(define name (constant-to-slot expr))]
+
+  ; Module-level context constant.
+  [(constant name expr)
+   #:with name^ (format-id #'name "~a-constant" #'name)
+   #'(begin
+       (provide name^)
+       ; The expression will not be type-checked, so we create a temporary type
+       ; dictionary that will be used only once.
+       (define name^ (let ([types (make-hash)])
+                       (syntax-parameterize ([inferred-types (make-rename-transformer #'types)])
+                         (constant-to-slot expr)))))])
+
+; A constant infers its type immediately before computing its value.
+; Here, we benefit from the fact that infer-type will return a
+; static-data where the expression has already been evaluated.
+(define-syntax-parse-rule (constant-to-slot expr)
+  (let ([t (infer-type expr)])
+    (slot (static-data-value t) (make-slot-typer t))))
+
+; An alias expands to a partial access to the target port.
+; The alias and the corresponding port must refer to the same slot.
+(define-syntax-parse-rule (alias name port-name)
+  (define name (dict-ref port-name 'name)))
+
+; A data port expands to a variable containing an empty slot.
+; The slot is relevant for input ports because they are assigned from outside
+; the current component instance.
+; We use a slot for output ports as well to keep a simple port access mechanism.
+(define-syntax-parse-rule (data-port name _ type)
+  (define name (slot #f (make-slot-typer type))))
+
+; A local signal expands to a variable containing the result of the given
+; expression in a slot.
+; Like output ports, local signals do not need to be wrapped in a slot, but
+; it helps expanding expressions without managing several special cases.
+(define-syntax-parse-rule (local-signal name (~optional type) expr)
+  #:with slot-type (or (attribute type) #'(infer-type expr))
+  (define name (slot expr (make-slot-typer slot-type))))
+
+; A composite port expands to a variable that stores the result of a constructor
+; call for the corresponding interface.
+; If the multiplicity is greater than 1, a vector of channels is created.
+(define-syntax-parse-rule (composite-port name (~optional (multiplicity mult)) (~or (~literal splice) (~literal flip)) ... intf-name arg ...)
+  #:with ctor-name (design-unit-ctor-name #'intf-name)
+  #:with m (or (attribute mult) #'1)
+  (define name (let ([ctor (λ (z) (ctor-name arg ...))])
+                 (if (> m 1)
+                   (build-vector m ctor)
+                   (ctor #f)))))
+
+; An instance expands to a variable that stores the result of a constructor call
+; for the corresponding component.
+; If the multiplicity is greater than 1, a vector of channels is created.
+; TODO We should create a vector if multiplicity is present regardless of its value.
+(define-syntax-parse-rule (instance name (~optional ((~literal multiplicity) mult)) comp-name arg ...)
+  #:with ctor-name (design-unit-ctor-name #'comp-name)
+  #:with m (or (attribute mult) #'1)
+  (define name (let ([ctor (λ (z) (ctor-name arg ...))])
+                 (if (> m 1)
+                   (build-vector m ctor)
+                   (ctor #f)))))
+
+; ------------------------------------------------------------------------------
+; Statements
+; ------------------------------------------------------------------------------
+
+; An assignment fills the target port's slot with the signal
+; from the right-hand side.
+(define-syntax-parser assignment
+  #:literals [name-expr]
+  [(_ (name-expr name) expr) #'(set-slot-data! name   expr)]
+  [(_ target           expr) #'(set-slot-data! target expr)])
+
+; Connect two interface instances.
+; See std.rkt for the implementation of connect.
+(define-syntax-parse-rule (connect-statement left right)
+  (connect left right))
+
+; An if statement expands to a conditional statement that generates a hash map.
+; That hash map is assigned to a variable with the same name as the if label.
+(define-syntax-parse-rule (if-statement name (~seq condition then-body) ... else-body)
+  (define name (cond [(int-to-bool-impl condition) then-body]
+                     ...
+                     [else else-body])))
+
+(define-syntax-parse-rule (for-statement name iter-name expr body ...)
+  #:with iter-name^ (generate-temporary #'iter-name)
+  (define name (for/vector ([iter-name^ (in-list expr)])
+                 (define iter-name (slot iter-name^ (make-slot-typer (static-data iter-name^ (literal-type iter-name^)))))
+                 body ...)))
+
+; A statement block executes statements and returns a hash map that exposes
+; local data for debugging.
+(define-syntax-parse-rule (statement-block body ...)
+  #:with (field-name ...) (design-unit-field-names (attribute body))
+  (let ()
+    body ...
+    (make-hash `((field-name . ,field-name) ...))))
+
+; ------------------------------------------------------------------------------
+; Expressions
+; ------------------------------------------------------------------------------
+
+; A literal expression expands to its value.
+(define-syntax-parse-rule (literal-expr value)
+  value)
+
+; A name expression expands to the corresponding variable name in the current scope.
+; If the name refers to a slot, unwrap it.
+; A name can also refer to a composite port...
+(define-syntax-parse-rule (name-expr name ...)
+  #:with expr this-syntax
+  #:with name^ #'(concat-name name ...)
+  (if (slot? name^)
+    (slot-data name^)
+    (begin
+      ; (printf "NOT A SLOT ~a ~a\n" '(name ...) name^)
+      name^)))
+
+; Append a suffix to a name-expr if specified.
+(define-syntax-parser concat-name
+  [(_ name)        #'name]
+  [(_ name suffix) (format-id #'name "~a~a" #'name #'suffix)])
+
+; After semantic checking, a field expression may contain the name
+; of a record type where the field is declared.
+(define-syntax-parser field-expr
+  ; If a field expression contains a type name, generate a struct field accessor.
+  [(field-expr expr field-name type-name)
+   #:with acc (format-id #'field-name "~a-~a" #'type-name #'field-name)
+   #'(acc expr)]
+  ; If a field expression does not contain a type name, generate a dictionary access.
+  [(field-expr expr field-name)
+   #'(dict-ref expr 'field-name)])
+
+; An indexed expression expands to a chain of vector accesses.
+(define-syntax-parser indexed-expr
+  [(indexed-expr expr index ... last)
+   #'(vector-ref (indexed-expr expr index ...) last)]
+  [(indexed-expr expr)
+   #'expr])
+
+; A call expression expands to a Racket function call.
+(define-syntax-parse-rule (call-expr fn-name arg ...)
+  #:with expr this-syntax
+  ; The type acts as a function that casts its argument.
+  ; If no type was found, it will be the identity function.
+  (let ([type (infer-type expr)])
+    (type (fn-name arg ...))))
+
+(define-syntax-parser register-expr
+  #:literals [when-clause]
+  [(_ i (when-clause r) d (when-clause e)) #'(register/re i r e d)]
+  [(_ i (when-clause r) d)                 #'(register/r  i r   d)]
+  [(_ i d (when-clause e))                 #'(register/e  i   e d)]
+  [(_ i d)                                 #'(register    i     d)])
+
+; A slot expression is a wrapper element added by the semantic checker to
+; identify an expression that refers to a port or local signal for reading.
+; It expands to a deferred signal read.
+(define-syntax-parse-rule (slot-expr expr)
+  (signal-defer (unwrap-slot expr)))
+
+; A static signal expression is a wrapper element added by the semantic checker
+; when an expression has a constant value, but is assigned to a signal.
+(define-syntax-parse-rule (signal-expr expr)
+  (signal (unwrap-slot expr)))
+
+(define-syntax-parser unwrap-slot
+  #:literals [name-expr field-expr]
+  [(_ (~and (name-expr  _ ...) expr)) #'expr]
+  [(_ (~and (field-expr _ ...) expr)) #'(slot-data expr)]
+  [(_ expr)                           #'expr])
+
+; A lift expression is a wrapper element added by the semantic checker
+; when an expression depends on some signal values.
+; name ... is a list of signal names that are needed to compute expr.
+(define-syntax-parser lift-expr
+  #:literals [slot-expr]
+  ; Lift a signal expression. Since the expression returns a signal,
+  ; we must lift signal-first to avoid created a signal of signals.
+  ; This is typically used when indexed-expr contains signals as indices.
+  [(_ binding ...+ (slot-expr expr))
+   #'(lift-expr binding ... (signal-first (slot-expr expr)))]
+  ; Lift any expression that computes values from values.
+  ; expr must not contain elements of type slot-expr.
+  [(_ (name sexpr) ...+ expr)
+   #'(for/signal ([name sexpr] ...) expr)])
+
+; ------------------------------------------------------------------------------
+; Type inference and checking
+; ------------------------------------------------------------------------------
+
+; Generate type inference code and memoize the computed type.
+; This code is meant to be deferred, either in a slot type
+; or inside a signal, so that out-of-order dependencies are correctly handled.
+; Only constants infer their types immediately.
+(define-syntax-parse-rule (infer-type expr)
+  #:with key (datum->syntax #'expr (format "~a$~a$~a"
+                                     (syntax-source   #'expr)
+                                     (syntax-position #'expr)
+                                     (syntax-span     #'expr)))
+  (dict-ref inferred-types key
+    (thunk
+      (let ([t (infer-type* expr)])
+        (dict-set! inferred-types key t)
+        t))))
 
 ; Generate type inference code for an expression.
 ; TODO Warn on circular dependencies in register-expr
@@ -139,150 +381,19 @@
 
   [_ #''any])
 
-; Generate type inference code and memoize the computed type.
-; This code is meant to be deferred, either in a slot type (via make-slot-type)
-; or inside a signal, so that out-of-order dependencies are correctly handled.
-; At the moment, only constants infer their types immediately.
-(define-syntax-parse-rule (infer-type expr)
-  #:with key (stx-key #'expr)
-  (dict-ref inferred-types key
-    (thunk
-      (let ([t (infer-type* expr)])
-        (dict-set! inferred-types key t)
-        t))))
+; Replace dynamic indices with zeros in indexed expressions.
+; This only concerns access to interface ports with multiplicity > 1,
+; which is expressed as a combination of field and indexed expressions.
+(define-syntax-parser remove-dynamic-indices
+  #:literals [indexed-expr field-expr]
+  [(_ (indexed-expr expr index ...))
+   #:with (index0 ...) (for/list ([it (in-list (attribute index))]) #'0)
+   #'(indexed-expr (remove-dynamic-indices expr) index0 ...)]
 
-(define-syntax-parameter in-design-unit #f)
+  [(_ (field-expr expr field-name))
+   #'(field-expr (remove-dynamic-indices expr) field-name)]
 
-(define-syntax-parameter inferred-types
-  (λ (stx)
-    (raise-syntax-error (syntax-e stx) "can only be used inside design-unit")))
-
-; An interface or a component expands to a constructor function
-; that returns a hash-map with public or debug data.
-; Interfaces and components differ by the element types they are allowed
-; to contain, but the expansion rule is exactly the same.
-(define-syntax-parse-rule (design-unit name body ...)
-  #:with ctor-name        (design-unit-ctor-name #'name)
-  #:with (param-name ...) (design-unit-parameter-names (attribute body))
-  #:with (param-type ...) (design-unit-parameter-types (attribute body))
-  #:with (arg-name   ...) (generate-temporaries        (attribute param-name))
-  #:with (field-name ...) (design-unit-field-names     (attribute body))
-  (begin
-    (provide ctor-name)
-    (define (ctor-name arg-name ...)
-      (define types (make-hash))
-      (splicing-syntax-parameterize ([in-design-unit #t]
-                                     [inferred-types (make-rename-transformer #'types)])
-        (define param-name (slot arg-name (make-slot-typer (static-data arg-name param-type)))) ...
-        body ...
-        (check-type body) ...)
-      (make-hash `((field-name . ,field-name) ...)))))
-
-(define-syntax-parse-rule (interface name body ...)
-  (design-unit name body ...))
-
-(define-syntax-parse-rule (component name body ...)
-  (design-unit name body ...))
-
-; Parameters are expanded in macro design-unit.
-; TODO add type checking
-(define-syntax-parse-rule (parameter _ ...)
-  (begin))
-
-; A data port expands to a variable containing an empty slot.
-; The slot is relevant for input ports because they are assigned from outside
-; the current component instance.
-; We use a slot for output ports as well to keep a simple port access mechanism.
-(define-syntax-parse-rule (data-port name _ type)
-  (define name (slot #f (make-slot-typer type))))
-
-; A local signal expands to a variable containing the result of the given
-; expression in a slot.
-; Like output ports, local signals do not need to be wrapped in a slot, but
-; it helps expanding expressions without managing several special cases.
-(define-syntax-parse-rule (local-signal name (~optional type) expr)
-  #:with slot-type (or (attribute type) #'(infer-type expr))
-  (define name (slot expr (make-slot-typer slot-type))))
-
-; A composite port expands to a variable that stores the result of a constructor
-; call for the corresponding interface.
-; If the multiplicity is greater than 1, a vector of channels is created.
-(define-syntax-parse-rule (composite-port name (~optional (multiplicity mult)) (~or (~literal splice) (~literal flip)) ... intf-name arg ...)
-  #:with ctor-name (design-unit-ctor-name #'intf-name)
-  #:with m (or (attribute mult) #'1)
-  (define name (let ([ctor (λ (z) (ctor-name arg ...))])
-                 (if (> m 1)
-                   (build-vector m ctor)
-                   (ctor #f)))))
-
-; An instance expands to a variable that stores the result of a constructor call
-; for the corresponding component.
-; If the multiplicity is greater than 1, a vector of channels is created.
-(define-syntax-parse-rule (instance name (~optional ((~literal multiplicity) mult)) comp-name arg ...)
-  #:with ctor-name (design-unit-ctor-name #'comp-name)
-  #:with m (or (attribute mult) #'1)
-  (define name (let ([ctor (λ (z) (ctor-name arg ...))])
-                 (if (> m 1)
-                   (build-vector m ctor)
-                   (ctor #f)))))
-
-; An if statement expands to a conditional statement that generates a hash map.
-; That hash map is assigned to a variable with the same name as the if label.
-(define-syntax-parse-rule (if-statement name (~seq condition then-body) ... else-body)
-  (define name (cond [(int-to-bool-impl condition) then-body]
-                     ...
-                     [else else-body])))
-
-(define-syntax-parse-rule (for-statement name iter-name expr body ...)
-  #:with iter-name^ (generate-temporary #'iter-name)
-  (define name (for/vector ([iter-name^ (in-list expr)])
-                 (define iter-name (slot iter-name^ (make-slot-typer (static-data iter-name^ (literal-type iter-name^)))))
-                 body ...)))
-
-; A statement block executes statements and returns a hash map that exposes
-; local data for debugging.
-(define-syntax-parse-rule (statement-block body ...)
-  #:with (field-name ...) (design-unit-field-names (attribute body))
-  (let ()
-    body ...
-    (make-hash `((field-name . ,field-name) ...))))
-
-; A constant expands to a variable definition.
-(define-syntax-parser constant
-  ; In an internal definition context, expand to a define.
-  [(constant name expr) #:when (syntax-parameter-value #'in-design-unit)
-   #'(define name (constant-to-slot expr))]
-
-  ; In a module-level context, expand to a suffixed define.
-  [(constant name expr)
-   #:with name^ (format-id #'name "~a-constant" #'name)
-   #'(begin
-       (provide name^)
-       ; We create a temporary type dictionary that will be used only once.
-       (define name^ (let ([types (make-hash)])
-                       (syntax-parameterize ([inferred-types (make-rename-transformer #'types)])
-                         (constant-to-slot expr)))))])
-
-; A constant infers its type immediately before computing its value.
-; If the expression contains a call-expr, we need to know its type
-; for the cast operation.
-; Here, we benefit from the fact that infer-type will return a
-; static-data where the expression has already been evaluated.
-(define-syntax-parse-rule (constant-to-slot expr)
-  (let ([t (infer-type expr)])
-    (slot (static-data-value t) (make-slot-typer t))))
-
-; An alias expands to a partial access to the target port.
-; The alias and the corresponding port must refer to the same slot.
-(define-syntax-parse-rule (alias name port-name)
-  (define name (dict-ref port-name 'name)))
-
-; An assignment fills the target port's slot with the signal
-; from the right-hand side.
-(define-syntax-parser assignment
-  #:literals [name-expr]
-  [(_ (name-expr name) expr) #'(set-slot-data! name   expr)]
-  [(_ target           expr) #'(set-slot-data! target expr)])
+  [(_ other) #'other])
 
 ; Typecheck an assignment, or a local signal with explicit type.
 (define-syntax-parser check-type
@@ -308,102 +419,9 @@
 
   [_ #'(begin)])
 
-; Connect two interface instances.
-; See std.rkt for the implementation of connect.
-(define-syntax-parse-rule (connection left right)
-  (connect left right))
-
-; A literal expression expands to its value.
-(define-syntax-parse-rule (literal-expr value)
-  value)
-
-; A name expression expands to the corresponding variable name in the current scope.
-; If the name refers to a slot, unwrap it.
-; A name can also refer to a composite port...
-(define-syntax-parse-rule (name-expr name ...)
-  #:with expr this-syntax
-  #:with name^ #'(concat-name name ...)
-  (if (slot? name^)
-    (slot-data name^)
-    (begin
-      ; (printf "NOT A SLOT ~a ~a\n" '(name ...) name^)
-      name^)))
-
-(define-syntax-parser concat-name
-  [(_ name)        #'name]
-  [(_ name suffix) (format-id #'name "~a~a" #'name #'suffix)])
-
-; After semantic checking, a field expression may contain the name
-; of a record type where the field is declared.
-(define-syntax-parser field-expr
-  ; If a field expression contains a type name, generate a struct field accessor.
-  [(field-expr expr field-name type-name)
-   #:with acc (format-id #'field-name "~a-~a" #'type-name #'field-name)
-   #'(acc expr)]
-  ; If a field expression does not contain a type name, generate a dictionary access.
-  [(field-expr expr field-name)
-   #'(dict-ref expr 'field-name)])
-
-; An indexed expression expands to a chain of vector accesses.
-(define-syntax-parser indexed-expr
-  [(indexed-expr expr index ... last)
-   #'(vector-ref (indexed-expr expr index ...) last)]
-  [(indexed-expr expr)
-   #'expr])
-
-; A call expression expands to a Racket function call.
-(define-syntax-parse-rule (call-expr fn-name arg ...)
-  #:with expr this-syntax
-  ; The type acts as a function that casts its argument.
-  ; If no type was found, use the identity function.
-  (let ([type (infer-type expr)])
-    (type (fn-name arg ...))))
-
-(define-syntax-parser register-expr
-  #:literals [when-clause]
-  [(_ i (when-clause r) d (when-clause e)) #'(register/re (with-infer-type i) r e d)]
-  [(_ i (when-clause r) d)                 #'(register/r  (with-infer-type i) r   d)]
-  [(_ i d (when-clause e))                 #'(register/e  (with-infer-type i)   e d)]
-  [(_ i d)                                 #'(register    (with-infer-type i)     d)])
-
-(define-syntax-parse-rule (with-infer-type expr)
-  (begin
-    (infer-type expr)
-    expr))
-
-; A slot expression is a wrapper element added by the semantic checker to
-; identify an expression that refers to a port or local signal for reading.
-; It expands to a deferred signal read.
-(define-syntax-parse-rule (slot-expr expr)
-  (signal-defer (unwrap-slot expr)))
-
-; A static signal expression is a wrapper element added by the semantic checker
-; when an expression has a constant value, but is assigned to a signal.
-(define-syntax-parse-rule (signal-expr expr)
-  (signal (unwrap-slot expr)))
-
-(define-syntax-parser unwrap-slot
-  #:literals [name-expr field-expr]
-  [(_ (~and (name-expr  _ ...) expr)) #'expr]
-  [(_ (~and (field-expr _ ...) expr)) #'(slot-data expr)]
-  [(_ expr)                           #'expr])
-
-; A lift expression is a wrapper element added by the semantic checker
-; when an expression depends on some signal values.
-; name ... is a list of signal names that are needed to compute expr.
-(define-syntax-parser lift-expr
-  #:literals [slot-expr]
-  ; Lift a signal expression. Since the expression returns a signal,
-  ; we must lift signal-first to avoid created a signal of signals.
-  ; This is typically used when indexed-expr contains signals as indices.
-  [(_ binding ...+ (slot-expr expr))
-   #'(lift-expr binding ... (signal-first (slot-expr expr)))]
-  ; Lift any expression that computes values from values.
-  ; expr must not contain elements of type slot-expr.
-  [(_ (name sexpr) ...+ expr)
-   #'(for/signal ([name sexpr] ...) expr)])
-
+; ------------------------------------------------------------------------------
 ; Disabled forms.
+; ------------------------------------------------------------------------------
 
 (define-syntax-parse-rule (disable-forms id ... msg)
   (begin

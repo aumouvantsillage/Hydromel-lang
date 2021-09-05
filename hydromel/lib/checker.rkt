@@ -208,8 +208,7 @@
          (define/syntax-parse expr   (expr^))
          (define target-port (check-assignment-target #'target))
          (if (meta/composite-port? target-port)
-           ; If the left-hand side is a composite port, generate a
-           ; connection statement.
+           ; If the left-hand side is a composite port, generate a connect statement.
            (let ([expr-port (resolve #'expr)])
              (unless (meta/composite-port? expr-port)
                (raise-syntax-error #f "Right-hand side of assignment is not a composite port" #'expr))
@@ -217,7 +216,7 @@
                              (syntax-e (meta/composite-port-intf-name expr-port)))
                (raise-syntax-error #f "Right-hand side and left-hand side of assignment have different interfaces" stx))
              (syntax/loc stx
-               (connection target expr)))
+               (connect-statement target expr)))
            ; If the left-hand side is a signal, generate an assignment statement.
            (quasisyntax/loc stx
                (assignment target #,(check-assigned-expr #'expr)))))]
