@@ -102,6 +102,7 @@
     [(static-data n (signed   #f)) (signed   (l/min-unsigned-width n))]
     [(static-data _ t)             (actual-type t)]
     [(union ts)                    (foldl merge-types #f (map actual-type ts))]
+    [(type t)                      (type (actual-type t))]
     [_                             t]))
 
 (define (merge-types t u)

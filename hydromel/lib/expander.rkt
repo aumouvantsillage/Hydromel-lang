@@ -86,6 +86,11 @@
   (λ (stx)
     (raise-syntax-error (syntax-e stx) "can only be used inside design-unit")))
 
+; A list of type checking thunks to run after all slots have been filled.
+(define-syntax-parameter type-checks
+  (λ (stx)
+    (raise-syntax-error (syntax-e stx) "can only be used inside design-unit")))
+
 ; An interface or a component expands to a constructor function
 ; that returns a hash-map with public or debug data.
 ; Interfaces and components differ by the element types they are allowed
@@ -99,12 +104,15 @@
   (begin
     (provide ctor-name)
     (define (ctor-name arg-name ...)
-      (define types (make-hash))
+      (define types  (make-hash))
+      (define checks '())
       (splicing-syntax-parameterize ([in-design-unit #t]
-                                     [inferred-types (make-rename-transformer #'types)])
+                                     [inferred-types (make-rename-transformer #'types)]
+                                     [type-checks    (make-rename-transformer #'checks)])
         (define param-name (make-slot arg-name (static-data arg-name param-type))) ...
-        body ...
-        (check-type body) ...)
+        body ...)
+      (for ([f (in-list (reverse checks))])
+        (f))
       (make-hash `((field-name . ,field-name) ...)))))
 
 (define-syntax-parse-rule (interface name body ...)
@@ -163,8 +171,14 @@
 ; Like output ports, local signals do not need to be wrapped in a slot, but
 ; it helps expanding expressions without managing several special cases.
 (define-syntax-parse-rule (local-signal name (~optional type) expr)
-  #:with slot-type (or (attribute type) #'(infer-type expr))
-  (define name (make-slot expr slot-type)))
+  #:with expr-type   #'(infer-type expr)
+  #:with target-type (or (attribute type) #'expr-type)
+  (begin
+    (define name (make-slot expr target-type))
+    (add-type-check
+      (unless (subtype? expr-type target-type)
+        ; TODO show source code instead of generated code, or source location only.
+        (raise-syntax-error #f (format "Expression type is incompatible with type annotation, found ~v, expected ~v" expr-type target-type) #'expr)))))
 
 ; A composite port expands to a variable that stores the result of a constructor
 ; call for the corresponding interface.
@@ -195,10 +209,19 @@
 
 ; An assignment fills the target port's slot with the signal
 ; from the right-hand side.
-(define-syntax-parser assignment
-  #:literals [name-expr]
-  [(_ (name-expr name) expr) #'(set-slot-data! name   expr)]
-  [(_ target           expr) #'(set-slot-data! target expr)])
+(define-syntax-parse-rule (assignment target expr)
+  #:with slt (syntax-parse #'target
+               #:literals [name-expr]
+               [(name-expr name) #'name]
+               [_                #'target])
+  #:with target-type #'(infer-type target)
+  #:with expr-type   #'(infer-type expr)
+  (begin
+    (set-slot-data! slt expr)
+    (add-type-check
+      (unless (subtype? expr-type target-type)
+        ; TODO show source code instead of generated code, or source location only.
+        (raise-syntax-error #f (format "Expression type is incompatible with target, found ~v, expected ~v" expr-type target-type) #'expr)))))
 
 ; Connect two interface instances.
 ; See std.rkt for the implementation of connect.
@@ -324,16 +347,23 @@
 ; This code is meant to be deferred, either in a slot type
 ; or inside a signal, so that out-of-order dependencies are correctly handled.
 ; Only constants infer their types immediately.
-(define-syntax-parse-rule (infer-type expr)
-  #:with key (datum->syntax #'expr (format "~a$~a$~a"
+(define-syntax-parser infer-type
+  #:literals [infer-type]
+  ; This is a special case for (infer-type) forms generated in checker.rkt
+  ; Maybe we can generate these forms in expander instead.
+  [(_ (infer-type expr))
+   #'(type (infer-type expr))]
+
+  [(_ expr)
+   #:with key (datum->syntax #'expr (format "~a$~a$~a"
                                      (syntax-source   #'expr)
                                      (syntax-position #'expr)
                                      (syntax-span     #'expr)))
-  (dict-ref inferred-types key
-    (thunk
-      (let ([t (infer-type* expr)])
-        (dict-set! inferred-types key t)
-        t))))
+   #'(dict-ref inferred-types key
+       (thunk
+         (let ([t (infer-type* expr)])
+           (dict-set! inferred-types key t)
+           t)))])
 
 ; Generate type inference code for an expression.
 ; TODO Warn on circular dependencies in register-expr
@@ -379,7 +409,7 @@
    #'(let ([name (make-slot #f (infer-type sexpr))] ...)
        (infer-type expr))]
 
-  [_ #''any])
+  [_ #'(any)])
 
 ; Replace dynamic indices with zeros in indexed expressions.
 ; This only concerns access to interface ports with multiplicity > 1,
@@ -395,29 +425,8 @@
 
   [(_ other) #'other])
 
-; Typecheck an assignment, or a local signal with explicit type.
-(define-syntax-parser check-type
-  #:literals [assignment local-signal for-statement]
-  [(_ (assignment target expr))
-   #:with expr-type   #'(infer-type expr)
-   #:with target-type #'(infer-type target)
-   #'(unless (subtype? expr-type target-type)
-       ; TODO show source code instead of generated code, or source location only.
-       (raise-syntax-error #f (format "Incompatible type in assignment, found ~v, expected ~v" expr-type target-type) #'expr))]
-
-  [(_ (local-signal name _ expr))
-   #'(check-type (assignment (name-expr name) expr))]
-
-  [(_ (for-statement _ _ body ...))
-   #'(begin (check-type body) ...)]
-
-  [(_ (if-statement _ (~seq condition then-body) ... else-body))
-   ; TODO check type of conditions
-   #'(begin
-       (check-type then-body) ...
-       (check-type else-body))]
-
-  [_ #'(begin)])
+(define-syntax-parse-rule (add-type-check expr)
+  (set! type-checks (cons (thunk expr) type-checks)))
 
 ; ------------------------------------------------------------------------------
 ; Disabled forms.

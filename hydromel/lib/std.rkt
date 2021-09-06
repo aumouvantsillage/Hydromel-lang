@@ -203,9 +203,9 @@
 (define (kw-concat-impl-signature . ts)
   (define ts^ (map t/actual-type ts))
   (define w (for/sum ([t (in-list ts^)]
-                      [i (in-naturals)] #:when (even? i))
-              ; TODO assert that t is an integer type
-              (t/abstract-integer-width t)))
+                      [i (in-naturals)] #:when (odd? i))
+              ; TODO assert that t contains an integer type
+              (t/abstract-integer-width (t/type-supertype t))))
   (match (first ts^)
     [(t/signed _)   (t/signed w)]
     [(t/unsigned _) (t/unsigned w)]))

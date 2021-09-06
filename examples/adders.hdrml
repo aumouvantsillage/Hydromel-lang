@@ -2,7 +2,7 @@
 
 import "full_adder.hdrml"
 
-interface adder(WIDTH : unsigned(32)) # TODO should accept any size
+interface adder(WIDTH : natural)
     port a  : in  unsigned(WIDTH)
     port b  : in  unsigned(WIDTH)
     port ci : in  bit
@@ -10,7 +10,7 @@ interface adder(WIDTH : unsigned(32)) # TODO should accept any size
     port co : out bit
 end
 
-component ripple_carry_adder_rec(WIDTH : unsigned(32)) # TODO should accept any size
+component ripple_carry_adder_rec(WIDTH : natural)
     port io : splice adder(WIDTH)
 
     instance head = full_adder
@@ -31,7 +31,7 @@ component ripple_carry_adder_rec(WIDTH : unsigned(32)) # TODO should accept any 
     end
 end
 
-# component ripple_carry_adder_iter(WIDTH : unsigned(32)) # TODO should accept any size
+# component ripple_carry_adder_iter(WIDTH : natural)
 #     port io : splice adder(WIDTH)
 #
 #     instance fa[WIDTH] = full_adder
@@ -49,7 +49,7 @@ end
 #     co = fa[WIDTH-1].co
 # end
 
-component carry_lookahead_adder(WIDTH : unsigned(32)) # TODO should accept any size
+component carry_lookahead_adder(WIDTH : natural)
     port io : splice adder(WIDTH)
 
     constant RIGHT_WIDTH = WIDTH / 2
