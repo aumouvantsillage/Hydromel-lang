@@ -69,13 +69,16 @@
       (for/list ([stx (in-list lst)])
         (syntax-parse stx
           [s:stx/data-port
-           #'(cons 's.name (meta/data-port 's.mode))]
+           (stx/l (cons 's.name (meta/data-port 's.mode)))]
+
           [s:stx/composite-port
            #:with flip   (boolean->syntax (attribute s.flip?))
            #:with splice (boolean->syntax (attribute s.splice?))
-           #'(cons 's.name (meta/composite-port #'s.intf-name flip splice))]
+           (stx/l (cons 's.name (meta/composite-port #'s.intf-name flip splice)))]
+
           [s:stx/constant
-           #'(cons 's.name (meta/constant #f))]
+           (stx/l (cons 's.name (meta/constant #f)))]
+           
           [_ #f]))))
 
   (define current-design-unit (make-parameter #f))
@@ -447,6 +450,9 @@
       [_ (raise-syntax-error #f "Expression not suitable as assignment target" stx)])
     target)
 
+  (define-syntax-parse-rule (stx/l expr)
+    (syntax/loc this-syntax expr))
+
   (define-syntax-parse-rule (qs/l expr)
     (quasisyntax/loc this-syntax expr))
 
@@ -461,7 +467,7 @@
       [s:stx/lift-expr
        ; If a lift-expr wraps a signal read, wrap it also in a slot-expr.
        (if (meta/signal? (resolve #'s.expr))
-         #'(lift-expr s.binding ... (slot-expr s.expr))
+         (stx/l (lift-expr s.binding ... (slot-expr s.expr)))
          this-syntax)]
 
       [_
@@ -480,9 +486,6 @@
       [(field-expr expr sel ...)
        (lift-if-needed* stx (list #'expr)
          (λ (lst) (qs/l (field-expr #,(first lst) sel ...))))]
-      ; [(concat-expr arg ...)
-      ;  (lift-if-needed* stx (attribute arg)
-      ;    (λ (lst) (qs/l (call-expr kw-concat #,@lst))))]
       [s:stx/call-expr
        (lift-if-needed* stx (attribute s.arg)
          (λ (lst) (qs/l (call-expr s.fn-name #,@lst))))]
@@ -507,12 +510,14 @@
          (values (append (attribute s.binding) b-lst)
                  (cons   #'s.expr              a-lst))]
 
-        [_ #:when (meta/signal? (resolve a))
+        [s #:when (meta/signal? (resolve a))
          ; If the argument resolves to a signal, wrap it in a slot-expr,
          ; create a binding and replace it with a name-expr.
          #:with bname (gensym "lift")
-         (values (cons #`(bname (slot-expr #,a)) b-lst)
-                 (cons #'(name-expr bname)         a-lst))]
+         ; Trick: we set the location of the generated expressions so that they
+         ; are correctly identified by the type checker.
+         (values (cons #`(bname #,(stx/l (slot-expr s))) b-lst)
+                 (cons (stx/l (name-expr bname))         a-lst))]
 
         [_
          ; In the other cases, keep the current list of bindings

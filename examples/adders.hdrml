@@ -56,8 +56,9 @@ component carry_lookahead_adder(WIDTH : natural)
     constant LEFT_WIDTH  = WIDTH - RIGHT_WIDTH
 
     instance right = ripple_carry_adder_rec(RIGHT_WIDTH)
-    right.a = a{RIGHT_WIDTH-1 .. 0}
-    right.b = b{RIGHT_WIDTH-1 .. 0}
+    right.a  = a{RIGHT_WIDTH-1 .. 0}
+    right.b  = b{RIGHT_WIDTH-1 .. 0}
+    right.ci = ci
 
     instance left0 = ripple_carry_adder_rec(LEFT_WIDTH)
     left0.a  = a{WIDTH-1 .. RIGHT_WIDTH}

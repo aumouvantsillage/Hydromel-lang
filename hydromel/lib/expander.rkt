@@ -350,14 +350,15 @@
 (define-syntax-parser infer-type
   #:literals [infer-type]
   ; This is a special case for (infer-type) forms generated in checker.rkt
-  ; Maybe we can generate these forms in expander instead.
-  [(_ (infer-type expr))
-   #'(type (infer-type expr))]
+  ; Maybe we should generate these forms in expander instead.
+  [(_ (~and (infer-type expr) this-expr))
+   #'(type this-expr)]
 
   [(_ expr)
-   #:with key (datum->syntax #'expr (format "~a$~a$~a"
+   #:with key (datum->syntax #'expr (format "~a$~a:~a:~a"
                                      (syntax-source   #'expr)
-                                     (syntax-position #'expr)
+                                     (syntax-line     #'expr)
+                                     (syntax-column   #'expr)
                                      (syntax-span     #'expr)))
    #'(dict-ref inferred-types key
        (thunk
