@@ -19,6 +19,7 @@
 
 (provide
   import
+  design-unit
   interface
   component
   parameter

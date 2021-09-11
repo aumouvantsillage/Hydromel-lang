@@ -65,6 +65,14 @@
   (define (boolean->syntax b)
     (if b #'#t #'#f))
 
+  ; Short forms for syntax/loc inside syntax-parse.
+  (define-syntax-parse-rule (s/l expr)
+    (syntax/loc this-syntax expr))
+
+  ; Short forms for quasyntax/loc inside syntax-parse.
+  (define-syntax-parse-rule (q/l expr)
+    (quasisyntax/loc this-syntax expr))
+
   ; First pass: fill the metadata of module-level elements.
   ; Those metadata are constructed as syntax objects that will be inserted
   ; into the result of compile-as-module-level-defs.
@@ -105,7 +113,7 @@
       [s:stx/import
        (thunk #'(begin))]
 
-      [s:stx/interface
+      [s:stx/design-unit
        (define body^
          (parameterize ([current-design-unit (lookup #'s.name)])
            (with-scope
@@ -115,19 +123,7 @@
                   (map make-checker)))))
        (thunk
          (define/syntax-parse (body ...) (check-all body^))
-         (s/l (interface s.name body ...)))]
-
-      [s:stx/component
-       (define body^
-         (parameterize ([current-design-unit (lookup #'s.name)])
-           (with-scope
-             (~>> (attribute s.body)
-                  (create-aliases)
-                  (map add-scope)
-                  (map make-checker)))))
-       (thunk
-         (define/syntax-parse (body ...) (check-all body^))
-         (s/l (component s.name body ...)))]
+         (s/l (design-unit s.name body ...)))]
 
       [s:stx/parameter
        #:with name (bind! #'s.name (meta/parameter))
@@ -248,7 +244,6 @@
          (unless (static? #'expr)
            (raise-syntax-error #f "Non-static expression cannot be used as loop range" #'expr))
          (q/l (for-statement name #,iter-name expr body)))]
-
 
       [s:stx/statement-block
        (define body^ (with-scope
@@ -430,12 +425,6 @@
 
       [_ (raise-syntax-error #f "Expression not suitable as assignment target" stx)])
     target)
-
-  (define-syntax-parse-rule (s/l expr)
-    (syntax/loc this-syntax expr))
-
-  (define-syntax-parse-rule (q/l expr)
-    (quasisyntax/loc this-syntax expr))
 
   ; Check an expression that constitutes the right-hand side of an assignment.
   ; This includes:
