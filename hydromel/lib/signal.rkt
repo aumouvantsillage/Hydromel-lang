@@ -41,7 +41,7 @@
 
 ; Wrap the given body in a promise.
 ; body ... is supposed to evaluate to a truthy value.
-(define-simple-macro (signal-delay body ...)
+(define-syntax-parse-rule (signal-delay body ...)
   (private-signal
     (let ([res #f])                    ; Will store the value of the promise.
       (thunk
@@ -50,16 +50,16 @@
         res))))                        ; Return the stored value.
 
 ; Evaluate a signal.
-(define-simple-macro (signal-force sig)
+(define-syntax-parse-rule (signal-force sig)
   (sig))                               ; Call the λ created by signal-delay.
 
 ; Delay the evaluation of a signal.
 ; This can be used when we need to reference a signal that is constructed later.
-(define-simple-macro (signal-defer sig)
+(define-syntax-parse-rule (signal-defer sig)
   (private-signal (thunk (signal-force sig))))
 
 ; Construct a signal with a given value, followed by the given signal.
-(define-simple-macro (signal-cons val sig)
+(define-syntax-parse-rule (signal-cons val sig)
   (signal-delay (cons val sig)))
 
 ; Evaluate the first sample of a signal.
@@ -91,7 +91,7 @@
 
 ; Create a signal with the given values.
 ; The last value is repeated indefinitely.
-(define-simple-macro (signal val ...)
+(define-syntax-parse-rule (signal val ...)
   (list->signal (list val ...))) ; Pass the arguments as a list to list->signal.
 
 
@@ -112,7 +112,7 @@
 ; Convert f into a function that operates on signals.
 ; f is not required to be a function.
 ; The resulting function takes the specified number of arguments.
-(define-simple-macro (signal-lift* f arg ...)
+(define-syntax-parse-rule (signal-lift* f arg ...)
   #:with (tmp ...) (generate-temporaries #'(arg ...)) ; Make a unique name for each argument.
   (letrec ([f^ (λ (tmp ...)                           ; The lifted version of f takes the given number of arguments.
                  (signal-cons                         ; It will return a signal:
@@ -167,7 +167,7 @@
     (pattern [var:id sig])
     (pattern var:id #:attr sig #'var)))
 
-(define-simple-macro (for/signal (c:signal-for-clause ...) body ...)
+(define-syntax-parse-rule (for/signal (c:signal-for-clause ...) body ...)
   ; Create a lifted λ and apply it immediately to the given signals.
   ((signal-λ (c.var ...) body ...) (signal-defer c.sig) ...))
 
@@ -183,7 +183,7 @@
 ; Register the given signal.
 ; The initial value of the result is q0.
 ; The expression can refer to the result as `this-reg`.
-(define-simple-macro (register q0 expr)
+(define-syntax-parse-rule (register q0 expr)
   (letrec ([res (signal-cons q0
                   (syntax-parameterize ([this-reg (make-rename-transformer #'res)])
                     expr))])
@@ -191,18 +191,18 @@
 
 ; Register with synchronous reset.
 ; The resulting signal receives q0 each time sig-r is true.
-(define-simple-macro (register/r q0 sig-r sig-d)
+(define-syntax-parse-rule (register/r q0 sig-r sig-d)
   (register q0 (for/signal ([r sig-r] [d sig-d])
                  (if r q0 d))))
 
 ; Register with enable.
 ; The resulting signal receives sig-d each time sig-e is true.
-(define-simple-macro (register/e q0 sig-e sig-d)
+(define-syntax-parse-rule (register/e q0 sig-e sig-d)
   (register q0 (for/signal ([e sig-e] [d sig-d] [q this-reg])
                  (if e d q))))
 
 ; Register with synchronous reset and enable.
-(define-simple-macro (register/re q0 sig-r sig-e sig-d)
+(define-syntax-parse-rule (register/re q0 sig-r sig-e sig-d)
   (register q0 (for/signal ([r sig-r] [e sig-e] [d sig-d] [q this-reg])
                  (cond [r    q0]
                        [e    d]
@@ -237,7 +237,7 @@
 ; More syntactic sugar.
 ;
 
-(define-simple-macro (>> name:id arg ...)
+(define-syntax-parse-rule (>> name:id arg ...)
   ((signal-lift* name arg ...) (signal-defer arg) ...))
 
 
