@@ -73,15 +73,15 @@
       (for/list ([stx (in-list lst)])
         (syntax-parse stx
           [s:stx/data-port
-           (stx/l (cons 's.name (meta/data-port 's.mode)))]
+           (s/l (cons 's.name (meta/data-port 's.mode)))]
 
           [s:stx/composite-port
            #:with flip   (boolean->syntax (attribute s.flip?))
            #:with splice (boolean->syntax (attribute s.splice?))
-           (stx/l (cons 's.name (meta/composite-port #'s.intf-name flip splice)))]
+           (s/l (cons 's.name (meta/composite-port #'s.intf-name flip splice)))]
 
           [s:stx/constant
-           (stx/l (cons 's.name (meta/constant #f)))]
+           (s/l (cons 's.name (meta/constant #f)))]
 
           [_ #f]))))
 
@@ -100,8 +100,7 @@
        (define body^ (map make-checker (attribute body)))
        (thunk
          (define/syntax-parse (body ...) (check-all body^))
-         (syntax/loc stx
-           (begin body ...)))]
+         (s/l (begin body ...)))]
 
       [s:stx/import
        (thunk #'(begin))]
@@ -116,8 +115,7 @@
                   (map make-checker)))))
        (thunk
          (define/syntax-parse (body ...) (check-all body^))
-         (syntax/loc stx
-           (interface s.name body ...)))]
+         (s/l (interface s.name body ...)))]
 
       [s:stx/component
        (define body^
@@ -129,16 +127,14 @@
                   (map make-checker)))))
        (thunk
          (define/syntax-parse (body ...) (check-all body^))
-         (syntax/loc stx
-           (component s.name body ...)))]
+         (s/l (component s.name body ...)))]
 
       [s:stx/parameter
        #:with name (bind! #'s.name (meta/parameter))
        (define type^ (make-checker #'s.type))
        (thunk/in-scope
          (define/syntax-parse type (type^))
-         (syntax/loc stx
-           (parameter name type)))]
+         (s/l (parameter name type)))]
 
       [s:stx/constant
        #:with name (if (current-design-unit)
@@ -150,16 +146,14 @@
          ; Check that the expression has a static value.
          (unless (static? #'expr)
            (raise-syntax-error #f "Non-static expression cannot be assigned to constant" #'s.expr))
-         (syntax/loc stx
-           (constant name expr)))]
+         (s/l (constant name expr)))]
 
       [s:stx/data-port
        #:with name (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
        (define type^ (make-checker #'s.type))
        (thunk/in-scope
          (define/syntax-parse type (type^))
-         (syntax/loc stx
-           (data-port name s.mode type)))]
+         (s/l (data-port name s.mode type)))]
 
       [s:stx/composite-port
        #:with name (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
@@ -174,8 +168,7 @@
          (lookup #'s.intf-name meta/interface?)
          ; Check arguments
          (define/syntax-parse (arg ...) (check-all args^))
-         (syntax/loc stx
-           (composite-port name (multiplicity mult) s.mode ... s.intf-name arg ...)))]
+         (s/l (composite-port name (multiplicity mult) s.mode ... s.intf-name arg ...)))]
 
       [s:stx/instance
        #:with name (bind! #'s.name (meta/instance #'s.comp-name))
@@ -189,8 +182,7 @@
          ; Check that comp-name refers to an existing component
          ; Check arguments
          (define/syntax-parse (arg ...) (check-all args^))
-         (syntax/loc stx
-           (instance name (multiplicity mult) s.comp-name arg ...)))]
+         (s/l (instance name (multiplicity mult) s.comp-name arg ...)))]
 
       [s:stx/local-signal
        #:with name (bind! #'s.name (meta/local-signal))
@@ -201,10 +193,8 @@
          (define/syntax-parse expr (check-assigned-expr (expr^)))
          (if type^
            (syntax-parse (type^)
-             [type (syntax/loc stx
-                     (local-signal name type expr))])
-           (syntax/loc stx
-             (local-signal name expr))))]
+             [type (s/l (local-signal name type expr))])
+           (s/l (local-signal name expr))))]
 
       [s:stx/assignment
        ; TODO check circular dependencies.
@@ -222,11 +212,9 @@
              (unless (equal? (syntax-e (meta/composite-port-intf-name target-port))
                              (syntax-e (meta/composite-port-intf-name expr-port)))
                (raise-syntax-error #f "Right-hand side and left-hand side of assignment have different interfaces" stx))
-             (syntax/loc stx
-               (connect-statement target expr)))
+             (s/l (connect-statement target expr)))
            ; If the left-hand side is a signal, generate an assignment statement.
-           (quasisyntax/loc stx
-               (assignment target #,(check-assigned-expr #'expr)))))]
+           (q/l (assignment target #,(check-assigned-expr #'expr)))))]
 
       [s:stx/if-statement
        #:with name (or (attribute s.name) (generate-temporary #'if))
@@ -240,8 +228,7 @@
            (raise-syntax-error #f "Non-static expression cannot be used in range" it))
          (define/syntax-parse (then-body ...) (check-all then-bodies^))
          (define/syntax-parse else-body       (else-body^))
-         (syntax/loc stx
-           (if-statement name (~@ condition then-body) ... else-body)))]
+         (s/l (if-statement name (~@ condition then-body) ... else-body)))]
 
       [s:stx/for-statement
        #:with name (or (attribute s.name) (generate-temporary #'if))
@@ -260,8 +247,7 @@
          (define/syntax-parse body (body^))
          (unless (static? #'expr)
            (raise-syntax-error #f "Non-static expression cannot be used as loop range" #'expr))
-         (quasisyntax/loc stx
-           (for-statement name #,iter-name expr body)))]
+         (q/l (for-statement name #,iter-name expr body)))]
 
 
       [s:stx/statement-block
@@ -271,8 +257,7 @@
                             (map make-checker))))
        (thunk
          (define/syntax-parse (body ...) (check-all body^))
-         (syntax/loc stx
-           (statement-block body ...)))]
+         (s/l (statement-block body ...)))]
 
       [s:stx/field-expr
        (define expr^ (make-checker #'s.expr))
@@ -280,10 +265,8 @@
          (define/syntax-parse expr (expr^))
          (define-values (type-name type) (check-field-expr #'expr #'s.field-name))
          (if (meta/record-type? type)
-           (quasisyntax/loc stx
-             (field-expr expr s.field-name #,type-name))
-           (syntax/loc stx
-             (field-expr expr s.field-name))))]
+           (q/l (field-expr expr s.field-name #,type-name))
+           (s/l (field-expr expr s.field-name))))]
 
       [s:stx/indexed-expr
        (define expr^ (make-checker #'s.expr))
@@ -295,8 +278,7 @@
          (unless (or (meta/composite-port? r) (meta/instance? r))
            (raise-syntax-error #f "Expression not suitable for indexing" #'s.expr))
          (define/syntax-parse (index ...) (check-all indices^))
-         (syntax/loc stx
-           (indexed-expr expr index ...)))]
+         (s/l (indexed-expr expr index ...)))]
 
       [s:stx/register-expr
        (define init-expr^   (make-checker #'s.init-expr))
@@ -313,15 +295,13 @@
                                             (and init-cond^ (init-cond^))
                                             (check-assigned-expr (update-expr^))
                                             (and update-cond^ (update-cond^)))))
-         (syntax/loc stx
-           (register-expr arg ...)))]
+         (s/l (register-expr arg ...)))]
 
       [s:stx/when-clause
        (define expr^ (make-checker #'(call-expr int-to-bool s.expr)))
        (thunk
          (define/syntax-parse expr (check-assigned-expr (expr^)))
-         (syntax/loc stx
-           (when-clause expr)))]
+         (s/l (when-clause expr)))]
 
       [s:stx/call-expr
        (define args^ (map make-checker (attribute s.arg)))
@@ -338,21 +318,18 @@
            (if (equal? (syntax->datum #'s.fn-name) 'kw-concat)
              #'((~@ arg (infer-type arg)) ...)
              #'(arg ...)))
-         (syntax/loc stx
-           (call-expr fn-name arg+ ...)))]
+         (s/l (call-expr fn-name arg+ ...)))]
 
       [s:stx/name-expr
        (thunk
          (match (lookup #'s.name)
            ; A function name is converted to a function call with no argument.
            [(meta/builtin-function fn-name)
-            (quasisyntax/loc stx
-              (call-expr #,fn-name))]
+            (q/l (call-expr #,fn-name))]
 
            ; For a global constant name, append a suffix to access the actual constant.
            [(meta/constant #t)
-            (syntax/loc stx
-              (name-expr s.name -constant))]
+            (s/l (name-expr s.name -constant))]
 
            [else stx]))]
 
@@ -454,10 +431,10 @@
       [_ (raise-syntax-error #f "Expression not suitable as assignment target" stx)])
     target)
 
-  (define-syntax-parse-rule (stx/l expr)
+  (define-syntax-parse-rule (s/l expr)
     (syntax/loc this-syntax expr))
 
-  (define-syntax-parse-rule (qs/l expr)
+  (define-syntax-parse-rule (q/l expr)
     (quasisyntax/loc this-syntax expr))
 
   ; Check an expression that constitutes the right-hand side of an assignment.
@@ -471,14 +448,14 @@
       [s:stx/lift-expr
        ; If a lift-expr wraps a signal read, wrap it also in a slot-expr.
        (if (meta/signal? (resolve #'s.expr))
-         (stx/l (lift-expr s.binding ... (slot-expr s.expr)))
+         (s/l (lift-expr s.binding ... (slot-expr s.expr)))
          this-syntax)]
 
       [_
        ; If stx has a static value, wrap it in a signal-expr.
        ; If stx resolves to a signal, wrap it in a slot-expr.
-       (cond [(static? stx)                (qs/l (signal-expr #,stx))]
-             [(meta/signal? (resolve stx)) (qs/l (slot-expr #,stx))]
+       (cond [(static? stx)                (q/l (signal-expr #,stx))]
+             [(meta/signal? (resolve stx)) (q/l (slot-expr #,stx))]
              [else                         stx])]))
 
   (define (lift-if-needed stx)
@@ -486,13 +463,13 @@
       #:literals [indexed-expr field-expr concat-expr]
       [(indexed-expr expr ...)
        (lift-if-needed* stx (attribute expr)
-         (λ (lst) (qs/l (indexed-expr #,@lst))))]
+         (λ (lst) (q/l (indexed-expr #,@lst))))]
       [(field-expr expr sel ...)
        (lift-if-needed* stx (list #'expr)
-         (λ (lst) (qs/l (field-expr #,(first lst) sel ...))))]
+         (λ (lst) (q/l (field-expr #,(first lst) sel ...))))]
       [s:stx/call-expr
        (lift-if-needed* stx (attribute s.arg)
-         (λ (lst) (qs/l (call-expr s.fn-name #,@lst))))]
+         (λ (lst) (q/l (call-expr s.fn-name #,@lst))))]
       [_
        stx]))
 
@@ -520,8 +497,8 @@
          #:with bname (gensym "lift")
          ; Trick: we set the location of the generated expressions so that they
          ; are correctly identified by the type checker.
-         (values (cons #`(bname #,(stx/l (slot-expr s))) b-lst)
-                 (cons (stx/l (name-expr bname))         a-lst))]
+         (values (cons #`(bname #,(s/l (slot-expr s))) b-lst)
+                 (cons (s/l (name-expr bname))         a-lst))]
 
         [_
          ; In the other cases, keep the current list of bindings
