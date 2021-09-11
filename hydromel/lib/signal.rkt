@@ -95,9 +95,9 @@
   (list->signal (list val ...))) ; Pass the arguments as a list to list->signal.
 
 
-;
+; ------------------------------------------------------------------------------
 ; Lifting.
-;
+; ------------------------------------------------------------------------------
 
 ; Convert f into a function that operates on signals.
 ; f must be a function.
@@ -119,7 +119,6 @@
                    (f  (signal-first tmp) ...)        ; with f applied to the first sample of each argument,
                    (f^ (signal-rest  tmp) ...)))])    ; and the lifted f applied to the rest of each argument.
     f^))
-
 
 (begin-for-syntax
   (define-splicing-syntax-class signal-returns-clause
@@ -171,10 +170,13 @@
   ; Create a lifted λ and apply it immediately to the given signals.
   ((signal-λ (c.var ...) body ...) (signal-defer c.sig) ...))
 
+(define-syntax-parse-rule (>> name:id arg ...)
+  ((signal-lift* name arg ...) (signal-defer arg) ...))
 
-;
+
+; ------------------------------------------------------------------------------
 ; Registers.
-;
+; ------------------------------------------------------------------------------
 
 (define-syntax-parameter this-reg
   (λ (stx)
@@ -208,6 +210,11 @@
                        [e    d]
                        [else q]))))
 
+
+; ------------------------------------------------------------------------------
+; Bundling/unbundling.
+; ------------------------------------------------------------------------------
+
 ; Convert one or more signals into a signal where each element is a list.
 (define signal-bundle (signal-lift list))
 
@@ -233,17 +240,9 @@
     (signal-bundle-vector (vector-map signal-rest vec))))
 
 
-;
-; More syntactic sugar.
-;
-
-(define-syntax-parse-rule (>> name:id arg ...)
-  ((signal-lift* name arg ...) (signal-defer arg) ...))
-
-
-;
+; ------------------------------------------------------------------------------
 ; Tests.
-;
+; ------------------------------------------------------------------------------
 
 (module+ test
   (require rackunit)
