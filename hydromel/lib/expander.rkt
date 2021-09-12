@@ -156,8 +156,8 @@
 ; Here, we benefit from the fact that infer-type will return a
 ; static-data where the expression has already been evaluated.
 (define-syntax-parse-rule (constant-to-slot expr)
-  (let ([t (infer-type expr)])
-    (make-slot (static-data-value t) t)))
+  (let ([expr-type (infer-type expr)])
+    (make-slot (static-data-value expr-type) expr-type)))
 
 ; An alias expands to a partial access to the target port.
 ; The alias and the corresponding port must refer to the same slot.
@@ -302,8 +302,8 @@
   #:with expr this-syntax
   ; The type acts as a function that casts its argument.
   ; If no type was found, it will be the identity function.
-  (let ([type (infer-type expr)])
-    (type (fn-name arg ...))))
+  (let ([expr-type (infer-type expr)])
+    (expr-type (fn-name arg ...))))
 
 (define-syntax-parser register-expr
   #:literals [when-clause]
@@ -352,29 +352,35 @@
 ; This code is meant to be deferred, either in a slot type
 ; or inside a signal, so that out-of-order dependencies are correctly handled.
 ; Only constants infer their types immediately.
-(define-syntax-parser infer-type
-  #:literals [infer-type]
+(define-syntax-parse-rule (infer-type expr)
+   #:with key (typing-key #'expr)
+   (dict-ref inferred-types 'key
+     (thunk
+       (let ([t (infer-type* expr)])
+         (dict-set! inferred-types 'key t)
+         t))))
+
+; Expression types are memoized in a dictionary whose keys are:
+; either the 'label syntax property (generated in checker.rkt)
+; or the source location of the expression (for expander tests only).
+(define-for-syntax (typing-key stx)
+  (or
+    (syntax-property stx 'label)
+    (datum->syntax stx (format "~a$~a:~a:~a"
+                               (syntax-source stx)
+                               (syntax-line stx)
+                               (syntax-column stx)
+                               (syntax-span stx)))))
+
+; Generate type inference code for an expression.
+; TODO Warn on circular dependencies in register-expr
+(define-syntax-parser infer-type*
+  #:literals [name-expr literal-expr register-expr when-clause field-expr call-expr slot-expr signal-expr lift-expr infer-type]
   ; This is a special case for (infer-type) forms generated in checker.rkt
   ; Maybe we should generate these forms in expander instead.
   [(_ (~and (infer-type expr) this-expr))
    #'(type this-expr)]
 
-  [(_ expr)
-   #:with key (datum->syntax #'expr (format "~a$~a:~a:~a"
-                                     (syntax-source   #'expr)
-                                     (syntax-line     #'expr)
-                                     (syntax-column   #'expr)
-                                     (syntax-span     #'expr)))
-   #'(dict-ref inferred-types key
-       (thunk
-         (let ([t (infer-type* expr)])
-           (dict-set! inferred-types key t)
-           t)))])
-
-; Generate type inference code for an expression.
-; TODO Warn on circular dependencies in register-expr
-(define-syntax-parser infer-type*
-  #:literals [name-expr literal-expr register-expr when-clause field-expr call-expr slot-expr signal-expr lift-expr]
   [(_ (name-expr name ...))
    #'(slot-type (concat-name name ...))]
 
@@ -456,7 +462,6 @@
 (disable-forms import or-expr and-expr rel-expr add-expr mult-expr
   if-expr prefix-expr range-expr slice-expr concat-expr
   "should not be used outside of begin-tiny-hdl")
-
 
 (module+ test
   (require
