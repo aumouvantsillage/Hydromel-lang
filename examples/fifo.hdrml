@@ -108,32 +108,32 @@ end
 component fifo_iter(T : type, I : T, N : natural)
     port io : splice consumer_producer(T)
 
-    instance f[N] = fifo1(T, I)
+    instance f<N> = fifo1(T, I)
 
-    f[0].c.valid = c.valid
-    f[0].c.data  = c.data
-    c.ready      = f[0].c.ready
+    f<0>.c.valid = c.valid
+    f<0>.c.data  = c.data
+    c.ready      = f<0>.c.ready
 
     for n in 1 .. N-1 loop
-        f[n].c.valid   = f[n-1].p.valid
-        f[n].c.data    = f[n-1].p.data
-        f[n-1].p.ready = f[n].c.ready
+        f<n>.c.valid   = f<n-1>.p.valid
+        f<n>.c.data    = f<n-1>.p.data
+        f<n-1>.p.ready = f<n>.c.ready
     end
 
-    p.valid        = f[N-1].p.valid
-    p.data         = f[N-1].p.data
-    f[N-1].p.ready = p.ready
+    p.valid        = f<N-1>.p.valid
+    p.data         = f<N-1>.p.data
+    f<N-1>.p.ready = p.ready
 end
 
 component fifo_iter_b(T : type, I : T, N : natural)
     port io : splice consumer_producer(T)
 
-    instance f[N] = fifo1(T, I)
-    f[0].c = c
+    instance f<N> = fifo1(T, I)
+    f<0>.c = c
 
     for n in 1 .. N-1 loop
-        f[n].c = f[n-1].p
+        f<n>.c = f<n-1>.p
     end
 
-    p = f[N-1].p
+    p = f<N-1>.p
 end

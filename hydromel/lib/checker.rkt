@@ -374,7 +374,7 @@
       [s:stx/literal-expr      #t]
       [s:stx/name-expr         (define c (lookup #'s.name)) (or (meta/constant? c) (meta/parameter? c))]
       [s:stx/field-expr        (or  (static? #'s.expr) (meta/constant? (resolve stx)))]
-      [s:stx/indexed-port-expr (and (static? #'s.expr) (andmap static? (attribute s.index)))]
+      [s:stx/indexed-port-expr (and (static? #'s.expr) (static? #'s.index))]
       [s:stx/call-expr         (andmap static? (attribute s.arg))]
       [_                       #f]))
 
@@ -403,7 +403,7 @@
          [_ (raise-syntax-error #f "Expression not suitable for field access" stx)])]
 
       [s:stx/indexed-port-expr
-       ; For an indexed expression, the metadata are those of the left-hand side.
+       ; For an indexed port expression, the metadata are those of the left-hand side.
        (resolve #'s.expr)]
 
       [_ #f]))

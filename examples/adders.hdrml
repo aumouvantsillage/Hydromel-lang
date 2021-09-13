@@ -38,19 +38,19 @@ end
 # component ripple_carry_adder_iter(WIDTH : natural)
 #     port io : splice adder(WIDTH)
 #
-#     instance fa[WIDTH] = full_adder
-#     fa[0].a  = a{0}
-#     fa[0].b  = b{0}
-#     fa[0].ci = ci
+#     instance fa<WIDTH> = full_adder
+#     fa<0>.a  = a{0}
+#     fa<0>.b  = b{0}
+#     fa<0>.ci = ci
 #
 #     for n in 1 .. WIDTH-1 loop
-#         fa[n].a  = a{n}
-#         fa[n].b  = b{n}
-#         fa[n].ci = fa[n-1].co
+#         fa<n>.a  = a{n}
+#         fa<n>.b  = b{n}
+#         fa<n>.ci = fa<n-1>.co
 #     end
 #
-#     s  = {fa[n].s for n in WIDTH-1 .. 0}
-#     co = fa[WIDTH-1].co
+#     s  = {fa<n>.s for n in WIDTH-1 .. 0}
+#     co = fa<WIDTH-1>.co
 # end
 
 component carry_lookahead_adder(WIDTH : natural)

@@ -407,7 +407,7 @@
 (define-syntax-parser remove-dynamic-indices
   #:literals [indexed-port-expr field-expr]
   [(_ (indexed-port-expr expr _))
-   #'(indexed-port-expr (remove-dynamic-indices expr) 0)]
+   #'(indexed-port-expr (remove-dynamic-indices expr) (literal-expr 0))]
 
   [(_ (field-expr expr field-name))
    #'(field-expr (remove-dynamic-indices expr) field-name)]
