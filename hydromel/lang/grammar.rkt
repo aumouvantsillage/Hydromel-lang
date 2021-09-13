@@ -55,7 +55,7 @@ composite-port: /"port" ID multiplicity? /":" composite-mode* ID argument-list?
 
 @composite-mode: "flip" | "splice"
 
-multiplicity: /"[" expression /"]"
+multiplicity: /"<" expression /">"
 
 ; TODO named arguments
 @argument-list: /"(" (expression /",")* expression? /")"
@@ -116,7 +116,8 @@ prefix-expr: ("-" | "not") simple-expr
   literal-expr |
   name-expr |
   field-expr |
-  indexed-expr |
+  indexed-port-expr |
+  indexed-array-expr |
   slice-expr |
   concat-expr |
   register-expr |
@@ -130,8 +131,11 @@ name-expr: ID
 field-expr:
   simple-expr /"." ID
 
-indexed-expr:
-  simple-expr /"[" expression (/"," expression)* /","? /"]"
+indexed-port-expr:
+  simple-expr /"<" expression /">"
+
+indexed-array-expr:
+  simple-expr /"[" expression /"]"
 
 slice-expr:
   simple-expr /"{" expression /"}"

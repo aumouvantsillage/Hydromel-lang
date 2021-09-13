@@ -91,9 +91,9 @@
     #:literals [field-expr]
     (pattern (field-expr expr field-name (~optional type-name))))
 
-  (define-syntax-class indexed-expr
-    #:literals [indexed-expr]
-    (pattern (indexed-expr expr index ...)))
+  (define-syntax-class indexed-port-expr
+    #:literals [indexed-port-expr]
+    (pattern (indexed-port-expr expr index)))
 
   (define-syntax-class register-expr
     #:literals [register-expr]
@@ -105,7 +105,8 @@
     (pattern (when-clause expr)))
 
   (define-syntax-class call-expr
-    #:literals [call-expr or-expr and-expr rel-expr add-expr mult-expr if-expr prefix-expr range-expr slice-expr concat-expr]
+    #:literals [call-expr or-expr and-expr rel-expr add-expr mult-expr if-expr prefix-expr
+                range-expr slice-expr concat-expr indexed-array-expr]
     (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
       #:attr fn-name (format-id #'op "kw-~a" #'op))
@@ -123,6 +124,9 @@
     (pattern (slice-expr expr index)
       #:attr (arg 1) (list #'expr #'index #'index)
       #:attr fn-name #'kw-slice)
+    (pattern (indexed-array-expr expr index)
+      #:attr (arg 1) (list #'expr #'index)
+      #:attr fn-name #'kw-array-ref)
     (pattern (concat-expr arg ...)
       #:attr fn-name #'kw-concat)
     (pattern (call-expr fn-name arg ...)))

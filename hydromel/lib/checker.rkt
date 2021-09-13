@@ -270,17 +270,16 @@
            (q/l (field-expr expr s.field-name #,type-name))
            (s/l (field-expr expr s.field-name))))]
 
-      [s:stx/indexed-expr
-       (define expr^ (make-checker #'s.expr))
-       (define indices^ (map make-checker (attribute s.index)))
+      [s:stx/indexed-port-expr
+       (define expr^  (make-checker #'s.expr))
+       (define index^ (make-checker #'s.index))
        (thunk
-         ; TODO support indexed access to array data types.
          (define/syntax-parse expr (expr^))
          (define r (resolve #'expr))
          (unless (or (meta/composite-port? r) (meta/instance? r))
            (raise-syntax-error #f "Expression not suitable for indexing" #'s.expr))
-         (define/syntax-parse (index ...) (check-all indices^))
-         (s/l (indexed-expr expr index ...)))]
+         (define/syntax-parse index (index^))
+         (s/l (indexed-port-expr expr index)))]
 
       [s:stx/register-expr
        (define init-expr^   (make-checker #'s.init-expr))
@@ -368,16 +367,16 @@
   ; - a literal expression,
   ; - a name expression that refers to a constant or a parameter,
   ; - a field expression whose left-hand side has a static value,
-  ; - an indexed expression whose left-hand side and indices have static values,
+  ; - an indexed port expression whose left-hand side and indices have static values,
   ; - a call whose arguments have static values.
   (define (static? stx)
     (syntax-parse stx
-      [s:stx/literal-expr #t]
-      [s:stx/name-expr    (define c (lookup #'s.name)) (or (meta/constant? c) (meta/parameter? c))]
-      [s:stx/field-expr   (or  (static? #'s.expr) (meta/constant? (resolve stx)))]
-      [s:stx/indexed-expr (and (static? #'s.expr) (andmap static? (attribute s.index)))]
-      [s:stx/call-expr    (andmap static? (attribute s.arg))]
-      [_                  #f]))
+      [s:stx/literal-expr      #t]
+      [s:stx/name-expr         (define c (lookup #'s.name)) (or (meta/constant? c) (meta/parameter? c))]
+      [s:stx/field-expr        (or  (static? #'s.expr) (meta/constant? (resolve stx)))]
+      [s:stx/indexed-port-expr (and (static? #'s.expr) (andmap static? (attribute s.index)))]
+      [s:stx/call-expr         (andmap static? (attribute s.arg))]
+      [_                       #f]))
 
   ; Find the metadata of the given expression result.
   (define (resolve stx)
@@ -403,7 +402,7 @@
 
          [_ (raise-syntax-error #f "Expression not suitable for field access" stx)])]
 
-      [s:stx/indexed-expr
+      [s:stx/indexed-port-expr
        ; For an indexed expression, the metadata are those of the left-hand side.
        (resolve #'s.expr)]
 
@@ -456,10 +455,10 @@
 
   (define (lift-if-needed stx)
     (syntax-parse stx
-      #:literals [indexed-expr field-expr concat-expr]
-      [(indexed-expr expr ...)
+      #:literals [indexed-port-expr field-expr concat-expr]
+      [(indexed-port-expr expr ...)
        (lift-if-needed* stx (attribute expr)
-         (λ (lst) (q/l (indexed-expr #,@lst))))]
+         (λ (lst) (q/l (indexed-port-expr #,@lst))))]
       [(field-expr expr sel ...)
        (lift-if-needed* stx (list #'expr)
          (λ (lst) (q/l (field-expr #,(first lst) sel ...))))]
@@ -563,10 +562,10 @@
   (begin-hydromel
     (component C2
       (composite-port i (multiplicity (literal-expr 2)) I0)
-      (assignment (field-expr (indexed-expr (name-expr i) (literal-expr 0)) y)
-                  (field-expr (indexed-expr (name-expr i) (literal-expr 0)) x))
-      (assignment (field-expr (indexed-expr (name-expr i) (literal-expr 1)) y)
-                  (field-expr (indexed-expr (name-expr i) (literal-expr 1)) x))))
+      (assignment (field-expr (indexed-port-expr (name-expr i) (literal-expr 0)) y)
+                  (field-expr (indexed-port-expr (name-expr i) (literal-expr 0)) x))
+      (assignment (field-expr (indexed-port-expr (name-expr i) (literal-expr 1)) y)
+                  (field-expr (indexed-port-expr (name-expr i) (literal-expr 1)) x))))
 
   (define c2-inst (C2-make))
   (slot-set! (c2-inst i 0 x) (signal 10))
@@ -582,14 +581,14 @@
 
     (component C3
       (composite-port j (multiplicity (literal-expr 2)) I1)
-      (assignment (field-expr (indexed-expr (field-expr (indexed-expr (name-expr j) (literal-expr 0)) i) (literal-expr 0)) y)
-                  (field-expr (indexed-expr (field-expr (indexed-expr (name-expr j) (literal-expr 0)) i) (literal-expr 0)) x))
-      (assignment (field-expr (indexed-expr (field-expr (indexed-expr (name-expr j) (literal-expr 0)) i) (literal-expr 1)) y)
-                  (field-expr (indexed-expr (field-expr (indexed-expr (name-expr j) (literal-expr 0)) i) (literal-expr 1)) x))
-      (assignment (field-expr (indexed-expr (field-expr (indexed-expr (name-expr j) (literal-expr 1)) i) (literal-expr 0)) y)
-                  (field-expr (indexed-expr (field-expr (indexed-expr (name-expr j) (literal-expr 1)) i) (literal-expr 0)) x))
-      (assignment (field-expr (indexed-expr (field-expr (indexed-expr (name-expr j) (literal-expr 1)) i) (literal-expr 1)) y)
-                  (field-expr (indexed-expr (field-expr (indexed-expr (name-expr j) (literal-expr 1)) i) (literal-expr 1)) x))))
+      (assignment (field-expr (indexed-port-expr (field-expr (indexed-port-expr (name-expr j) (literal-expr 0)) i) (literal-expr 0)) y)
+                  (field-expr (indexed-port-expr (field-expr (indexed-port-expr (name-expr j) (literal-expr 0)) i) (literal-expr 0)) x))
+      (assignment (field-expr (indexed-port-expr (field-expr (indexed-port-expr (name-expr j) (literal-expr 0)) i) (literal-expr 1)) y)
+                  (field-expr (indexed-port-expr (field-expr (indexed-port-expr (name-expr j) (literal-expr 0)) i) (literal-expr 1)) x))
+      (assignment (field-expr (indexed-port-expr (field-expr (indexed-port-expr (name-expr j) (literal-expr 1)) i) (literal-expr 0)) y)
+                  (field-expr (indexed-port-expr (field-expr (indexed-port-expr (name-expr j) (literal-expr 1)) i) (literal-expr 0)) x))
+      (assignment (field-expr (indexed-port-expr (field-expr (indexed-port-expr (name-expr j) (literal-expr 1)) i) (literal-expr 1)) y)
+                  (field-expr (indexed-port-expr (field-expr (indexed-port-expr (name-expr j) (literal-expr 1)) i) (literal-expr 1)) x))))
 
   (define c3-inst (C3-make))
   (slot-set! (c3-inst j 0 i 0 x) (signal 10))
@@ -706,7 +705,7 @@
       (data-port y in (call-expr signed (literal-expr 32)))
       (data-port z out (call-expr signed (literal-expr 32)))
       (assignment (name-expr z)
-                  (field-expr (indexed-expr (name-expr i) (name-expr y)) x))))
+                  (field-expr (indexed-port-expr (name-expr i) (name-expr y)) x))))
 
   (define c10-inst (C10-make))
   (slot-set! (c10-inst i 0 x) (signal 10))
@@ -746,13 +745,13 @@
       (data-port x1 in (call-expr signed (literal-expr 32)))
       (data-port y out (call-expr signed (literal-expr 32)))
       (instance c (multiplicity (literal-expr 2)) C11 (literal-expr 10))
-      (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 0)) x) (name-expr x0))
-      (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 1)) x) (name-expr x1))
+      (assignment (field-expr (indexed-port-expr (name-expr c) (literal-expr 0)) x) (name-expr x0))
+      (assignment (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) x) (name-expr x1))
       (assignment (name-expr y)
         (call-expr cast
           (call-expr signed (literal-expr 32))
-          (add-expr (field-expr (indexed-expr (name-expr c) (literal-expr 0)) y)
-                  + (field-expr (indexed-expr (name-expr c) (literal-expr 1)) y))))))
+          (add-expr (field-expr (indexed-port-expr (name-expr c) (literal-expr 0)) y)
+                  + (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) y))))))
 
   (define c13-inst (C13-make))
   (slot-set! (c13-inst x0) (signal 10 20 30 40 50))
@@ -786,10 +785,10 @@
   (begin-hydromel
     (component C16
       (composite-port j splice I1)
-      (assignment (field-expr (indexed-expr (name-expr i) (literal-expr 0)) y)
-                  (field-expr (indexed-expr (name-expr i) (literal-expr 0)) x))
-      (assignment (field-expr (indexed-expr (name-expr i) (literal-expr 1)) y)
-                  (field-expr (indexed-expr (name-expr i) (literal-expr 1)) x))))
+      (assignment (field-expr (indexed-port-expr (name-expr i) (literal-expr 0)) y)
+                  (field-expr (indexed-port-expr (name-expr i) (literal-expr 0)) x))
+      (assignment (field-expr (indexed-port-expr (name-expr i) (literal-expr 1)) y)
+                  (field-expr (indexed-port-expr (name-expr i) (literal-expr 1)) x))))
 
   (define c16-inst (C16-make))
   (slot-set! (c16-inst i 0 x) (signal 10))
@@ -1040,4 +1039,18 @@
 
   (test-case "Can infer types when assignments are in reverse order"
     (check-equal? (actual-type (slot-type (dict-ref c33-inst 's))) (actual-type (slot-type (dict-ref c33-inst 'x))))
-    (check-equal? (actual-type (slot-type (dict-ref c33-inst 'u))) (actual-type (slot-type (dict-ref c33-inst 's))))))
+    (check-equal? (actual-type (slot-type (dict-ref c33-inst 'u))) (actual-type (slot-type (dict-ref c33-inst 's)))))
+
+  (begin-hydromel
+    (component C34
+      (data-port x in  (call-expr array (literal-expr 4) (call-expr unsigned (literal-expr 8))))
+      (data-port i in  (call-expr unsigned (literal-expr 2)))
+      (data-port y out (call-expr unsigned (literal-expr 8)))
+      (assignment (name-expr y) (indexed-array-expr (name-expr x) (name-expr i)))))
+
+  (define c34-inst (C34-make))
+  (slot-set! (c34-inst x) (signal (vector 10 20 30 40)))
+  (slot-set! (c34-inst i) (signal 0 1 2 3))
+
+  (test-case "Can read an array"
+    (check-sig-equal? (slot-ref c34-inst y) (signal 10 20 30 40) 4)))

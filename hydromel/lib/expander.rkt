@@ -25,7 +25,8 @@
   if-statement for-statement statement-block
   assignment connect-statement
   literal-expr name-expr field-expr
-  indexed-expr call-expr register-expr when-clause
+  indexed-port-expr indexed-array-expr
+  call-expr register-expr when-clause
   slot-expr signal-expr lift-expr concat-expr
   or-expr and-expr rel-expr add-expr mult-expr
   if-expr prefix-expr range-expr slice-expr
@@ -271,12 +272,9 @@
   [(field-expr expr field-name)
    #'(dict-ref expr 'field-name)])
 
-; An indexed expression expands to a chain of vector accesses.
-(define-syntax-parser indexed-expr
-  [(indexed-expr expr index ... last)
-   #'(vector-ref (indexed-expr expr index ...) last)]
-  [(indexed-expr expr)
-   #'expr])
+; An indexed port expression expands to a vector access.
+(define-syntax-parse-rule (indexed-port-expr expr index)
+  (vector-ref expr index))
 
 ; A call expression expands to a Racket function call.
 (define-syntax-parse-rule (call-expr fn-name arg ...)
@@ -317,7 +315,7 @@
   #:literals [slot-expr]
   ; Lift a signal expression. Since the expression returns a signal,
   ; we must lift signal-first to avoid created a signal of signals.
-  ; This is typically used when indexed-expr contains signals as indices.
+  ; This is typically used when indexed-port-expr contains signals as indices.
   [(_ binding ...+ (slot-expr expr))
    #'(lift-expr binding ... (signal-first (slot-expr expr)))]
   ; Lift any expression that computes values from values.
@@ -390,7 +388,6 @@
 
   ; TODO: do not implemented these since they will be implemented as call-exprs
   ; [(field-expr expr field-name type-name)]
-  ; [(indexed-expr)]
 
   [(_ (signal-expr x))
    #'(infer-type x)]
@@ -408,10 +405,9 @@
 ; This only concerns access to interface ports with multiplicity > 1,
 ; which is expressed as a combination of field and indexed expressions.
 (define-syntax-parser remove-dynamic-indices
-  #:literals [indexed-expr field-expr]
-  [(_ (indexed-expr expr index ...))
-   #:with (index0 ...) (for/list ([it (in-list (attribute index))]) #'0)
-   #'(indexed-expr (remove-dynamic-indices expr) index0 ...)]
+  #:literals [indexed-port-expr field-expr]
+  [(_ (indexed-port-expr expr _))
+   #'(indexed-port-expr (remove-dynamic-indices expr) 0)]
 
   [(_ (field-expr expr field-name))
    #'(field-expr (remove-dynamic-indices expr) field-name)]
@@ -441,7 +437,8 @@
 
 ; Concatenation expressions are converted to function calls in the checker.
 (disable-forms import or-expr and-expr rel-expr add-expr mult-expr
-  if-expr prefix-expr range-expr slice-expr concat-expr
+               if-expr prefix-expr range-expr slice-expr concat-expr
+               indexed-array-expr
   "should not be used outside of begin-tiny-hdl")
 
 (module+ test
@@ -582,12 +579,12 @@
 
   (component C3
     (composite-port i (multiplicity (literal-expr 3)) I1)
-    (assignment (field-expr (indexed-expr (name-expr i) (literal-expr 0)) y)
-                (slot-expr (field-expr (indexed-expr (name-expr i) (literal-expr 0)) x)))
-    (assignment (field-expr (indexed-expr (name-expr i) (literal-expr 1)) y)
-                (slot-expr (field-expr (indexed-expr (name-expr i) (literal-expr 1)) x)))
-    (assignment (field-expr (indexed-expr (name-expr i) (literal-expr 2)) y)
-                (slot-expr (field-expr (indexed-expr (name-expr i) (literal-expr 2)) x))))
+    (assignment (field-expr (indexed-port-expr (name-expr i) (literal-expr 0)) y)
+                (slot-expr (field-expr (indexed-port-expr (name-expr i) (literal-expr 0)) x)))
+    (assignment (field-expr (indexed-port-expr (name-expr i) (literal-expr 1)) y)
+                (slot-expr (field-expr (indexed-port-expr (name-expr i) (literal-expr 1)) x)))
+    (assignment (field-expr (indexed-port-expr (name-expr i) (literal-expr 2)) y)
+                (slot-expr (field-expr (indexed-port-expr (name-expr i) (literal-expr 2)) x))))
 
   (define c3-inst (C3-make))
   (slot-set! (c3-inst i 0 x) (signal 10))
@@ -608,7 +605,7 @@
     (data-port z out (call-expr signed (literal-expr 32)))
     (assignment (name-expr z)
                 (lift-expr [y^ (slot-expr (name-expr y))]
-                           (slot-expr (field-expr (indexed-expr (name-expr i) (name-expr y^)) x)))))
+                           (slot-expr (field-expr (indexed-port-expr (name-expr i) (name-expr y^)) x)))))
 
   (define c4-inst (C4-make))
   (slot-set! (c4-inst i 0 x) (signal 10))
@@ -693,11 +690,11 @@
     (data-port x1 in (call-expr signed (literal-expr 32)))
     (data-port y out (call-expr signed (literal-expr 32)))
     (instance c (multiplicity (literal-expr 2)) C7 (literal-expr 10))
-    (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 0)) x) (slot-expr (name-expr x0)))
-    (assignment (field-expr (indexed-expr (name-expr c) (literal-expr 1)) x) (slot-expr (name-expr x1)))
+    (assignment (field-expr (indexed-port-expr (name-expr c) (literal-expr 0)) x) (slot-expr (name-expr x0)))
+    (assignment (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) x) (slot-expr (name-expr x1)))
     (assignment (name-expr y)
-      (lift-expr [y0 (slot-expr (field-expr (indexed-expr (name-expr c) (literal-expr 0)) y))]
-                 [y1 (slot-expr (field-expr (indexed-expr (name-expr c) (literal-expr 1)) y))]
+      (lift-expr [y0 (slot-expr (field-expr (indexed-port-expr (name-expr c) (literal-expr 0)) y))]
+                 [y1 (slot-expr (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) y))]
         (call-expr cast-impl
           (call-expr signed (literal-expr 32))
           (call-expr + (name-expr y0) (name-expr y1))))))
@@ -868,9 +865,9 @@
     (check-equal? (actual-type (slot-type (dict-ref c21-inst 'u))) (actual-type (slot-type (dict-ref c21-inst 's)))))
 
   (component C22
-    (data-port x in (call-expr array (literal-expr 4) (call-expr unsigned (literal-expr 8))))
-    (data-port i in (call-expr unsigned (literal-expr 2)))
-    (data-port y in (call-expr unsigned (literal-expr 8)))
+    (data-port x in  (call-expr array (literal-expr 4) (call-expr unsigned (literal-expr 8))))
+    (data-port i in  (call-expr unsigned (literal-expr 2)))
+    (data-port y out (call-expr unsigned (literal-expr 8)))
     (assignment (name-expr y) (lift-expr [x^ (slot-expr (name-expr x))]
                                          [i^ (slot-expr (name-expr i))]
                                 (call-expr vector-ref (name-expr x^) (name-expr i^)))))
