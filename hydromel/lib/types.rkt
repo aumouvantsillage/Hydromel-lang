@@ -47,7 +47,12 @@
 
 (struct union datatype (types) #:transparent)
 
-(struct array datatype (sizes elt-type) #:transparent)
+(struct array datatype (size elt-type) #:transparent)
+
+(define (array-signature tn te)
+  (match (cons tn (actual-type te))
+    [(cons (static-data n _) (type te^)) (type (array n te^))]
+    [_                                   (error "Cannot determine array type" tn te)]))
 
 (struct record datatype (fields) #:transparent)
 

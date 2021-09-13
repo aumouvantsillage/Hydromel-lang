@@ -18,36 +18,17 @@
     syntax/stx))
 
 (provide
-  import
-  design-unit
-  interface
-  component
-  parameter
-  data-port
-  composite-port
-  multiplicity
-  flip
-  splice
-  constant
-  local-signal
-  instance
-  if-statement
-  for-statement
-  statement-block
-  assignment
-  connect-statement
-  literal-expr
-  alias
-  name-expr
-  field-expr
-  indexed-expr
-  call-expr
-  register-expr
-  when-clause
-  slot-expr
-  signal-expr
-  lift-expr concat-expr
-  or-expr and-expr rel-expr add-expr mult-expr if-expr prefix-expr range-expr slice-expr
+  import design-unit interface component
+  parameter data-port composite-port alias
+  multiplicity flip splice
+  constant local-signal instance
+  if-statement for-statement statement-block
+  assignment connect-statement
+  literal-expr name-expr field-expr
+  indexed-expr call-expr register-expr when-clause
+  slot-expr signal-expr lift-expr concat-expr
+  or-expr and-expr rel-expr add-expr mult-expr
+  if-expr prefix-expr range-expr slice-expr
   infer-type)
 
 ; ------------------------------------------------------------------------------
@@ -349,7 +330,7 @@
 ; ------------------------------------------------------------------------------
 
 ; Generate type inference code and memoize the computed type.
-; This code is meant to be deferred, either in a slot type
+; This code is meant to be executed lazily, either in a slot type
 ; or inside a signal, so that out-of-order dependencies are correctly handled.
 ; Only constants infer their types immediately.
 (define-syntax-parse-rule (infer-type expr)
@@ -884,4 +865,19 @@
 
   (test-case "Can infer types when assignments are in reverse order"
     (check-equal? (actual-type (slot-type (dict-ref c21-inst 's))) (actual-type (slot-type (dict-ref c21-inst 'x))))
-    (check-equal? (actual-type (slot-type (dict-ref c21-inst 'u))) (actual-type (slot-type (dict-ref c21-inst 's))))))
+    (check-equal? (actual-type (slot-type (dict-ref c21-inst 'u))) (actual-type (slot-type (dict-ref c21-inst 's)))))
+
+  (component C22
+    (data-port x in (call-expr array (literal-expr 4) (call-expr unsigned (literal-expr 8))))
+    (data-port i in (call-expr unsigned (literal-expr 2)))
+    (data-port y in (call-expr unsigned (literal-expr 8)))
+    (assignment (name-expr y) (lift-expr [x^ (slot-expr (name-expr x))]
+                                         [i^ (slot-expr (name-expr i))]
+                                (call-expr vector-ref (name-expr x^) (name-expr i^)))))
+
+  (define c22-inst (C22-make))
+  (slot-set! (c22-inst x) (signal (vector 10 20 30 40)))
+  (slot-set! (c22-inst i) (signal 0 1 2 3))
+
+  (test-case "Can read an array"
+    (check-sig-equal? (slot-ref c22-inst y) (signal 10 20 30 40) 4)))

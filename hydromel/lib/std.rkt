@@ -34,6 +34,7 @@
   kw-range       kw-range-impl    kw-range-impl-signature
   kw-slice                        unsigned-slice-signature
   kw-concat      kw-concat-impl   kw-concat-impl-signature
+  kw-array-ref                    vector-ref-signature
   (all-from-out  "logic.rkt")
   signed_width                    min-signed-width-signature
   unsigned_width                  min-unsigned-width-signature
@@ -213,6 +214,15 @@
   (match (first ts^)
     [(t/signed _)   (t/signed w)]
     [(t/unsigned _) (t/unsigned w)]))
+
+(define-syntax kw-array-ref (meta/builtin-function #'vector-ref))
+
+(define (vector-ref-signature ta tb)
+  ; TODO check the type of tb
+  (define ta^ (t/actual-type ta))
+  (match ta^
+    [(t/array _ te) te]
+    [_              (error "Not an array type" ta)]))
 
 (define-syntax cast (meta/builtin-function #'cast-impl))
 
