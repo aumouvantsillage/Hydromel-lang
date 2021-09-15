@@ -51,11 +51,11 @@ local-signal: /"signal" ID (/":" type-expression)? /"=" expression
 
 data-port: /"port" ID /":" ("in" | "out") type-expression
 
-composite-port: /"port" ID multiplicity? /":" composite-mode* ID argument-list?
+composite-port: /"port" ID multiplicity /":" composite-mode* ID argument-list?
 
 @composite-mode: "flip" | "splice"
 
-multiplicity: /"<" expression /">"
+/multiplicity: (/"<" (expression /",")* expression /","? /">")?
 
 ; TODO named arguments
 @argument-list: /"(" (expression /",")* expression? /")"
@@ -64,7 +64,7 @@ assignment:
   simple-expr /"=" expression
 
 instance:
-  /"instance" ID multiplicity? /"=" ID argument-list?
+  /"instance" ID multiplicity /"=" ID argument-list?
 
 if-statement:
   (ID /":")?

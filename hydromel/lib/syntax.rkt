@@ -41,8 +41,8 @@
     (pattern (data-port name mode type)))
 
   (define-syntax-class composite-port
-    #:literals [composite-port multiplicity]
-    (pattern (composite-port name (~optional (multiplicity mult)) mode:composite-mode ... intf-name arg ...)
+    #:literals [composite-port]
+    (pattern (composite-port name (mult ...) mode:composite-mode ... intf-name arg ...)
       #:attr splice? (member 'splice (syntax->datum #'(mode ...)))
       #:attr flip?   (member 'flip   (syntax->datum #'(mode ...)))))
 
@@ -64,8 +64,8 @@
     (pattern (assignment target expr)))
 
   (define-syntax-class instance
-    #:literals [instance multiplicity]
-    (pattern (instance name (~optional (multiplicity mult)) comp-name arg ...)))
+    #:literals [instance]
+    (pattern (instance name (mult ...) comp-name arg ...)))
 
   (define-syntax-class if-statement
     #:literals [if-statement]

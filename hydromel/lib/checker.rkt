@@ -160,36 +160,35 @@
 
       [s:stx/composite-port
        #:with name (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
-       (define mult^ (make-checker (or (attribute s.mult) #'(literal-expr 1))))
+       (define mult^ (map make-checker (attribute s.mult)))
        (define args^ (map make-checker (attribute s.arg)))
        (thunk/in-scope
          ; Check that the multiplicity has a static value.
-         (define/syntax-parse mult (mult^))
-         (unless (static? #'mult)
-           (raise-syntax-error #f "Non-static expression cannot be used as instance multiplicity" #'s.mult))
+         (define/syntax-parse (mult ...) (check-all mult^))
+         (for ([m (in-list (attribute mult))])
+           (unless (static? m)
+             (raise-syntax-error #f "Non-static expression cannot be used as port multiplicity" m)))
          ; Check that intf-name refers to an existing interface
          (lookup #'s.intf-name meta/interface?)
          ; Check arguments
          (define/syntax-parse (arg ...) (check-all args^))
-         (if (attribute s.mult)
-           (s/l (composite-port name (multiplicity mult) s.mode ... s.intf-name arg ...))
-           (s/l (composite-port name                     s.mode ... s.intf-name arg ...))))]
+         (s/l (composite-port name (mult ...) s.mode ... s.intf-name arg ...)))]
 
       [s:stx/instance
        #:with name (bind! #'s.name (meta/instance #'s.comp-name))
-       (define mult^ (make-checker (or (attribute s.mult) #'(literal-expr 1))))
+       (define mult^ (map make-checker (attribute s.mult)))
        (define args^ (map make-checker (attribute s.arg)))
        (thunk/in-scope
          ; Check that the multiplicity has a static value.
-         (define/syntax-parse mult (mult^))
-         (unless (static? #'mult)
-           (raise-syntax-error #f "Non-static expression cannot be used as instance multiplicity" #'s.mult))
+         (define/syntax-parse (mult ...) (check-all mult^))
+         (for ([m (in-list (attribute mult))])
+           (unless (static? m)
+             (raise-syntax-error #f "Non-static expression cannot be used as instance multiplicity" m)))
          ; Check that comp-name refers to an existing component
+         (lookup #'s.comp-name meta/component?)
          ; Check arguments
          (define/syntax-parse (arg ...) (check-all args^))
-         (if (attribute s.mult)
-           (s/l (instance name (multiplicity mult) s.comp-name arg ...))
-           (s/l (instance name                     s.comp-name arg ...))))]
+         (s/l (instance name (mult ...) s.comp-name arg ...)))]
 
       [s:stx/local-signal
        #:with name (bind! #'s.name (meta/local-signal))
@@ -554,7 +553,7 @@
       (data-port y out (call-expr signed (literal-expr 32))))
 
     (component C1
-      (composite-port i I0)
+      (composite-port i () I0)
       (assignment (field-expr (name-expr i) y) (field-expr (name-expr i) x))))
 
   (define c1-inst (C1-make))
@@ -565,7 +564,7 @@
 
   (begin-hydromel
     (component C2
-      (composite-port i (multiplicity (literal-expr 2)) I0)
+      (composite-port i ((literal-expr 2)) I0)
       (assignment (field-expr (indexed-port-expr (name-expr i) (literal-expr 0)) y)
                   (field-expr (indexed-port-expr (name-expr i) (literal-expr 0)) x))
       (assignment (field-expr (indexed-port-expr (name-expr i) (literal-expr 1)) y)
@@ -581,10 +580,10 @@
 
   (begin-hydromel
     (interface I1
-      (composite-port i (multiplicity (literal-expr 2)) I0))
+      (composite-port i ((literal-expr 2)) I0))
 
     (component C3
-      (composite-port j (multiplicity (literal-expr 2)) I1)
+      (composite-port j ((literal-expr 2)) I1)
       (assignment (field-expr (indexed-port-expr (field-expr (indexed-port-expr (name-expr j) (literal-expr 0)) i) (literal-expr 0)) y)
                   (field-expr (indexed-port-expr (field-expr (indexed-port-expr (name-expr j) (literal-expr 0)) i) (literal-expr 0)) x))
       (assignment (field-expr (indexed-port-expr (field-expr (indexed-port-expr (name-expr j) (literal-expr 0)) i) (literal-expr 1)) y)
@@ -705,7 +704,7 @@
       (data-port x in (call-expr signed (literal-expr 32))))
 
     (component C10
-      (composite-port i (multiplicity (literal-expr 3)) I2)
+      (composite-port i ((literal-expr 3)) I2)
       (data-port y in (call-expr signed (literal-expr 32)))
       (data-port z out (call-expr signed (literal-expr 32)))
       (assignment (name-expr z)
@@ -733,7 +732,7 @@
     (component C12
       (data-port x in (call-expr signed (literal-expr 32)))
       (data-port y out (call-expr signed (literal-expr 32)))
-      (instance c C11 (literal-expr 10))
+      (instance c () C11 (literal-expr 10))
       (assignment (field-expr (name-expr c) x) (name-expr x))
       (assignment (name-expr y) (field-expr (name-expr c) y))))
 
@@ -748,7 +747,7 @@
       (data-port x0 in (call-expr signed (literal-expr 32)))
       (data-port x1 in (call-expr signed (literal-expr 32)))
       (data-port y out (call-expr signed (literal-expr 32)))
-      (instance c (multiplicity (literal-expr 2)) C11 (literal-expr 10))
+      (instance c ((literal-expr 2)) C11 (literal-expr 10))
       (assignment (field-expr (indexed-port-expr (name-expr c) (literal-expr 0)) x) (name-expr x0))
       (assignment (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) x) (name-expr x1))
       (assignment (name-expr y)
@@ -766,7 +765,7 @@
 
   (begin-hydromel
     (component C14
-      (composite-port i splice I0)
+      (composite-port i () splice I0)
       (assignment (name-expr y) (name-expr x))))
 
   (define c14-inst (C14-make))
@@ -777,7 +776,7 @@
 
   (begin-hydromel
     (component C15
-      (composite-port i splice flip I0)
+      (composite-port i () splice flip I0)
       (assignment (name-expr x) (name-expr y))))
 
   (define c15-inst (C15-make))
@@ -788,7 +787,7 @@
 
   (begin-hydromel
     (component C16
-      (composite-port j splice I1)
+      (composite-port j () splice I1)
       (assignment (field-expr (indexed-port-expr (name-expr i) (literal-expr 0)) y)
                   (field-expr (indexed-port-expr (name-expr i) (literal-expr 0)) x))
       (assignment (field-expr (indexed-port-expr (name-expr i) (literal-expr 1)) y)
@@ -804,10 +803,10 @@
 
   (begin-hydromel
     (interface I3
-      (composite-port i splice I0))
+      (composite-port i () splice I0))
 
     (component C17
-      (composite-port j splice I3)
+      (composite-port j () splice I3)
       (assignment (name-expr y) (name-expr x))))
 
   (define c17-inst (C17-make))
@@ -821,7 +820,7 @@
 
   (begin-hydromel
     (component C18
-      (composite-port j splice flip I3)
+      (composite-port j () splice flip I3)
       (assignment (name-expr x) (name-expr y))))
 
   (define c18-inst (C18-make))
@@ -832,10 +831,10 @@
 
   (begin-hydromel
     (interface I4
-      (composite-port i splice flip I0))
+      (composite-port i () splice flip I0))
 
     (component C19
-      (composite-port j splice I4)
+      (composite-port j () splice I4)
       (assignment (name-expr x) (name-expr y))))
 
   (define c19-inst (C19-make))
@@ -846,7 +845,7 @@
 
   (begin-hydromel
     (component C20
-      (composite-port j splice flip I4)
+      (composite-port j () splice flip I4)
       (assignment (name-expr y) (name-expr x))))
 
   (define c20-inst (C20-make))
@@ -950,7 +949,7 @@
       (data-port y out (call-expr signed (literal-expr 32))))
 
     (component C27
-      (composite-port p I5)
+      (composite-port p () I5)
       (assignment (field-expr (name-expr p) y) (field-expr (name-expr p) N))))
 
   (define c27-inst (C27-make))
@@ -961,7 +960,7 @@
   (begin-hydromel
     (component C28
       (data-port y out (call-expr signed (literal-expr 32)))
-      (instance c C26)
+      (instance c () C26)
       (assignment (name-expr y) (field-expr (name-expr c) N))))
 
   (define c28-inst (C28-make))
@@ -972,7 +971,7 @@
   (begin-hydromel
     (component C29
       (data-port y out (call-expr signed (literal-expr 32)))
-      (instance c C27)
+      (instance c () C27)
       (assignment (name-expr y) (field-expr (field-expr (name-expr c) p) N))))
 
   (define c29-inst (C29-make))

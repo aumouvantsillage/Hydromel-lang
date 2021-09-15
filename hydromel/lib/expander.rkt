@@ -20,7 +20,7 @@
 (provide
   import design-unit interface component
   parameter data-port composite-port alias
-  multiplicity flip splice
+  flip splice
   constant local-signal instance
   if-statement for-statement statement-block
   assignment connect-statement
@@ -171,12 +171,12 @@
 ; call for the corresponding interface.
 ; If a multiplicity is present, a vector of channels is created.
 (define-syntax-parser composite-port
-  #:literals [multiplicity splice flip]
-  [(_ name (multiplicity mult) (~or splice flip) ... intf-name arg ...)
+  #:literals [splice flip]
+  [(_ name (mult) (~or splice flip) ... intf-name arg ...)
    #:with ctor-name (design-unit-ctor-name #'intf-name)
    #'(define name (build-vector mult (λ (z) (ctor-name arg ...))))]
 
-  [(_ name (~or splice flip) ... intf-name arg ...)
+  [(_ name () (~or splice flip) ... intf-name arg ...)
    #:with ctor-name (design-unit-ctor-name #'intf-name)
    #'(define name (ctor-name arg ...))])
 
@@ -184,11 +184,11 @@
 ; for the corresponding component.
 ; If a multiplicity is present, a vector of channels is created.
 (define-syntax-parser instance
-  [(_ name (multiplicity mult) comp-name arg ...)
+  [(_ name (mult) comp-name arg ...)
    #:with ctor-name (design-unit-ctor-name #'comp-name)
    #'(define name (build-vector mult (λ (z) (ctor-name arg ...))))]
 
-  [(_ name comp-name arg ...)
+  [(_ name () comp-name arg ...)
    #:with ctor-name (design-unit-ctor-name #'comp-name)
    #'(define name (ctor-name arg ...))])
 
@@ -404,7 +404,7 @@
   [_ #'(any)])
 
 ; Replace dynamic indices with zeros in indexed expressions.
-; This only concerns access to interface ports with multiplicity > 1,
+; This only concerns access to interface ports with multiplicity,
 ; which is expressed as a combination of field and indexed expressions.
 (define-syntax-parser remove-dynamic-indices
   #:literals [indexed-port-expr field-expr]
@@ -430,7 +430,7 @@
     ...))
 
 ; Multiplicity indications are processed in macros composite-port and instance.
-(disable-forms multiplicity splice flip
+(disable-forms splice flip
   "should be used inside a composite port declaration")
 
 ; When clauses are processed in macro register-expr.
@@ -490,12 +490,12 @@
 
   (interface I2
     (data-port z in (call-expr signed (literal-expr 32)))
-    (composite-port i I1)
+    (composite-port i () I1)
     (data-port u out (call-expr signed (literal-expr 32))))
 
   (interface I3
     (data-port v in (call-expr signed (literal-expr 32)))
-    (composite-port j I2)
+    (composite-port j () I2)
     (data-port w out (call-expr signed (literal-expr 32))))
 
   (define i2-inst (I2-make))
@@ -518,7 +518,7 @@
 
   (component C1
     (data-port v in (call-expr signed (literal-expr 32)))
-    (composite-port j I2)
+    (composite-port j () I2)
     (data-port w out (call-expr signed (literal-expr 32)))
     (assignment (name-expr w) (slot-expr (name-expr v))))
 
@@ -534,7 +534,7 @@
     (check-pred slot? (dict-ref c1-inst 'w)))
 
   (interface I4
-    (composite-port i (multiplicity (literal-expr 3)) I1))
+    (composite-port i ((literal-expr 3)) I1))
 
   (define i4-inst (I4-make))
 
@@ -546,7 +546,7 @@
 
   (interface I5
     (parameter N (call-expr unsigned (literal-expr 32)))
-    (composite-port i (multiplicity (name-expr N)) I1))
+    (composite-port i ((name-expr N)) I1))
 
   (define i5-inst (I5-make 5))
 
@@ -558,7 +558,7 @@
 
   (interface I6
     (parameter M (call-expr unsigned (literal-expr 32)))
-    (composite-port j I5 (name-expr M)))
+    (composite-port j () I5 (name-expr M)))
 
   (define i6-inst (I6-make 3))
 
@@ -569,7 +569,7 @@
       (check-pred dict? (vector-ref (dict-ref (dict-ref i6-inst 'j) 'i) n))))
 
   (component C2
-    (composite-port i I1)
+    (composite-port i () I1)
     (assignment (field-expr (name-expr i) y)
                 (slot-expr (field-expr (name-expr i) x))))
 
@@ -580,7 +580,7 @@
     (check-sig-equal? (slot-ref c2-inst i y) (slot-ref c2-inst i x) 5))
 
   (component C3
-    (composite-port i (multiplicity (literal-expr 3)) I1)
+    (composite-port i ((literal-expr 3)) I1)
     (assignment (field-expr (indexed-port-expr (name-expr i) (literal-expr 0)) y)
                 (slot-expr (field-expr (indexed-port-expr (name-expr i) (literal-expr 0)) x)))
     (assignment (field-expr (indexed-port-expr (name-expr i) (literal-expr 1)) y)
@@ -602,7 +602,7 @@
     (data-port x in (call-expr signed (literal-expr 32))))
 
   (component C4
-    (composite-port i (multiplicity (literal-expr 3)) I7)
+    (composite-port i ((literal-expr 3)) I7)
     (data-port y in (call-expr signed (literal-expr 32)))
     (data-port z out (call-expr signed (literal-expr 32)))
     (assignment (name-expr z)
@@ -677,7 +677,7 @@
   (component C8
     (data-port x in (call-expr signed (literal-expr 32)))
     (data-port y out (call-expr signed (literal-expr 32)))
-    (instance c C7 (literal-expr 10))
+    (instance c () C7 (literal-expr 10))
     (assignment (field-expr (name-expr c) x) (slot-expr (name-expr x)))
     (assignment (name-expr y) (slot-expr (field-expr (name-expr c) y))))
 
@@ -691,7 +691,7 @@
     (data-port x0 in (call-expr signed (literal-expr 32)))
     (data-port x1 in (call-expr signed (literal-expr 32)))
     (data-port y out (call-expr signed (literal-expr 32)))
-    (instance c (multiplicity (literal-expr 2)) C7 (literal-expr 10))
+    (instance c ((literal-expr 2)) C7 (literal-expr 10))
     (assignment (field-expr (indexed-port-expr (name-expr c) (literal-expr 0)) x) (slot-expr (name-expr x0)))
     (assignment (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) x) (slot-expr (name-expr x1)))
     (assignment (name-expr y)
@@ -782,7 +782,7 @@
     (data-port y out (call-expr signed (literal-expr 32))))
 
   (component C15
-    (composite-port p I8)
+    (composite-port p () I8)
     (assignment (field-expr (name-expr p) y) (signal-expr (field-expr (name-expr p) N))))
 
   (define c15-inst (C15-make))
@@ -792,7 +792,7 @@
 
   (component C16
     (data-port y out (call-expr signed (literal-expr 32)))
-    (instance c C14)
+    (instance c () C14)
     (assignment (name-expr y) (signal-expr (field-expr (name-expr c) N))))
 
   (define c16-inst (C16-make))
@@ -802,7 +802,7 @@
 
   (component C17
     (data-port y out (call-expr signed (literal-expr 32)))
-    (instance c C15)
+    (instance c () C15)
     (assignment (name-expr y) (signal-expr (field-expr (field-expr (name-expr c) p) N))))
 
   (define c17-inst (C17-make))
