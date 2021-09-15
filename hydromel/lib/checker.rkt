@@ -171,7 +171,9 @@
          (lookup #'s.intf-name meta/interface?)
          ; Check arguments
          (define/syntax-parse (arg ...) (check-all args^))
-         (s/l (composite-port name (multiplicity mult) s.mode ... s.intf-name arg ...)))]
+         (if (attribute s.mult)
+           (s/l (composite-port name (multiplicity mult) s.mode ... s.intf-name arg ...))
+           (s/l (composite-port name                     s.mode ... s.intf-name arg ...))))]
 
       [s:stx/instance
        #:with name (bind! #'s.name (meta/instance #'s.comp-name))
@@ -185,7 +187,9 @@
          ; Check that comp-name refers to an existing component
          ; Check arguments
          (define/syntax-parse (arg ...) (check-all args^))
-         (s/l (instance name (multiplicity mult) s.comp-name arg ...)))]
+         (if (attribute s.mult)
+           (s/l (instance name (multiplicity mult) s.comp-name arg ...))
+           (s/l (instance name                     s.comp-name arg ...))))]
 
       [s:stx/local-signal
        #:with name (bind! #'s.name (meta/local-signal))

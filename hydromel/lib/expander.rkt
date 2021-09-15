@@ -169,26 +169,28 @@
 
 ; A composite port expands to a variable that stores the result of a constructor
 ; call for the corresponding interface.
-; If the multiplicity is greater than 1, a vector of channels is created.
-(define-syntax-parse-rule (composite-port name (~optional (multiplicity mult)) (~or (~literal splice) (~literal flip)) ... intf-name arg ...)
-  #:with ctor-name (design-unit-ctor-name #'intf-name)
-  #:with m (or (attribute mult) #'1)
-  (define name (let ([ctor (λ (z) (ctor-name arg ...))])
-                 (if (> m 1)
-                   (build-vector m ctor)
-                   (ctor #f)))))
+; If a multiplicity is present, a vector of channels is created.
+(define-syntax-parser composite-port
+  #:literals [multiplicity splice flip]
+  [(_ name (multiplicity mult) (~or splice flip) ... intf-name arg ...)
+   #:with ctor-name (design-unit-ctor-name #'intf-name)
+   #'(define name (build-vector mult (λ (z) (ctor-name arg ...))))]
+
+  [(_ name (~or splice flip) ... intf-name arg ...)
+   #:with ctor-name (design-unit-ctor-name #'intf-name)
+   #'(define name (ctor-name arg ...))])
 
 ; An instance expands to a variable that stores the result of a constructor call
 ; for the corresponding component.
-; If the multiplicity is greater than 1, a vector of channels is created.
-; TODO We should create a vector if multiplicity is present regardless of its value.
-(define-syntax-parse-rule (instance name (~optional ((~literal multiplicity) mult)) comp-name arg ...)
-  #:with ctor-name (design-unit-ctor-name #'comp-name)
-  #:with m (or (attribute mult) #'1)
-  (define name (let ([ctor (λ (z) (ctor-name arg ...))])
-                 (if (> m 1)
-                   (build-vector m ctor)
-                   (ctor #f)))))
+; If a multiplicity is present, a vector of channels is created.
+(define-syntax-parser instance
+  [(_ name (multiplicity mult) comp-name arg ...)
+   #:with ctor-name (design-unit-ctor-name #'comp-name)
+   #'(define name (build-vector mult (λ (z) (ctor-name arg ...))))]
+
+  [(_ name comp-name arg ...)
+   #:with ctor-name (design-unit-ctor-name #'comp-name)
+   #'(define name (ctor-name arg ...))])
 
 ; ------------------------------------------------------------------------------
 ; Statements
