@@ -320,7 +320,7 @@
          ; argument values with their inferred types.
          (define/syntax-parse (arg+ ...)
            (if (equal? (syntax->datum #'s.fn-name) 'kw-concat)
-             #'((~@ arg (infer-type arg)) ...)
+             #'((~@ arg (type-of arg)) ...)
              #'(arg ...)))
          (s/l (call-expr fn-name arg+ ...)))]
 

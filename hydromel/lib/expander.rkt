@@ -30,7 +30,7 @@
   slot-expr signal-expr lift-expr concat-expr
   or-expr and-expr rel-expr add-expr mult-expr
   if-expr prefix-expr range-expr slice-expr
-  infer-type)
+  type-of)
 
 ; ------------------------------------------------------------------------------
 ; Design units
@@ -135,10 +135,10 @@
                          (constant-to-slot expr)))))])
 
 ; A constant infers its type immediately before computing its value.
-; Here, we benefit from the fact that infer-type will return a
+; Here, we benefit from the fact that type-of will return a
 ; static-data where the expression has already been evaluated.
 (define-syntax-parse-rule (constant-to-slot expr)
-  (let ([expr-type (infer-type expr)])
+  (let ([expr-type (type-of expr)])
     (make-slot (static-data-value expr-type) expr-type)))
 
 ; An alias expands to a partial access to the target port.
@@ -158,7 +158,7 @@
 ; Like output ports, local signals do not need to be wrapped in a slot, but
 ; it helps expanding expressions without managing several special cases.
 (define-syntax-parse-rule (local-signal name (~optional type) expr)
-  #:with expr-type   #'(infer-type expr)
+  #:with expr-type   #'(type-of expr)
   #:with target-type (or (attribute type) #'expr-type)
   (begin
     (define name (make-slot expr target-type))
@@ -203,8 +203,8 @@
                #:literals [name-expr]
                [(name-expr name) #'name]
                [_                #'target])
-  #:with target-type #'(infer-type target)
-  #:with expr-type   #'(infer-type expr)
+  #:with target-type #'(type-of target)
+  #:with expr-type   #'(type-of expr)
   (begin
     (set-slot-data! slt expr)
     (add-type-check
@@ -283,7 +283,7 @@
   #:with expr this-syntax
   ; The type acts as a function that casts its argument.
   ; If no type was found, it will be the identity function.
-  (let ([expr-type (infer-type expr)])
+  (let ([expr-type (type-of expr)])
     (expr-type (fn-name arg ...))))
 
 (define-syntax-parser register-expr
@@ -333,11 +333,11 @@
 ; This code is meant to be executed lazily, either in a slot type
 ; or inside a signal, so that out-of-order dependencies are correctly handled.
 ; Only constants infer their types immediately.
-(define-syntax-parse-rule (infer-type expr)
+(define-syntax-parse-rule (type-of expr)
    #:with key (typing-key #'expr)
    (dict-ref inferred-types 'key
      (thunk
-       (let ([t (infer-type* expr)])
+       (let ([t (type-of* expr)])
          (dict-set! inferred-types 'key t)
          t))))
 
@@ -355,11 +355,11 @@
 
 ; Generate type inference code for an expression.
 ; TODO Warn on circular dependencies in register-expr
-(define-syntax-parser infer-type*
-  #:literals [name-expr literal-expr register-expr when-clause field-expr call-expr slot-expr signal-expr lift-expr infer-type]
-  ; This is a special case for (infer-type) forms generated in checker.rkt
+(define-syntax-parser type-of*
+  #:literals [name-expr literal-expr register-expr when-clause field-expr call-expr slot-expr signal-expr lift-expr type-of]
+  ; This is a special case for (type-of) forms generated in checker.rkt
   ; Maybe we should generate these forms in expander instead.
-  [(_ (~and (infer-type expr) this-expr))
+  [(_ (~and (type-of expr) this-expr))
    #'(type this-expr)]
 
   [(_ (name-expr name ...))
@@ -369,12 +369,12 @@
    #'(static-data n (literal-type n))]
 
   [(_ (register-expr i (~optional (when-clause r)) d (~optional (when-clause e))))
-   #:with infer-r (if (attribute r) #'(infer-type r) #'(void))
-   #:with infer-e (if (attribute e) #'(infer-type e) #'(void))
+   #:with infer-r (if (attribute r) #'(type-of r) #'(void))
+   #:with infer-e (if (attribute e) #'(type-of e) #'(void))
    #'(begin
        infer-r
        infer-e
-       (union (list (infer-type i) (infer-type d))))]
+       (union (list (type-of i) (type-of d))))]
 
   [(_ (field-expr expr field-name))
    #'(let ([x (dict-ref (remove-dynamic-indices expr) 'field-name)])
@@ -382,7 +382,7 @@
 
   [(_ (~and (call-expr name arg ...) expr))
    #:with sig-name (format-id #'here "~a-signature" #'name)
-   #'(let* ([arg-types (list (infer-type arg) ...)]
+   #'(let* ([arg-types (list (type-of arg) ...)]
             [res-type (apply sig-name arg-types)])
        (if (andmap static-data? arg-types)
          (static-data (name arg ...) res-type)
@@ -392,14 +392,14 @@
   ; [(field-expr expr field-name type-name)]
 
   [(_ (signal-expr x))
-   #'(infer-type x)]
+   #'(type-of x)]
 
   [(_ (slot-expr x))
-   #'(infer-type x)]
+   #'(type-of x)]
 
   [(_ (lift-expr (name sexpr) ...+ expr))
-   #'(let ([name (make-slot #f (infer-type sexpr))] ...)
-       (infer-type expr))]
+   #'(let ([name (make-slot #f (type-of sexpr))] ...)
+       (type-of expr))]
 
   [_ #'(any)])
 
