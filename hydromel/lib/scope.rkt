@@ -31,7 +31,7 @@
 (define (add-scope stx)
   (ee/add-scope stx (current-scope)))
 
-(define (lookup name [pred (λ (x) #t)])
+(define (lookup name [pred (const #t)])
   (define res (ee/lookup name pred))
   (unless res
     (raise-syntax-error #f "No declaration found for this identifier" name))
