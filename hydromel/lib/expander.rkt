@@ -63,7 +63,16 @@
   ; Return the list of port and signal names in the given syntax object.
   (define (design-unit-field-names stx-lst)
     (define/syntax-parse ((_ name _ ...) ...) (design-unit-fields stx-lst))
-    (attribute name)))
+    (attribute name))
+
+  ; Return the list of spliced composite ports in the given syntax object.
+  (define (design-unit-spliced-names stx-lst)
+    (filter identity
+      (for/list ([stx (in-list stx-lst)])
+        (syntax-parse stx
+          #:literals [composite-port splice]
+          [(composite-port name _ ... splice _ ...) #'name]
+          [_                                        #f])))))
 
 ; A flag that allows to check whether a given form is part of a design unit body,
 ; or whether it appears at the module level.
@@ -84,11 +93,12 @@
 ; Interfaces and components differ by the element types they are allowed
 ; to contain, but the expansion rule is exactly the same.
 (define-syntax-parse-rule (design-unit name body ...)
-  #:with ctor-name        (design-unit-ctor-name #'name)
-  #:with (param-name ...) (design-unit-parameter-names (attribute body))
-  #:with (param-type ...) (design-unit-parameter-types (attribute body))
-  #:with (arg-name   ...) (generate-temporaries        (attribute param-name))
-  #:with (field-name ...) (design-unit-field-names     (attribute body))
+  #:with ctor-name          (design-unit-ctor-name #'name)
+  #:with (param-name ...)   (design-unit-parameter-names (attribute body))
+  #:with (param-type ...)   (design-unit-parameter-types (attribute body))
+  #:with (arg-name   ...)   (generate-temporaries        (attribute param-name))
+  #:with (field-name ...)   (design-unit-field-names     (attribute body))
+  #:with (spliced-name ...) (design-unit-spliced-names   (attribute body))
   (begin
     (provide ctor-name)
     (define (ctor-name arg-name ...)
@@ -101,7 +111,7 @@
         body ...)
       (for ([f (in-list (reverse checks))])
         (f))
-      (make-hash `((field-name . ,field-name) ...)))))
+      (make-hash `((* . (spliced-name ...)) (field-name . ,field-name) ...)))))
 
 (define-syntax-parse-rule (interface name body ...)
   (design-unit name body ...))

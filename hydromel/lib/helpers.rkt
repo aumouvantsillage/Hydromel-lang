@@ -34,25 +34,32 @@
      (hash-set parent path inst)]
 
     [(hash-table _ ...)
+     ; Get the list of spliced port names.
+     ; Include '* as a key to avoid when processing the hash-table.
+     (define sp (cons '* (dict-ref inst '* (thunk empty))))
+     ; For each field that is not a spliced port...
      (for/fold ([res parent])
-               ([(k v) (in-dict inst)])
+               ([(k v) (in-dict inst)]
+                #:when (not (member k sp)))
+       ; Add the field name to the current path.
        (define name (symbol->string k))
        (define path^ (if path (string-append path "." name) name))
+       ; Process the current entry and add it to the slot table.
        (slot-table v res path^))]
 
     [(vector elt ...)
+     ; For each index and each element of the vector...
      (for/fold ([res parent])
                ([v (in-list elt)]
                 [n (in-naturals)])
+       ; Add the index to the current path.
        (define index (format "[~a]" n))
        (define path^ (if path (string-append path index) index))
+       ; Process the current entry and add it to the slot table.
        (slot-table v res path^))]
 
-    [(t/abstract-integer _)
-     (hash-set parent path (slot (signal inst) (thunk (t/literal-type inst))))]
-
     [_
-     (error "Unsupported data type at" path)]))
+     (error "Unsupported data type at" path inst)]))
 
 (define (print-slot-table tbl duration)
   (for ([(name slt) (in-dict tbl)])
