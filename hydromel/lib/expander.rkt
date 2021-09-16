@@ -15,6 +15,7 @@
   (for-syntax
     racket/match
     racket/syntax
+    racket/function
     syntax/stx))
 
 (provide
@@ -170,27 +171,22 @@
 ; A composite port expands to a variable that stores the result of a constructor
 ; call for the corresponding interface.
 ; If a multiplicity is present, a vector of channels is created.
-(define-syntax-parser composite-port
-  #:literals [splice flip]
-  [(_ name (mult) (~or splice flip) ... intf-name arg ...)
-   #:with ctor-name (design-unit-ctor-name #'intf-name)
-   #'(define name (build-vector mult (λ (z) (ctor-name arg ...))))]
-
-  [(_ name () (~or splice flip) ... intf-name arg ...)
-   #:with ctor-name (design-unit-ctor-name #'intf-name)
-   #'(define name (ctor-name arg ...))])
+(define-syntax-parse-rule (composite-port name (mult ...) (~or (~literal splice) (~literal flip)) ... intf-name arg ...)
+  (define name (channel (mult ...) intf-name arg ...)))
 
 ; An instance expands to a variable that stores the result of a constructor call
 ; for the corresponding component.
 ; If a multiplicity is present, a vector of channels is created.
-(define-syntax-parser instance
-  [(_ name (mult) comp-name arg ...)
-   #:with ctor-name (design-unit-ctor-name #'comp-name)
-   #'(define name (build-vector mult (λ (z) (ctor-name arg ...))))]
+(define-syntax-parse-rule (instance name (mult ...) comp-name arg ...)
+  (define name (channel (mult ...) comp-name arg ...)))
 
-  [(_ name () comp-name arg ...)
-   #:with ctor-name (design-unit-ctor-name #'comp-name)
-   #'(define name (ctor-name arg ...))])
+(define-syntax-parser channel
+  [(_ (m ms ...) intf-name arg ...)
+   #'(build-vector m (λ (z) (channel (ms ...) intf-name arg ...)))]
+
+  [(_ () intf-name arg ...)
+   #:with ctor-name (design-unit-ctor-name #'intf-name)
+   #'(ctor-name arg ...)])
 
 ; ------------------------------------------------------------------------------
 ; Statements
@@ -408,8 +404,9 @@
 ; which is expressed as a combination of field and indexed expressions.
 (define-syntax-parser remove-dynamic-indices
   #:literals [indexed-port-expr field-expr]
-  [(_ (indexed-port-expr expr _))
-   #'(indexed-port-expr (remove-dynamic-indices expr) (literal-expr 0))]
+  [(_ (indexed-port-expr expr index ...))
+   #:with (index0 ...) (map (const #'(literal-expr 0)) (attribute index))
+   #'(indexed-port-expr (remove-dynamic-indices expr) index0 ...)]
 
   [(_ (field-expr expr field-name))
    #'(field-expr (remove-dynamic-indices expr) field-name)]

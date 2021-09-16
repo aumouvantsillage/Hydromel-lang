@@ -275,14 +275,14 @@
 
       [s:stx/indexed-port-expr
        (define expr^  (make-checker #'s.expr))
-       (define index^ (make-checker #'s.index))
+       (define index^ (map make-checker (attribute s.index)))
        (thunk
          (define/syntax-parse expr (expr^))
          (define r (resolve #'expr))
          (unless (or (meta/composite-port? r) (meta/instance? r))
            (raise-syntax-error #f "Expression not suitable for indexing" #'s.expr))
-         (define/syntax-parse index (index^))
-         (s/l (indexed-port-expr expr index)))]
+         (define/syntax-parse (index ...) (check-all index^))
+         (s/l (indexed-port-expr expr index ...)))]
 
       [s:stx/register-expr
        (define init-expr^   (make-checker #'s.init-expr))
@@ -377,7 +377,7 @@
       [s:stx/literal-expr      #t]
       [s:stx/name-expr         (define c (lookup #'s.name)) (or (meta/constant? c) (meta/parameter? c))]
       [s:stx/field-expr        (or  (static? #'s.expr) (meta/constant? (resolve stx)))]
-      [s:stx/indexed-port-expr (and (static? #'s.expr) (static? #'s.index))]
+      [s:stx/indexed-port-expr (and (static? #'s.expr) (andmap static? (attribute s.index)))]
       [s:stx/call-expr         (andmap static? (attribute s.arg))]
       [_                       #f]))
 

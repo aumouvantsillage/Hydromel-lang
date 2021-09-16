@@ -93,7 +93,7 @@
 
   (define-syntax-class indexed-port-expr
     #:literals [indexed-port-expr]
-    (pattern (indexed-port-expr expr index)))
+    (pattern (indexed-port-expr expr index ...)))
 
   (define-syntax-class register-expr
     #:literals [register-expr]
