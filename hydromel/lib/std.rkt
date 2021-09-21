@@ -34,6 +34,7 @@
   kw-range       kw-range-impl    kw-range-impl-signature
   kw-slice                        unsigned-slice-signature
   kw-concat      kw-concat-impl   kw-concat-impl-signature
+  kw-array                        vector-signature
   kw-array-ref                    vector-ref-signature
   (all-from-out  "logic.rkt")
   signed_width                    min-signed-width-signature
@@ -214,6 +215,11 @@
   (match (first ts^)
     [(t/signed _)   (t/signed w)]
     [(t/unsigned _) (t/unsigned w)]))
+
+(define-syntax kw-array (meta/builtin-function #'vector))
+
+(define (vector-signature . ts)
+  (t/array (length ts) (t/union ts)))
 
 (define-syntax kw-array-ref (meta/builtin-function #'vector-ref))
 

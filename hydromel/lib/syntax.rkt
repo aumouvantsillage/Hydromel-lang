@@ -129,6 +129,8 @@
       #:attr fn-name #'kw-array-ref)
     (pattern (concat-expr arg ...)
       #:attr fn-name #'kw-concat)
+    (pattern (array-expr arg ...)
+      #:attr fn-name #'kw-array)
     (pattern (call-expr fn-name arg ...)))
 
   (define-syntax-class lift-expr

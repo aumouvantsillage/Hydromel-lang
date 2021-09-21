@@ -886,4 +886,16 @@
   (slot-set! (c22-inst i) (signal 0 1 2 3))
 
   (test-case "Can read an array"
-    (check-sig-equal? (slot-ref c22-inst y) (signal 10 20 30 40) 4)))
+    (check-sig-equal? (slot-ref c22-inst y) (signal 10 20 30 40) 4))
+
+  (component C23
+    (data-port y out (call-expr array (literal-expr 3) (call-expr unsigned (literal-expr 8))))
+    (assignment (name-expr y) (signal-expr (call-expr vector (literal-expr 10) (literal-expr 20) (literal-expr 30)))))
+
+  (define c23-inst (C23-make))
+
+  (test-case "Can make a vector"
+    (check-sig-equal? (slot-ref c23-inst y) (signal (vector 10 20 30)) 1)))
+
+; TODO test multidimensional ports
+; TODO test multidimensional arrays

@@ -75,9 +75,15 @@ if-statement:
 
 for-statement:
   (ID /":")?
-  /"for" ID /"in" expression /"loop"
+  /"for" iterator /"loop"
   statement-block
   /"end"
+
+@iterator:
+  ID /"in" expression
+
+@iterator-list:
+  iterator (/"," iterator)* /","?
 
 statement-block:
   statement*
@@ -86,6 +92,9 @@ statement-block:
 
 ; TODO other expressions
 @expression: maybe-if-expr
+
+@expression-list:
+  expression (/"," expression)* /","?
 
 @maybe-if-expr:     if-expr     | maybe-or-expr
 @maybe-or-expr:     or-expr     | maybe-and-expr
@@ -120,6 +129,9 @@ prefix-expr: ("-" | "not") simple-expr
   indexed-array-expr |
   slice-expr |
   concat-expr |
+  concat-for-expr |
+  array-expr |
+  array-for-expr |
   register-expr |
   call-expr |
   /"(" expression /")"
@@ -141,7 +153,16 @@ slice-expr:
   simple-expr /"{" expression /"}"
 
 concat-expr:
-  /"{" expression (/"," expression)* /","? /"}"
+  /"{" expression-list /"}"
+
+concat-for-expr:
+  /"{" expression /"for" iterator-list /"}"
+
+array-expr:
+  /"[" expression-list /"]"
+
+array-for-expr:
+  /"[" expression /"for" iterator-list /"]"
 
 register-expr:
   /"register" /"(" expression when-clause? /"," expression when-clause? /")"

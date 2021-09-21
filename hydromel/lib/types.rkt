@@ -112,6 +112,7 @@
     [(static-data _ t)             (actual-type t)]
     [(union ts)                    (foldl merge-types #f (map actual-type ts))]
     [(type t)                      (type (actual-type t))]
+    [(array n t)                   (array n (actual-type t))]
     [_                             t]))
 
 (define (merge-types t u)
@@ -129,6 +130,7 @@
     [(list (unsigned n) (unsigned m)) (<= n m)]
     [(list (signed n)   (unsigned m)) #f]
     [(list (unsigned n) (signed m))   (<  n m)]
+    [(list (array n v)  (array m w))  (and (= n m) (subtype? v w))]
     [(list (union vs)   _)            (for/and ([it (in-list vs)])
                                         (subtype? it u))]
     [(list _            (union vs))   (for/or ([it (in-list vs)])
