@@ -50,8 +50,8 @@
 (struct array datatype (size elt-type) #:transparent)
 
 (define (array-signature tn te)
-  (match (cons tn (actual-type te))
-    [(cons (static-data n _) (type te^)) (type (array n te^))]
+  (match (list tn (actual-type te))
+    [(list (static-data n _) (type te^)) (type (array n te^))]
     [_                                   (error "Cannot determine array type" tn te)]))
 
 (struct record datatype (fields) #:transparent)
@@ -115,23 +115,23 @@
     [_                             t]))
 
 (define (merge-types t u)
-  (match (cons t u)
-    [(cons _            #f)           t]
-    [(cons (unsigned m) (unsigned n)) (unsigned (max m n))]
-    [(cons (signed   m) (signed   n)) (signed   (max m n))]
-    [(cons (unsigned m) (signed   n)) (signed   (max (add1 m) n))]
-    [(cons (signed   m) (unsigned n)) (signed   (max m (add1 n)))]
+  (match (list t u)
+    [(list _            #f)           t]
+    [(list (unsigned m) (unsigned n)) (unsigned (max m n))]
+    [(list (signed   m) (signed   n)) (signed   (max m n))]
+    [(list (unsigned m) (signed   n)) (signed   (max (add1 m) n))]
+    [(list (signed   m) (unsigned n)) (signed   (max m (add1 n)))]
     [_                                (error "types cannot be merged" t u)]))
 
 (define (subtype? t u)
-  (match (cons (actual-type t) (actual-type u))
-    [(cons (signed n)   (signed m))   (<= n m)]
-    [(cons (unsigned n) (unsigned m)) (<= n m)]
-    [(cons (signed n)   (unsigned m)) #f]
-    [(cons (unsigned n) (signed m))   (<  n m)]
-    [(cons (union vs)   _)            (for/and ([it (in-list vs)])
+  (match (list (actual-type t) (actual-type u))
+    [(list (signed n)   (signed m))   (<= n m)]
+    [(list (unsigned n) (unsigned m)) (<= n m)]
+    [(list (signed n)   (unsigned m)) #f]
+    [(list (unsigned n) (signed m))   (<  n m)]
+    [(list (union vs)   _)            (for/and ([it (in-list vs)])
                                         (subtype? it u))]
-    [(cons _            (union vs))   (for/or ([it (in-list vs)])
+    [(list _            (union vs))   (for/or ([it (in-list vs)])
                                         (subtype? t it))]
     ; TODO tuple, array, record
     [_ #f]))

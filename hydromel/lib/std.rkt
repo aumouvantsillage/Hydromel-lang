@@ -91,10 +91,10 @@
 (define (bitwise-signature ta tb)
   (define ta^ (t/actual-type ta))
   (define tb^ (t/actual-type tb))
-  (match (cons ta^ tb^)
-    [(cons (t/unsigned na)          (t/unsigned nb))          (t/unsigned (max na nb))]
-    [(cons (t/signed   na)          (t/abstract-integer  nb)) (t/signed   (max na nb))]
-    [(cons (t/abstract-integer  na) (t/signed   nb))          (t/signed   (max na nb))]
+  (match (list ta^ tb^)
+    [(list (t/unsigned na)          (t/unsigned nb))          (t/unsigned (max na nb))]
+    [(list (t/signed   na)          (t/abstract-integer  nb)) (t/signed   (max na nb))]
+    [(list (t/abstract-integer  na) (t/signed   nb))          (t/signed   (max na nb))]
     [_ (error "Bitwise operation expects integer operands.")]))
 
 (define (bitwise-not-signature ta) ta)
@@ -132,11 +132,11 @@
 (define (+-signature ta tb)
   (define ta^ (t/actual-type ta))
   (define tb^ (t/actual-type tb))
-  (match (cons ta^ tb^)
-    [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (add1 (max na nb)))]
-    [(cons (t/unsigned na) (t/signed   nb)) (t/signed   (add1 (max (add1 na) nb)))]
-    [(cons (t/signed   na) (t/unsigned nb)) (t/signed   (add1 (max na (add1 nb))))]
-    [(cons (t/signed   na) (t/signed   nb)) (t/signed   (add1 (max na nb)))]
+  (match (list ta^ tb^)
+    [(list (t/unsigned na) (t/unsigned nb)) (t/unsigned (add1 (max na nb)))]
+    [(list (t/unsigned na) (t/signed   nb)) (t/signed   (add1 (max (add1 na) nb)))]
+    [(list (t/signed   na) (t/unsigned nb)) (t/signed   (add1 (max na (add1 nb))))]
+    [(list (t/signed   na) (t/signed   nb)) (t/signed   (add1 (max na nb)))]
     [_ (error "Arithmetic operation expects integer operands." ta^ tb^)]))
 
 (define (--signature ta [tb #f])
@@ -147,10 +147,10 @@
 (define (*-signature ta tb)
   (define ta^ (t/actual-type ta))
   (define tb^ (t/actual-type tb))
-  (match (cons ta^ tb^)
-    [(cons (t/unsigned na)         (t/unsigned nb))          (t/unsigned (+ na nb))]
-    [(cons (t/abstract-integer na) (t/signed   nb))          (t/signed   (+ na nb))]
-    [(cons (t/signed na)           (t/abstract-integer  nb)) (t/signed   (+ na nb))]
+  (match (list ta^ tb^)
+    [(list (t/unsigned na)         (t/unsigned nb))          (t/unsigned (+ na nb))]
+    [(list (t/abstract-integer na) (t/signed   nb))          (t/signed   (+ na nb))]
+    [(list (t/signed na)           (t/abstract-integer  nb)) (t/signed   (+ na nb))]
     [_ (error "Arithmetic operation expects integer operands.")]))
 
 (define (quotient-signature ta tb)
@@ -166,11 +166,11 @@
   (define ta^ (t/actual-type ta))
   (define tb^ (t/actual-type tb))
   (t/range
-    (match (cons ta^ tb^)
-      [(cons (t/unsigned na) (t/unsigned nb)) (t/unsigned (max na nb))]
-      [(cons (t/unsigned na) (t/signed   nb)) (t/signed   (max (add1 na) nb))]
-      [(cons (t/signed   na) (t/unsigned nb)) (t/signed   (max na (add1 nb)))]
-      [(cons (t/signed   na) (t/signed   nb)) (t/signed   (max na nb))]
+    (match (list ta^ tb^)
+      [(list (t/unsigned na) (t/unsigned nb)) (t/unsigned (max na nb))]
+      [(list (t/unsigned na) (t/signed   nb)) (t/signed   (max (add1 na) nb))]
+      [(list (t/signed   na) (t/unsigned nb)) (t/signed   (max na (add1 nb)))]
+      [(list (t/signed   na) (t/signed   nb)) (t/signed   (max na nb))]
       [_ (error "Range expects integer boundaries.")])))
 
 ; The slicing operation defaults to the unsigned version.
