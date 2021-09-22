@@ -331,6 +331,14 @@
   [(_ (name sexpr) ...+ expr)
    #'(for/signal ([name sexpr] ...) expr)])
 
+(define-syntax-parser array-for-expr
+  [(_ body (~seq name rng-expr) nr ...)
+   #'(for/vector ([name (in-list rng-expr)])
+       (array-for-expr body nr ...))]
+
+  [(_ body)
+   #'body])
+
 ; ------------------------------------------------------------------------------
 ; Type inference and checking
 ; ------------------------------------------------------------------------------
@@ -362,7 +370,7 @@
 ; Generate type inference code for an expression.
 ; TODO Warn on circular dependencies in register-expr
 (define-syntax-parser type-of*
-  #:literals [name-expr literal-expr register-expr when-clause field-expr call-expr slot-expr signal-expr lift-expr type-of]
+  #:literals [name-expr literal-expr register-expr when-clause field-expr call-expr slot-expr signal-expr array-for-expr lift-expr type-of]
   ; This is a special case for (type-of) forms generated in checker.rkt
   ; Maybe we should generate these forms in expander instead.
   [(_ (~and (type-of expr) this-expr))
@@ -402,6 +410,16 @@
 
   [(_ (slot-expr x))
    #'(type-of x)]
+
+  [(_ (array-for-expr body (~seq name rng-expr) nr ...))
+   #'(let* ([rng rng-expr]
+            [left (first rng)]
+            [right (last rng)]
+            [name (make-slot #f (merge-types (literal-type left) (literal-type right)))])
+       (array (length rng) (type-of* (array-for-expr body nr ...))))]
+
+  [(_ (array-for-expr body))
+   #'(type-of body)]
 
   [(_ (lift-expr (name sexpr) ...+ expr))
    #'(let ([name (make-slot #f (type-of sexpr))] ...)
@@ -895,7 +913,24 @@
   (define c23-inst (C23-make))
 
   (test-case "Can make a vector"
-    (check-sig-equal? (slot-ref c23-inst y) (signal (vector 10 20 30)) 1)))
+    (check-sig-equal? (slot-ref c23-inst y) (signal (vector 10 20 30)) 1))
+
+  (component C24
+    (data-port x in (call-expr unsigned (literal-expr 8)))
+    (data-port y out (call-expr array (literal-expr 3) (call-expr unsigned (literal-expr 9))))
+    (assignment (name-expr y)
+      (lift-expr [x^ (slot-expr (name-expr x))]
+        (array-for-expr
+          (call-expr + (name-expr x^) (name-expr i))
+          i (call-expr kw-range-impl (literal-expr 1) (literal-expr 3))))))
+
+  (define c24-inst (C24-make))
+  (slot-set! (c24-inst x) (signal 10 20 30))
+
+  (test-case "Can make a vector comprehension"
+    (check-sig-equal? (slot-ref c24-inst y) (signal (vector 11 12 13) (vector 21 22 23) (vector 31 32 33)) 3)))
 
 ; TODO test multidimensional ports
 ; TODO test multidimensional arrays
+; TODO test concat comprehensions
+; TODO test multidimensional array comprehensions
