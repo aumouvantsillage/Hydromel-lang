@@ -125,7 +125,7 @@
          (parameterize ([current-design-unit (lookup #'s.name)])
            (with-scope
              (~>> (attribute s.body)
-                  (create-aliases)
+                  create-aliases
                   (map add-scope)
                   (map make-checker)))))
        (thunk
@@ -238,7 +238,7 @@
 
       [s:stx/for-statement
        #:with name (or (attribute s.name) (generate-temporary #'if))
-       (define expr^ (make-checker #'s.expr))
+       (define iter-expr^ (make-checker #'s.iter-expr))
        ; The loop counter is bound as a constant inside a new scope
        ; so that only the loop body can use it.
        (define-values (iter-name body^)
@@ -249,11 +249,11 @@
                  add-scope
                  make-checker))))
        (thunk/in-scope
-         (define/syntax-parse expr (expr^))
+         (define/syntax-parse iter-expr (iter-expr^))
          (define/syntax-parse body (body^))
-         (unless (static? #'expr)
-           (raise-syntax-error #f "Non-static expression cannot be used as loop range" #'expr))
-         (q/l (for-statement name #,iter-name expr body)))]
+         (unless (static? #'iter-expr)
+           (raise-syntax-error #f "Non-static expression cannot be used as loop range" #'iter-expr))
+         (q/l (for-statement name #,iter-name iter-expr body)))]
 
       [s:stx/statement-block
        (define body^ (with-scope
@@ -337,6 +337,27 @@
 
            [else stx]))]
 
+      [s:stx/array-for-expr
+       (define iter-exprs^ (map make-checker (attribute s.iter-expr)))
+       ; The loop counter is bound as a constant inside a new scope
+       ; so that only the comprehension body can use it.
+       (define-values (iter-names^ body^)
+         (with-scope
+           (values
+             (for/list ([name (in-list (attribute s.iter-name))])
+               (bind! name (meta/constant #f)))
+             (~> #'s.body
+                 add-scope
+                 make-checker))))
+       (thunk/in-scope
+         (define/syntax-parse (iter-name ...) iter-names^)
+         (define/syntax-parse (iter-expr ...) (check-all iter-exprs^))
+         (define/syntax-parse body (body^))
+         (for ([it (in-list (attribute iter-expr))])
+           (unless (static? it)
+             (raise-syntax-error #f "Non-static expression cannot be used as comprehension range" it)))
+         (s/l (array-for-expr body (~@ iter-name iter-expr) ...)))]
+
       [_ (thunk stx)]))
 
   ; Returns a list of ports in interface intf after splicing.
@@ -347,7 +368,7 @@
           (cons field-name (if flip? (meta/flip-port field) field))
           (if (and (meta/composite-port? field) (meta/composite-port-splice? field))
             (~> field
-                (meta/composite-port-intf-name)
+                meta/composite-port-intf-name
                 (lookup meta/interface?)
                 (splice-interface (xor flip? (meta/composite-port-flip? field))))
             empty)))))
@@ -371,6 +392,7 @@
   ; - a name expression that refers to a constant or a parameter,
   ; - a field expression whose left-hand side has a static value,
   ; - an indexed port expression whose left-hand side and indices have static values,
+  ; - an array comprehension whose body and ranges are static,
   ; - a call whose arguments have static values.
   (define (static? stx)
     (syntax-parse stx
@@ -378,6 +400,7 @@
       [s:stx/name-expr         (define c (lookup #'s.name)) (or (meta/constant? c) (meta/parameter? c))]
       [s:stx/field-expr        (or  (static? #'s.expr) (meta/constant? (resolve stx)))]
       [s:stx/indexed-port-expr (and (static? #'s.expr) (andmap static? (attribute s.index)))]
+      [s:stx/array-for-expr    (and (static? #'body)   (andmap static? (attribute s.iter-expr)))]
       [s:stx/call-expr         (andmap static? (attribute s.arg))]
       [_                       #f]))
 
@@ -458,13 +481,16 @@
 
   (define (lift-if-needed stx)
     (syntax-parse stx
-      #:literals [indexed-port-expr field-expr concat-expr]
+      #:literals [indexed-port-expr field-expr array-for-expr concat-expr]
       [(indexed-port-expr expr ...)
        (lift-if-needed* stx (attribute expr)
          (λ (lst) (q/l (indexed-port-expr #,@lst))))]
       [(field-expr expr sel ...)
        (lift-if-needed* stx (list #'expr)
          (λ (lst) (q/l (field-expr #,(first lst) sel ...))))]
+      [(array-for-expr body iter ...)
+       (lift-if-needed* stx (list #'body)
+         (λ (lst) (q/l (array-for-expr #,(first lst) iter ...))))]
       [s:stx/call-expr
        (lift-if-needed* stx (attribute s.arg)
          (λ (lst) (q/l (call-expr s.fn-name #,@lst))))]
@@ -1056,4 +1082,28 @@
   (slot-set! (c34-inst i) (signal 0 1 2 3))
 
   (test-case "Can read an array"
-    (check-sig-equal? (slot-ref c34-inst y) (signal 10 20 30 40) 4)))
+    (check-sig-equal? (slot-ref c34-inst y) (signal 10 20 30 40) 4))
+
+  (begin-hydromel
+    (component C35
+      (data-port y out (call-expr array (literal-expr 3) (call-expr unsigned (literal-expr 8))))
+      (assignment (name-expr y) (array-expr (literal-expr 10) (literal-expr 20) (literal-expr 30))))
+
+    (define c35-inst (C35-make))
+
+    (test-case "Can make a vector"
+      (check-sig-equal? (slot-ref c35-inst y) (signal (vector 10 20 30)) 1))))
+
+  ; (begin-hydromel
+  ;   (component C36
+  ;     (data-port x in (call-expr unsigned (literal-expr 8)))
+  ;     (data-port y out (call-expr array (literal-expr 3) (call-expr unsigned (literal-expr 9))))
+  ;     (assignment (name-expr y)
+  ;       (array-for-expr (add-expr (name-expr x) + (name-expr i))
+  ;                       i (range-expr (literal-expr 1) .. (literal-expr 3)))))))
+  ;
+  ; (define c36-inst (C36-make))
+  ; (slot-set! (c36-inst x) (signal 10 20 30))
+  ;
+  ; (test-case "Can make a vector comprehension"
+  ;   (check-sig-equal? (slot-ref c36-inst y) (signal (vector 11 12 13) (vector 21 22 23) (vector 31 32 33)) 3)))

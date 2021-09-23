@@ -27,7 +27,7 @@
                      ; Find a port with the given name in the interface
                      ; of composite port p.
                      (define q (~> p
-                                 (composite-port-intf-name)
+                                 composite-port-intf-name
                                  (lookup interface?)
                                  (design-unit-ref name #f)))
                      ; If a port was found and p is flipped, then flip q.

@@ -31,6 +31,7 @@
   slot-expr signal-expr lift-expr concat-expr
   or-expr and-expr rel-expr add-expr mult-expr
   if-expr prefix-expr range-expr slice-expr
+  array-expr array-for-expr
   type-of)
 
 ; ------------------------------------------------------------------------------
@@ -230,9 +231,9 @@
                      ...
                      [else else-body])))
 
-(define-syntax-parse-rule (for-statement name iter-name expr body ...)
+(define-syntax-parse-rule (for-statement name iter-name iter-expr body ...)
   #:with iter-name^ (generate-temporary #'iter-name)
-  (define name (for/vector ([iter-name^ (in-list expr)])
+  (define name (for/vector ([iter-name^ (in-list iter-expr)])
                  (define iter-name (make-slot iter-name^ (static-data iter-name^ (literal-type iter-name^))))
                  body ...)))
 
@@ -332,8 +333,8 @@
    #'(for/signal ([name sexpr] ...) expr)])
 
 (define-syntax-parser array-for-expr
-  [(_ body (~seq name rng-expr) nr ...)
-   #'(for/vector ([name (in-list rng-expr)])
+  [(_ body (~seq iter-name iter-expr) nr ...)
+   #'(for/vector ([iter-name (in-list iter-expr)])
        (array-for-expr body nr ...))]
 
   [(_ body)
@@ -411,11 +412,11 @@
   [(_ (slot-expr x))
    #'(type-of x)]
 
-  [(_ (array-for-expr body (~seq name rng-expr) nr ...))
-   #'(let* ([rng rng-expr]
-            [left (first rng)]
-            [right (last rng)]
-            [name (make-slot #f (merge-types (literal-type left) (literal-type right)))])
+  [(_ (array-for-expr body (~seq iter-name iter-expr) nr ...))
+   #'(let* ([rng       iter-expr]
+            [left      (first rng)]
+            [right     (last rng)]
+            [iter-name (make-slot #f (merge-types (literal-type left) (literal-type right)))])
        (array (length rng) (type-of* (array-for-expr body nr ...))))]
 
   [(_ (array-for-expr body))
@@ -465,7 +466,7 @@
 ; Concatenation expressions are converted to function calls in the checker.
 (disable-forms import or-expr and-expr rel-expr add-expr mult-expr
                if-expr prefix-expr range-expr slice-expr concat-expr
-               indexed-array-expr
+               indexed-array-expr array-expr
   "should not be used outside of begin-tiny-hdl")
 
 (module+ test

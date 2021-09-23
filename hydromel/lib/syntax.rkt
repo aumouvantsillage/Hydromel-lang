@@ -73,7 +73,7 @@
 
   (define-syntax-class for-statement
     #:literals [for-statement]
-    (pattern (for-statement (~optional name) iter-name expr body)))
+    (pattern (for-statement (~optional name) iter-name iter-expr body)))
 
   (define-syntax-class statement-block
     #:literals [statement-block]
@@ -100,13 +100,17 @@
     (pattern (register-expr init-expr   (~optional init-cond:when-clause)
                             update-expr (~optional update-cond:when-clause))))
 
+  (define-syntax-class array-for-expr
+    #:literals [array-for-expr]
+    (pattern (array-for-expr body (~seq iter-name iter-expr) ...+)))
+
   (define-syntax-class when-clause
     #:literals [when-clause]
     (pattern (when-clause expr)))
 
   (define-syntax-class call-expr
     #:literals [call-expr or-expr and-expr rel-expr add-expr mult-expr if-expr prefix-expr
-                range-expr slice-expr concat-expr indexed-array-expr]
+                range-expr slice-expr concat-expr indexed-array-expr array-expr]
     (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
       #:attr fn-name (format-id #'op "kw-~a" #'op))
