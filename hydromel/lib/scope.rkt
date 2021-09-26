@@ -5,34 +5,34 @@
 #lang racket
 
 (require
-  racket/function
-  (prefix-in ee/ ee-lib))
+  syntax/parse/define
+  syntax/id-table)
 
 (provide
   with-scope
-  thunk/in-scope
-  add-scope
-  (rename-out [ee/bind! bind!])
+  set-scope
+  bind!
   lookup)
+
+(struct scope (parent table))
 
 (define current-scope (make-parameter #f))
 
-(define-syntax-rule (with-scope body ...)
-  (ee/with-scope sc
-    (parameterize ([current-scope sc])
-      body ...)))
+(define-syntax-parse-rule (with-scope body ...)
+  (parameterize ([current-scope (scope (current-scope) (make-free-id-table))])
+    body ...))
 
-(define-syntax-rule (thunk/in-scope body ...)
-  (let ([ctx (ee/current-def-ctx)])
-    (thunk
-      (parameterize ([ee/current-def-ctx ctx])
-        body ...))))
+(define (set-scope stx)
+  (syntax-property stx 'scope (current-scope)))
 
-(define (add-scope stx)
-  (ee/add-scope stx (current-scope)))
+(define (bind! name data)
+  (dict-set! (scope-table (current-scope)) name data))
 
-(define (lookup name [pred (const #t)])
-  (define res (ee/lookup name pred))
-  (unless res
-    (raise-syntax-error #f "No declaration found for this identifier" name))
-  res)
+(define (lookup name [pred (const #t)] #:scope [sc (syntax-property name 'scope)])
+  (if sc
+    (dict-ref (scope-table sc) name
+      (thunk (lookup name pred #:scope (scope-parent sc))))
+    (let ([res (syntax-local-value name)])
+      (unless res
+        (raise-syntax-error #f "No declaration found for this identifier" name))
+      res)))

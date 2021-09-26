@@ -261,9 +261,7 @@
   #:with name^ #'(concat-name name ...)
   (if (slot? name^)
     (slot-data name^)
-    (begin
-      ; (printf "NOT A SLOT ~a ~a\n" '(name ...) name^)
-      name^)))
+    name^))
 
 ; Append a suffix to a name-expr if specified.
 (define-syntax-parser concat-name
