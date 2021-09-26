@@ -339,7 +339,7 @@
 
       [_ this-syntax]))
 
-  ; Fourth path: label all expressions for the type checker.
+  ; Fourth pass: label all expressions for the type checker.
   (define (label stx)
     (syntax-property
       (syntax-parse stx
