@@ -1,0 +1,14 @@
+#lang hydromel
+
+component register_bank(T : type, LENGTH : natural)
+    port write : in bit
+    port addr : in unsigned(unsigned_width(LENGTH-1))
+    port d : in T
+    port q : out T
+
+    signal r : array(LENGTH, T) =
+        register([0 for n in 0..LENGTH-1],
+                 [if addr == n then d else r[n]
+                  for n in 0..LENGTH-1] when write)
+    q = r[addr]
+end

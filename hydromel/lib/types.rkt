@@ -50,9 +50,9 @@
 (struct array datatype (size elt-type) #:transparent)
 
 (define (array-signature tn te)
-  (match (list tn (actual-type te))
-    [(list (static-data n _) (type te^)) (type (array n te^))]
-    [_                                   (error "Cannot determine array type" tn te)]))
+  (match (list tn te)
+    [(list (static-data n _) (static-data t _)) (type (array n t))]
+    [_                                          (error "Cannot determine array type" tn te)]))
 
 (struct record datatype (fields) #:transparent)
 
@@ -117,12 +117,14 @@
 
 (define (merge-types t u)
   (match (list t u)
-    [(list _            #f)           t]
-    [(list (unsigned m) (unsigned n)) (unsigned (max m n))]
-    [(list (signed   m) (signed   n)) (signed   (max m n))]
-    [(list (unsigned m) (signed   n)) (signed   (max (add1 m) n))]
-    [(list (signed   m) (unsigned n)) (signed   (max m (add1 n)))]
-    [_                                (error "types cannot be merged" t u)]))
+    [(list _              #f)           t]
+    [(list (unsigned m)   (unsigned n)) (unsigned (max m n))]
+    [(list (signed   m)   (signed   n)) (signed   (max m n))]
+    [(list (unsigned m)   (signed   n)) (signed   (max (add1 m) n))]
+    [(list (signed   m)   (unsigned n)) (signed   (max m (add1 n)))]
+    [(list (array    n v) (array    m w))
+     #:when (= n m)                     (array n (merge-types v w))]
+    [_                                  (error "types cannot be merged" t u)]))
 
 (define (subtype? t u)
   (match (list (actual-type t) (actual-type u))

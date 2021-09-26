@@ -389,7 +389,7 @@
       [s:stx/name-expr         (define c (lookup #'s.name)) (or (meta/constant? c) (meta/parameter? c))]
       [s:stx/field-expr        (or  (static? #'s.expr) (meta/constant? (resolve stx)))]
       [s:stx/indexed-port-expr (and (static? #'s.expr) (andmap static? (attribute s.index)))]
-      [s:stx/array-for-expr    (and (static? #'body)   (andmap static? (attribute s.iter-expr)))]
+      [s:stx/array-for-expr    (and (static? #'s.body) (andmap static? (attribute s.iter-expr)))]
       [s:stx/call-expr         (andmap static? (attribute s.arg))]
       [_                       #f]))
 
