@@ -98,12 +98,6 @@
   ; Second pass:  create the scope hierarchy and bindings to local metadata.
   (define (add-scopes stx)
     (syntax-parse stx
-      #:literals [compile-hydromel]
-
-      [(compile-hydromel body ...)
-       #:with (body^ ...) (map add-scopes (attribute body))
-       (s/l (compile-hydromel body^ ...))]
-
       [s:stx/design-unit
        #:with (unit-type _ ...) this-syntax
        #:with (body ...) (parameterize ([current-design-unit (lookup #'s.name)])
@@ -114,52 +108,28 @@
        (s/l (unit-type s.name body ...))]
 
       [s:stx/parameter
-       #:with type (add-scopes #'s.type)
        (bind! #'s.name (meta/parameter))
-       (s/l (parameter s.name type))]
+       (add-scopes* this-syntax)]
 
-      [s:stx/constant
-       #:with expr (add-scopes #'s.expr)
-       (when (current-design-unit)
-         (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name)))
-       (s/l (constant s.name expr))]
+      [s:stx/constant #:when (current-design-unit)
+       (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
+       (add-scopes* this-syntax)]
 
       [s:stx/data-port
-       #:with type (add-scopes #'s.type)
        (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
-       (s/l (data-port s.name s.mode type))]
+       (add-scopes* this-syntax)]
 
       [s:stx/composite-port
-       #:with (mult ...) (map add-scopes (attribute s.mult))
-       #:with (arg  ...) (map add-scopes (attribute s.arg))
        (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
-       (s/l (composite-port s.name (mult ...) s.mode ... s.intf-name arg ...))]
+       (add-scopes* this-syntax)]
 
       [s:stx/instance
-       #:with (mult ...) (map add-scopes (attribute s.mult))
-       #:with (arg  ...) (map add-scopes (attribute s.arg))
        (bind! #'s.name (meta/instance #'s.comp-name))
-       (s/l (instance s.name (mult ...) s.comp-name arg ...))]
+       (add-scopes* this-syntax)]
 
       [s:stx/local-signal
-       #:with expr (add-scopes #'s.expr)
        (bind! #'s.name (meta/local-signal))
-       (if (attribute s.type)
-         (syntax-parse (add-scopes #'s.type)
-           [type (s/l (local-signal s.name type expr))])
-         (s/l (local-signal s.name expr)))]
-
-      [s:stx/assignment
-       #:with target (add-scopes #'s.target)
-       #:with expr   (add-scopes #'s.expr)
-       (s/l (assignment target expr))]
-
-      [s:stx/if-statement
-       #:with name (or (attribute s.name) (generate-temporary #'if))
-       #:with (condition ...) (map add-scopes (attribute s.condition))
-       #:with (then-body ...) (map add-scopes (attribute s.then-body))
-       #:with else-body       (add-scopes #'s.else-body)
-       (s/l (if-statement name (~@ condition then-body) ... else-body))]
+       (add-scopes* this-syntax)]
 
       [s:stx/for-statement
        #:with name (or (attribute s.name) (generate-temporary #'if))
@@ -175,28 +145,6 @@
        #:with (body ...) (with-scope (map add-scopes (attribute s.body)))
        (s/l (statement-block body ...))]
 
-      [s:stx/field-expr
-       #:with expr (add-scopes #'s.expr)
-       (s/l (field-expr expr s.field-name))]
-
-      [s:stx/indexed-port-expr
-       #:with expr        (add-scopes #'s.expr)
-       #:with (index ...) (map add-scopes (attribute s.index))
-       (s/l (indexed-port-expr expr index ...))]
-
-      [s:stx/register-expr
-       #:with (_ arg ...) this-syntax
-       #:with (arg^ ...) (map add-scopes (attribute arg))
-       (s/l (register-expr arg^ ...))]
-
-      [s:stx/when-clause
-       #:with expr (add-scopes #'s.expr)
-       (s/l (when-clause expr))]
-
-      [s:stx/call-expr
-       #:with (arg ...) (map add-scopes (attribute s.arg))
-       (s/l (call-expr s.fn-name arg ...))]
-
       [s:stx/array-for-expr
        #:with (iter-expr ...) (map add-scopes (attribute s.iter-expr))
        ; The loop counter is bound as a constant inside a new scope
@@ -207,9 +155,21 @@
                      (add-scopes #'s.body))
        (s/l (array-for-expr body (~@ s.iter-name iter-expr) ...))]
 
+      ; Attach the current scope as a syntax property to the current name,
+      ; allowing to perform lookups in the semantic checking pass.
       [s:stx/name-expr
        #:with name (set-scope #'s.name)
        (s/l (name-expr name))]
+
+      [_ (add-scopes* this-syntax)]))
+
+  (define (add-scopes* stx)
+    (syntax-parse stx
+      ; Add scopes recursively to any list form that
+      ; does not create bindings or introduce a new scope.
+      [(item ...)
+       #:with (item^ ...) (map add-scopes (attribute item))
+       (s/l (item^ ...))]
 
       [_ this-syntax]))
 
@@ -292,13 +252,14 @@
          (q/l (assignment target #,(check-assigned-expr #'expr))))]
 
       [s:stx/if-statement
+       #:with name            (or (attribute s.name) (generate-temporary #'if))
        #:with (condition ...) (map check (attribute s.condition))
        #:with (then-body ...) (map check (attribute s.then-body))
        #:with else-body       (check #'s.else-body)
        (for ([it (in-list (attribute condition))]
              #:unless (static? it))
          (raise-syntax-error #f "Non-static expression cannot be used in range" it))
-       (s/l (if-statement s.name (~@ condition then-body) ... else-body))]
+       (s/l (if-statement name (~@ condition then-body) ... else-body))]
 
       [s:stx/for-statement
        #:with iter-expr (check #'s.iter-expr)
