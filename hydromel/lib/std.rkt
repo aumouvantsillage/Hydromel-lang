@@ -19,38 +19,38 @@
     (prefix-in meta/ "meta.rkt")))
 
 (provide
-  int-to-bool    int-to-bool:impl int-to-bool:impl:return-type
-  &if            if:impl          if:impl:return-type
-  &not                            bitwise-not:return-type
-  &and                            bitwise-and:return-type
-  &or                             bitwise-ior:return-type
-  &xor                            bitwise-xor:return-type
-  &==            eq:impl          eq:impl:return-type
-  &/=            ne:impl          ne:impl:return-type
-  &>             gt:impl          gt:impl:return-type
-  &+                              +:return-type
-  &-                              -:return-type
-  &*                              *:return-type
-  &/                              quotient:return-type
-  &range         range:impl       range:impl:return-type
-  slice                           unsigned-slice:return-type
-  concat         concat:impl      concat:impl:return-type
-  make-array                      vector:return-type
-  array-ref                       vector-ref:return-type
+  int->bool      int->bool:impl int->bool:impl:return-type
+  &if            if:impl        if:impl:return-type
+  &not                          bitwise-not:return-type
+  &and                          bitwise-and:return-type
+  &or                           bitwise-ior:return-type
+  &xor                          bitwise-xor:return-type
+  &==            eq:impl        eq:impl:return-type
+  &/=            ne:impl        ne:impl:return-type
+  &>             gt:impl        gt:impl:return-type
+  &+                            +:return-type
+  &-                            -:return-type
+  &*                            *:return-type
+  &/                            quotient:return-type
+  &range         range:impl     range:impl:return-type
+  slice                         unsigned-slice:return-type
+  concat         concat:impl    concat:impl:return-type
+  make-array                    vector:return-type
+  array-ref                     vector-ref:return-type
   (all-from-out  "logic.rkt")
-  signed_width                    min-signed-width:return-type
-  unsigned_width                  min-unsigned-width:return-type
-  cast           cast:impl        cast:impl:return-type)
+  signed_width                  min-signed-width:return-type
+  unsigned_width                min-unsigned-width:return-type
+  cast           cast:impl      cast:impl:return-type)
 
 ; Convert an integer to a boolean.
 ; This function is used in generated conditional statements.
 ; It is not available from Hydromel source code.
-(define-syntax int-to-bool (meta/builtin-function #'int-to-bool:impl))
+(define-syntax int->bool (meta/builtin-function #'int->bool:impl))
 
-(define (int-to-bool:impl a)
+(define (int->bool:impl a)
   (not (zero? a)))
 
-(define (int-to-bool:impl:return-type ta)
+(define (int->bool:impl:return-type ta)
   (t/boolean))
 
 ; The Hydromel if statement is expanded to a call-expr
@@ -58,7 +58,7 @@
 (define-syntax &if (meta/builtin-function #'if:impl))
 
 (define-syntax-parse-rule (if:impl (~seq cnd thn) ... els)
-  (cond [(int-to-bool:impl cnd) thn]
+  (cond [(int->bool:impl cnd) thn]
         ...
         [else els]))
 

@@ -300,7 +300,7 @@
        (s/l (register-expr arg ...))]
 
       [s:stx/when-clause
-       #:with expr (check-assigned-expr (check #'(call-expr int-to-bool s.expr)))
+       #:with expr (check-assigned-expr (check #'(call-expr int->bool s.expr)))
        (s/l (when-clause expr))]
 
       [s:stx/call-expr

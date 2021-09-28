@@ -133,7 +133,7 @@
 (define-syntax-parser constant
   ; Local constant in an interface or component.
   [(constant name expr) #:when (syntax-parameter-value #'in-design-unit)
-   #'(define name (constant-to-slot expr))]
+   #'(define name (constant->slot expr))]
 
   ; Module-level context constant.
   [(constant name expr)
@@ -144,12 +144,12 @@
        ; dictionary that will be used only once.
        (define name^ (let ([types (make-hash)])
                        (syntax-parameterize ([inferred-types (make-rename-transformer #'types)])
-                         (constant-to-slot expr)))))])
+                         (constant->slot expr)))))])
 
 ; A constant infers its type immediately before computing its value.
 ; Here, we benefit from the fact that type-of will return a
 ; static-data where the expression has already been evaluated.
-(define-syntax-parse-rule (constant-to-slot expr)
+(define-syntax-parse-rule (constant->slot expr)
   (let ([expr-type (type-of expr)])
     (make-slot (static-data-value expr-type) expr-type)))
 
@@ -227,7 +227,7 @@
 ; An if statement expands to a conditional statement that generates a hash map.
 ; That hash map is assigned to a variable with the same name as the if label.
 (define-syntax-parse-rule (if-statement name (~seq condition then-body) ... else-body)
-  (define name (cond [(int-to-bool:impl condition) then-body]
+  (define name (cond [(int->bool:impl condition) then-body]
                      ...
                      [else else-body])))
 
