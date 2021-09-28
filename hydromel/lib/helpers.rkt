@@ -66,7 +66,7 @@
     (define data (slot-data slt))
     (printf "~a : ~v = ~a\n"
       name
-      (t/actual-type (slot-type slt))
+      (t/normalize-type (slot-type slt))
       (if (signal? data)
         (signal-take data duration)
         data))))

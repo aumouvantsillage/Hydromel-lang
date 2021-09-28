@@ -20,7 +20,7 @@
                           [index      (in-naturals)])
                  (define samples (~> slt slot-data (signal-take duration)))
                  (values name (waveform (format "s~a" index)
-                                        (~> slt slot-type t/actual-type t/abstract-integer-width)
+                                        (~> slt slot-type t/normalize-type t/abstract-integer-width)
                                         samples))))
 
   ; VCD header.

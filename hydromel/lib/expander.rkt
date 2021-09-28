@@ -414,7 +414,7 @@
    #'(let* ([rng       iter-expr]
             [left      (first rng)]
             [right     (last rng)]
-            [iter-name (make-slot #f (merge-types (literal-type left) (literal-type right)))])
+            [iter-name (make-slot #f (common-supertype (literal-type left) (literal-type right)))])
        (array (length rng) (type-of* (array-for-expr body nr ...))))]
 
   [(_ (array-for-expr body))
@@ -887,8 +887,8 @@
   (define c21-inst (C21-make))
 
   (test-case "Can infer types when assignments are in reverse order"
-    (check-equal? (actual-type (slot-type (dict-ref c21-inst 's))) (actual-type (slot-type (dict-ref c21-inst 'x))))
-    (check-equal? (actual-type (slot-type (dict-ref c21-inst 'u))) (actual-type (slot-type (dict-ref c21-inst 's)))))
+    (check-equal? (normalize-type (slot-type (dict-ref c21-inst 's))) (normalize-type (slot-type (dict-ref c21-inst 'x))))
+    (check-equal? (normalize-type (slot-type (dict-ref c21-inst 'u))) (normalize-type (slot-type (dict-ref c21-inst 's)))))
 
   (component C22
     (data-port x in  (call-expr array (literal-expr 4) (call-expr unsigned (literal-expr 8))))

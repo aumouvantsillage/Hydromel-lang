@@ -103,7 +103,7 @@
 
 (define (type-impl-signature)
   (static-data (type-impl) (type-impl)))
-  
+
 ; Type helpers.
 
 (define (literal-type x)
@@ -113,17 +113,17 @@
     (unsigned (l/min-unsigned-width x))
     (signed   (l/min-signed-width   x))))
 
-(define (actual-type t)
+(define (normalize-type t)
   (match t
     [(static-data n (unsigned #f)) (unsigned (l/min-unsigned-width n))]
     [(static-data n (signed   #f)) (signed   (l/min-unsigned-width n))]
-    [(static-data _ t)             (actual-type t)]
-    [(union ts)                    (foldl merge-types #f (map actual-type ts))]
-    [(subtype t)                   (subtype (actual-type t))]
-    [(array n t)                   (array n (actual-type t))]
+    [(static-data _ t)             (normalize-type t)]
+    [(union ts)                    (foldl common-supertype #f (map normalize-type ts))]
+    [(subtype t)                   (subtype (normalize-type t))]
+    [(array n t)                   (array n (normalize-type t))]
     [_                             t]))
 
-(define (merge-types t u)
+(define (common-supertype t u)
   (match (list t u)
     [(list _              #f)           t]
     [(list (unsigned m)   (unsigned n)) (unsigned (max m n))]
@@ -131,11 +131,11 @@
     [(list (unsigned m)   (signed   n)) (signed   (max (add1 m) n))]
     [(list (signed   m)   (unsigned n)) (signed   (max m (add1 n)))]
     [(list (array    n v) (array    m w))
-     #:when (= n m)                     (array n (merge-types v w))]
+     #:when (= n m)                     (array n (common-supertype v w))]
     [_                                  (error "types cannot be merged" t u)]))
 
 (define (<: t u)
-  (match (list (actual-type t) (actual-type u))
+  (match (list (normalize-type t) (normalize-type u))
     [(list (signed n)   (signed m))   (<= n m)]
     [(list (unsigned n) (unsigned m)) (<= n m)]
     [(list (signed n)   (unsigned m)) #f]

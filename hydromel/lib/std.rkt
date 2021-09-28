@@ -14,6 +14,7 @@
     min-unsigned-value max-unsigned-value
     unsigned-slice     unsigned-concat)
   syntax/parse/define
+  threading
   (for-syntax
     (prefix-in meta/ "meta.rkt")))
 
@@ -69,7 +70,7 @@
 (define-syntax unsigned_width (meta/builtin-function #'min-unsigned-width))
 
 (define (min-unsigned-width-signature t)
-  (define t^ (t/actual-type t))
+  (define t^ (t/normalize-type t))
   (t/unsigned (t/abstract-integer-width t^)))
 
 ; Returns the minimum width to encode a given number
@@ -77,7 +78,7 @@
 (define-syntax signed_width (meta/builtin-function #'min-signed-width))
 
 (define (min-signed-width-signature t)
-  (define t^ (t/actual-type t))
+  (define t^ (t/normalize-type t))
   (t/unsigned (match t^
                 [(t/signed   n) n]
                 [(t/unsigned n) (add1 n)]
@@ -90,8 +91,8 @@
 (define-syntax kw-xor (meta/builtin-function #'bitwise-xor))
 
 (define (bitwise-signature ta tb)
-  (define ta^ (t/actual-type ta))
-  (define tb^ (t/actual-type tb))
+  (define ta^ (t/normalize-type ta))
+  (define tb^ (t/normalize-type tb))
   (match (list ta^ tb^)
     [(list (t/unsigned na)          (t/unsigned nb))          (t/unsigned (max na nb))]
     [(list (t/signed   na)          (t/abstract-integer  nb)) (t/signed   (max na nb))]
@@ -131,8 +132,8 @@
 (define-syntax kw-/ (meta/builtin-function #'quotient))
 
 (define (+-signature ta tb)
-  (define ta^ (t/actual-type ta))
-  (define tb^ (t/actual-type tb))
+  (define ta^ (t/normalize-type ta))
+  (define tb^ (t/normalize-type tb))
   (match (list ta^ tb^)
     [(list (t/unsigned na) (t/unsigned nb)) (t/unsigned (add1 (max na nb)))]
     [(list (t/unsigned na) (t/signed   nb)) (t/signed   (add1 (max (add1 na) nb)))]
@@ -143,11 +144,11 @@
 (define (--signature ta [tb #f])
   (if tb
     (+-signature ta tb)
-    (t/signed (add1 (t/abstract-integer-width (t/actual-type ta))))))
+    (t/signed (add1 (t/abstract-integer-width (t/normalize-type ta))))))
 
 (define (*-signature ta tb)
-  (define ta^ (t/actual-type ta))
-  (define tb^ (t/actual-type tb))
+  (define ta^ (t/normalize-type ta))
+  (define tb^ (t/normalize-type tb))
   (match (list ta^ tb^)
     [(list (t/unsigned na)         (t/unsigned nb))          (t/unsigned (+ na nb))]
     [(list (t/abstract-integer na) (t/signed   nb))          (t/signed   (+ na nb))]
@@ -164,8 +165,8 @@
   (range a (add1 b)))
 
 (define (kw-range-impl-signature ta tb)
-  (define ta^ (t/actual-type ta))
-  (define tb^ (t/actual-type tb))
+  (define ta^ (t/normalize-type ta))
+  (define tb^ (t/normalize-type tb))
   (t/range
     (match (list ta^ tb^)
       [(list (t/unsigned na) (t/unsigned nb)) (t/unsigned (max na nb))]
@@ -191,7 +192,7 @@
                  [(t/signed      n)   (min-signed-value   n)]
                  [_                   (error "Invalid type for right slice index.")]))
   (define width (max 0 (add1 (- left right))))
-  (match (t/actual-type ta)
+  (match (t/normalize-type ta)
     [(t/unsigned _) (t/unsigned width)]
     [(t/signed   _) (t/signed   width)]
     [_ (error "Slice expects integer value.")]))
@@ -204,14 +205,16 @@
 ; Since this function needs to know the width of its arguments,
 ; their types are inserted by the checker.
 (define-syntax-parse-rule (kw-concat-impl (~seq v t) ...)
-  (unsigned-concat [v (sub1 (t/abstract-integer-width (t/actual-type t))) 0] ...))
+  (unsigned-concat [v (~> t t/normalize-type t/abstract-integer-width sub1) 0] ...))
 
 (define (kw-concat-impl-signature . ts)
-  (define w (for/sum ([t (in-list ts)]
-                      [i (in-naturals)] #:when (odd? i))
+  (define ts^ (for/list ([t (in-list ts)]
+                         [i (in-naturals)] #:when (odd? i))
+                (~> t t/static-data-value t/normalize-type)))
+  (define w (for/sum ([t (in-list ts^)])
               ; TODO assert that t contains an integer type
-              (t/abstract-integer-width (t/static-data-value t))))
-  (match (t/actual-type (first ts))
+              (t/abstract-integer-width t)))
+  (match (first ts^)
     [(t/signed _)   (t/signed w)]
     [(t/unsigned _) (t/unsigned w)]))
 
@@ -224,7 +227,7 @@
 
 (define (vector-ref-signature ta tb)
   ; TODO check the type of tb
-  (define ta^ (t/actual-type ta))
+  (define ta^ (t/normalize-type ta))
   (match ta^
     [(t/array _ te) te]
     [_              (error "Not an array type" ta)]))
