@@ -31,12 +31,12 @@
 ; whose result is a type.
 (define (signed-signature tn)
   (match tn
-    [(static-data n _) (type (signed n))]
+    [(static-data n _) (static-data (signed n) (type-impl))]
     [_                 (error "Signed width must be a static integer" tn)]))
 
 (define (unsigned-signature tn)
   (match tn
-    [(static-data n _) (type (unsigned n))]
+    [(static-data n _) (static-data (unsigned n) (type-impl))]
     [_                 (error "Unsigned width must be a static integer" tn)]))
 
 (struct unsigned abstract-integer ()
@@ -51,7 +51,7 @@
 
 (define (array-signature tn te)
   (match (list tn te)
-    [(list (static-data n _) (static-data t _)) (type (array n t))]
+    [(list (static-data n _) (static-data t _)) (static-data (array n t) (type-impl))]
     [_                                          (error "Cannot determine array type" tn te)]))
 
 (struct record datatype (fields) #:transparent)
@@ -62,8 +62,8 @@
 ; The boolean type is used internally.
 (struct boolean datatype () #:transparent)
 
-; The type of types.
-(struct type datatype (supertype) #:transparent)
+; Subtype of a given type.
+(struct subtype datatype (supertype) #:transparent)
 
 ; A type to keep a literal value with its type.
 (struct static-data datatype (value type)
@@ -78,7 +78,7 @@
   (unsigned 1))
 
 (define (bit-impl-signature)
-  (type (bit-impl)))
+  (static-data (bit-impl) (type-impl)))
 
 (define-syntax natural (meta/builtin-function #'natural-impl))
 
@@ -86,7 +86,7 @@
   (unsigned #f))
 
 (define (natural-impl-signature)
-  (type (natural-impl)))
+  (static-data (natural-impl) (type-impl)))
 
 (define-syntax integer (meta/builtin-function #'integer-impl))
 
@@ -94,8 +94,16 @@
   (signed #f))
 
 (define (integer-impl-signature)
-  (type (integer-impl)))
+  (static-data (integer-impl) (type-impl)))
 
+(define-syntax type (meta/builtin-function #'type-impl))
+
+(define (type-impl)
+  (subtype (any)))
+
+(define (type-impl-signature)
+  (static-data (type-impl) (type-impl)))
+  
 ; Type helpers.
 
 (define (literal-type x)
@@ -111,7 +119,7 @@
     [(static-data n (signed   #f)) (signed   (l/min-unsigned-width n))]
     [(static-data _ t)             (actual-type t)]
     [(union ts)                    (foldl merge-types #f (map actual-type ts))]
-    [(type t)                      (type (actual-type t))]
+    [(subtype t)                   (subtype (actual-type t))]
     [(array n t)                   (array n (actual-type t))]
     [_                             t]))
 
@@ -126,16 +134,16 @@
      #:when (= n m)                     (array n (merge-types v w))]
     [_                                  (error "types cannot be merged" t u)]))
 
-(define (subtype? t u)
+(define (<: t u)
   (match (list (actual-type t) (actual-type u))
     [(list (signed n)   (signed m))   (<= n m)]
     [(list (unsigned n) (unsigned m)) (<= n m)]
     [(list (signed n)   (unsigned m)) #f]
     [(list (unsigned n) (signed m))   (<  n m)]
-    [(list (array n v)  (array m w))  (and (= n m) (subtype? v w))]
+    [(list (array n v)  (array m w))  (and (= n m) (<: v w))]
     [(list (union vs)   _)            (for/and ([it (in-list vs)])
-                                        (subtype? it u))]
+                                        (<: it u))]
     [(list _            (union vs))   (for/or ([it (in-list vs)])
-                                        (subtype? t it))]
+                                        (<: t it))]
     ; TODO tuple, array, record
     [_ #f]))

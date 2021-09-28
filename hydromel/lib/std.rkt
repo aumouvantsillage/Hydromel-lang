@@ -207,12 +207,11 @@
   (unsigned-concat [v (sub1 (t/abstract-integer-width (t/actual-type t))) 0] ...))
 
 (define (kw-concat-impl-signature . ts)
-  (define ts^ (map t/actual-type ts))
-  (define w (for/sum ([t (in-list ts^)]
+  (define w (for/sum ([t (in-list ts)]
                       [i (in-naturals)] #:when (odd? i))
               ; TODO assert that t contains an integer type
-              (t/abstract-integer-width (t/type-supertype t))))
-  (match (first ts^)
+              (t/abstract-integer-width (t/static-data-value t))))
+  (match (t/actual-type (first ts))
     [(t/signed _)   (t/signed w)]
     [(t/unsigned _) (t/unsigned w)]))
 
@@ -238,4 +237,4 @@
   e)
 
 (define (cast-impl-signature ta tb)
-  (t/type-supertype (t/actual-type ta)))
+  (t/static-data-value ta))

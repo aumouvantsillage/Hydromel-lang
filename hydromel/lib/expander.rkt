@@ -175,7 +175,7 @@
   (begin
     (define name (make-slot expr target-type))
     (add-type-check
-      (unless (subtype? expr-type target-type)
+      (unless (<: expr-type target-type)
         ; TODO show source code instead of generated code, or source location only.
         (raise-syntax-error #f (format "Expression type is incompatible with type annotation, found ~v, expected ~v" expr-type target-type) #'expr)))))
 
@@ -215,7 +215,7 @@
   (begin
     (set-slot-data! slt expr)
     (add-type-check
-      (unless (subtype? expr-type target-type)
+      (unless (<: expr-type target-type)
         ; TODO show source code instead of generated code, or source location only.
         (raise-syntax-error #f (format "Expression type is incompatible with target, found ~v, expected ~v" expr-type target-type) #'expr)))))
 
@@ -373,7 +373,7 @@
   ; This is a special case for (type-of) forms generated in checker.rkt
   ; Maybe we should generate these forms in expander instead.
   [(_ (~and (type-of expr) this-expr))
-   #'(type this-expr)]
+   #'(static-data this-expr (call-expr type-impl))]
 
   [(_ (name-expr name ...))
    #'(slot-type (concat-name name ...))]

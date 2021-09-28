@@ -138,7 +138,7 @@ prefix-expr: ("-" | "not") simple-expr
 
 literal-expr: INT
 
-name-expr: ID
+name-expr: ID | "type"
 
 field-expr:
   simple-expr /"." ID
@@ -177,7 +177,6 @@ call-expr:
 
 ; Array and tuple types are included in call-expr
 @type-expression:
-  "type" |
   name-expr |
   call-expr |
   record-type
