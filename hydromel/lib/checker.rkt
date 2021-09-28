@@ -312,7 +312,7 @@
                           #'s.fn-name))
        ; Bitwise concatenation is a special case where we interleave
        ; argument values with their inferred types.
-       #:with (arg+ ...) (if (equal? (syntax->datum #'fn-name) 'kw-concat-impl)
+       #:with (arg+ ...) (if (equal? (syntax->datum #'fn-name) 'concat:impl)
                            #'((~@ arg (type-of arg)) ...)
                            #'(arg ...))
        (s/l (call-expr fn-name arg+ ...))]

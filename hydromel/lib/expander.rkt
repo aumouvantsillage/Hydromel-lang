@@ -227,7 +227,7 @@
 ; An if statement expands to a conditional statement that generates a hash map.
 ; That hash map is assigned to a variable with the same name as the if label.
 (define-syntax-parse-rule (if-statement name (~seq condition then-body) ... else-body)
-  (define name (cond [(int-to-bool-impl condition) then-body]
+  (define name (cond [(int-to-bool:impl condition) then-body]
                      ...
                      [else else-body])))
 
@@ -373,7 +373,7 @@
   ; This is a special case for (type-of) forms generated in checker.rkt
   ; Maybe we should generate these forms in expander instead.
   [(_ (~and (type-of expr) this-expr))
-   #'(static-data this-expr (call-expr type-impl))]
+   #'(static-data this-expr (call-expr type:impl))]
 
   [(_ (name-expr name ...))
    #'(slot-type (concat-name name ...))]
@@ -394,7 +394,7 @@
        (slot-type x))]
 
   [(_ (~and (call-expr name arg ...) expr))
-   #:with sig-name (format-id #'here "~a-return-type" #'name)
+   #:with sig-name (format-id #'here "~a:return-type" #'name)
    #'(let* ([arg-types (list (type-of arg) ...)]
             [res-type (apply sig-name arg-types)])
        (if (andmap static-data? arg-types)
@@ -565,7 +565,7 @@
   (test-case "Can construct a channel for an interface with a vector port"
     (check-pred vector? (dict-ref i4-inst 'i))
     (check-eq? (vector-length (dict-ref i4-inst 'i)) 3)
-    (for ([n (kw-range-impl 0 2)])
+    (for ([n (range:impl 0 2)])
       (check-pred dict? (vector-ref (dict-ref i4-inst 'i) n))))
 
   (interface I5
@@ -577,7 +577,7 @@
   (test-case "Can construct a channel for an interface with arguments"
     (check-pred vector? (dict-ref i5-inst 'i))
     (check-eq? (vector-length (dict-ref i5-inst 'i)) 5)
-    (for ([n (kw-range-impl 0 4)])
+    (for ([n (range:impl 0 4)])
       (check-pred dict? (vector-ref (dict-ref i5-inst 'i) n))))
 
   (interface I6
@@ -589,7 +589,7 @@
   (test-case "Can construct a channel containing a composite port with arguments"
     (check-pred vector? (dict-ref (dict-ref i6-inst 'j) 'i))
     (check-eq? (vector-length (dict-ref (dict-ref i6-inst 'j) 'i)) 3)
-    (for ([n (kw-range-impl 0 2)])
+    (for ([n (range:impl 0 2)])
       (check-pred dict? (vector-ref (dict-ref (dict-ref i6-inst 'j) 'i) n))))
 
   (component C2
@@ -649,7 +649,7 @@
     (assignment (name-expr z)
       (lift-expr [x^ (slot-expr (name-expr x))]
                  [y^ (slot-expr (name-expr y))]
-        (call-expr cast-impl
+        (call-expr cast:impl
           (call-expr signed (literal-expr 32))
           (call-expr + (name-expr x^) (name-expr y^))))))
 
@@ -675,7 +675,7 @@
     (assignment (name-expr v)
       (lift-expr [xy^ (slot-expr (name-expr xy))]
                  [zu^ (slot-expr (name-expr zu))]
-        (call-expr cast-impl
+        (call-expr cast:impl
           (call-expr signed (literal-expr 32))
           (call-expr + (name-expr xy^) (name-expr zu^))))))
 
@@ -694,7 +694,7 @@
     (data-port y out (call-expr signed (literal-expr 32)))
     (assignment (name-expr y)
                 (lift-expr [x^ (slot-expr (name-expr x))]
-                  (call-expr cast-impl
+                  (call-expr cast:impl
                     (call-expr signed (literal-expr 32))
                     (call-expr * (name-expr x^) (name-expr N))))))
 
@@ -721,7 +721,7 @@
     (assignment (name-expr y)
       (lift-expr [y0 (slot-expr (field-expr (indexed-port-expr (name-expr c) (literal-expr 0)) y))]
                  [y1 (slot-expr (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) y))]
-        (call-expr cast-impl
+        (call-expr cast:impl
           (call-expr signed (literal-expr 32))
           (call-expr + (name-expr y0) (name-expr y1))))))
 
@@ -867,8 +867,8 @@
     (assignment (name-expr z)
       (lift-expr [x^ (slot-expr (name-expr x))]
                  [y^ (slot-expr (name-expr y))]
-        (call-expr kw-concat-impl (name-expr x^) (call-expr signed (literal-expr 4))
-                                  (name-expr y^) (call-expr signed (literal-expr 4))))))
+        (call-expr concat:impl (name-expr x^) (call-expr signed (literal-expr 4))
+                               (name-expr y^) (call-expr signed (literal-expr 4))))))
 
   (define c20-inst (C20-make))
   (slot-set! (c20-inst x) (signal 0 5 -2))
@@ -921,7 +921,7 @@
       (lift-expr [x^ (slot-expr (name-expr x))]
         (array-for-expr
           (call-expr + (name-expr x^) (name-expr i))
-          i (call-expr kw-range-impl (literal-expr 1) (literal-expr 3))))))
+          i (call-expr range:impl (literal-expr 1) (literal-expr 3))))))
 
   (define c24-inst (C24-make))
   (slot-set! (c24-inst x) (signal 10 20 30))
