@@ -19,28 +19,28 @@
     (prefix-in meta/ "meta.rkt")))
 
 (provide
-  int-to-bool    int-to-bool-impl int-to-bool-impl-signature
-  kw-if          kw-if-impl       kw-if-impl-signature
-  kw-not                          bitwise-not-signature
-  kw-and                          bitwise-and-signature
-  kw-or                           bitwise-ior-signature
-  kw-xor                          bitwise-xor-signature
-  kw-==          kw-==-impl       kw-==-impl-signature
-  kw-/=          kw-/=-impl       kw-/=-impl-signature
-  kw->           kw->-impl        kw->-impl-signature
-  kw-+                            +-signature
-  kw--                            --signature
-  kw-*                            *-signature
-  kw-/                            quotient-signature
-  kw-range       kw-range-impl    kw-range-impl-signature
-  kw-slice                        unsigned-slice-signature
-  kw-concat      kw-concat-impl   kw-concat-impl-signature
-  kw-array                        vector-signature
-  kw-array-ref                    vector-ref-signature
+  int-to-bool    int-to-bool-impl int-to-bool-impl-return-type
+  kw-if          kw-if-impl       kw-if-impl-return-type
+  kw-not                          bitwise-not-return-type
+  kw-and                          bitwise-and-return-type
+  kw-or                           bitwise-ior-return-type
+  kw-xor                          bitwise-xor-return-type
+  kw-==          kw-==-impl       kw-==-impl-return-type
+  kw-/=          kw-/=-impl       kw-/=-impl-return-type
+  kw->           kw->-impl        kw->-impl-return-type
+  kw-+                            +-return-type
+  kw--                            --return-type
+  kw-*                            *-return-type
+  kw-/                            quotient-return-type
+  kw-range       kw-range-impl    kw-range-impl-return-type
+  kw-slice                        unsigned-slice-return-type
+  kw-concat      kw-concat-impl   kw-concat-impl-return-type
+  kw-array                        vector-return-type
+  kw-array-ref                    vector-ref-return-type
   (all-from-out  "logic.rkt")
-  signed_width                    min-signed-width-signature
-  unsigned_width                  min-unsigned-width-signature
-  cast           cast-impl        cast-impl-signature)
+  signed_width                    min-signed-width-return-type
+  unsigned_width                  min-unsigned-width-return-type
+  cast           cast-impl        cast-impl-return-type)
 
 ; Convert an integer to a boolean.
 ; This function is used in generated conditional statements.
@@ -50,36 +50,36 @@
 (define (int-to-bool-impl a)
   (not (zero? a)))
 
-(define (int-to-bool-impl-signature t)
+(define (int-to-bool-impl-return-type ta)
   (t/boolean))
 
 ; The Hydromel if statement is expanded to a call-expr
 ; to kw-if as if it were a function.
 (define-syntax kw-if (meta/builtin-function #'kw-if-impl))
 
-(define-syntax-parse-rule (kw-if-impl (~seq c t) ... e)
-  (cond [(int-to-bool-impl c) t]
+(define-syntax-parse-rule (kw-if-impl (~seq cnd thn) ... els)
+  (cond [(int-to-bool-impl cnd) thn]
         ...
-        [else e]))
+        [else els]))
 
-(define (kw-if-impl-signature tc . ts)
+(define (kw-if-impl-return-type tc . ts)
   (t/union ts))
 
 ; Returns the minimum width to encode a given number
 ; as an unsigned integer.
 (define-syntax unsigned_width (meta/builtin-function #'min-unsigned-width))
 
-(define (min-unsigned-width-signature t)
-  (define t^ (t/normalize-type t))
-  (t/unsigned (t/abstract-integer-width t^)))
+(define (min-unsigned-width-return-type ta)
+  (define ta^ (t/normalize-type ta))
+  (t/unsigned (t/abstract-integer-width ta^)))
 
 ; Returns the minimum width to encode a given number
 ; as an signed integer.
 (define-syntax signed_width (meta/builtin-function #'min-signed-width))
 
-(define (min-signed-width-signature t)
-  (define t^ (t/normalize-type t))
-  (t/unsigned (match t^
+(define (min-signed-width-return-type ta)
+  (define ta^ (t/normalize-type ta))
+  (t/unsigned (match ta^
                 [(t/signed   n) n]
                 [(t/unsigned n) (add1 n)]
                 [_ (error "Cannot compute data size.")])))
@@ -90,7 +90,7 @@
 (define-syntax kw-or  (meta/builtin-function #'bitwise-ior))
 (define-syntax kw-xor (meta/builtin-function #'bitwise-xor))
 
-(define (bitwise-signature ta tb)
+(define (bitwise-return-type ta tb)
   (define ta^ (t/normalize-type ta))
   (define tb^ (t/normalize-type tb))
   (match (list ta^ tb^)
@@ -99,10 +99,10 @@
     [(list (t/abstract-integer  na) (t/signed   nb))          (t/signed   (max na nb))]
     [_ (error "Bitwise operation expects integer operands.")]))
 
-(define (bitwise-not-signature ta) ta)
-(define bitwise-and-signature bitwise-signature)
-(define bitwise-ior-signature bitwise-signature)
-(define bitwise-xor-signature bitwise-signature)
+(define (bitwise-not-return-type ta) ta)
+(define bitwise-and-return-type bitwise-return-type)
+(define bitwise-ior-return-type bitwise-return-type)
+(define bitwise-xor-return-type bitwise-return-type)
 
 ; Comparison operations return integers 0 and 1.
 (define-syntax kw-== (meta/builtin-function #'kw-==-impl))
@@ -118,12 +118,12 @@
 (define (kw->-impl a b)
   (if (> a b) 1 0))
 
-(define (comparison-signature ta tb)
+(define (comparison-return-type ta tb)
   (t/unsigned 1))
 
-(define kw-==-impl-signature comparison-signature)
-(define kw-/=-impl-signature comparison-signature)
-(define kw->-impl-signature  comparison-signature)
+(define kw-==-impl-return-type comparison-return-type)
+(define kw-/=-impl-return-type comparison-return-type)
+(define kw->-impl-return-type  comparison-return-type)
 
 ; Use the built-in arithmetic operators.
 (define-syntax kw-+ (meta/builtin-function #'+))
@@ -131,7 +131,7 @@
 (define-syntax kw-* (meta/builtin-function #'*))
 (define-syntax kw-/ (meta/builtin-function #'quotient))
 
-(define (+-signature ta tb)
+(define (+-return-type ta tb)
   (define ta^ (t/normalize-type ta))
   (define tb^ (t/normalize-type tb))
   (match (list ta^ tb^)
@@ -141,12 +141,12 @@
     [(list (t/signed   na) (t/signed   nb)) (t/signed   (add1 (max na nb)))]
     [_ (error "Arithmetic operation expects integer operands." ta^ tb^)]))
 
-(define (--signature ta [tb #f])
+(define (--return-type ta [tb #f])
   (if tb
-    (+-signature ta tb)
+    (+-return-type ta tb)
     (t/signed (add1 (t/abstract-integer-width (t/normalize-type ta))))))
 
-(define (*-signature ta tb)
+(define (*-return-type ta tb)
   (define ta^ (t/normalize-type ta))
   (define tb^ (t/normalize-type tb))
   (match (list ta^ tb^)
@@ -155,7 +155,7 @@
     [(list (t/signed na)           (t/abstract-integer  nb)) (t/signed   (+ na nb))]
     [_ (error "Arithmetic operation expects integer operands.")]))
 
-(define (quotient-signature ta tb)
+(define (quotient-return-type ta tb)
   ta)
 
 ; TODO descending ranges
@@ -164,7 +164,7 @@
 (define (kw-range-impl a b)
   (range a (add1 b)))
 
-(define (kw-range-impl-signature ta tb)
+(define (kw-range-impl-return-type ta tb)
   (define ta^ (t/normalize-type ta))
   (define tb^ (t/normalize-type tb))
   (t/range
@@ -177,10 +177,10 @@
 
 ; The slicing operation defaults to the unsigned version.
 ; The signed case is handled automatically because the expander inserts
-; a conversion to the type returned by the signature.
+; a conversion to the type returned by the return-type.
 (define-syntax kw-slice (meta/builtin-function #'unsigned-slice))
 
-(define (unsigned-slice-signature ta tb tc)
+(define (unsigned-slice-return-type ta tb tc)
   (define left (match tb
                  [(t/static-data n _) n]
                  [(t/unsigned    n)   (max-unsigned-value n)]
@@ -201,31 +201,31 @@
 
 ; The binary concatenetion operation defaults to the unsigned version.
 ; The signed case is handled automatically because the expander inserts
-; a conversion to the type returned by the signature.
+; a conversion to the type returned by the return-type.
 ; Since this function needs to know the width of its arguments,
 ; their types are inserted by the checker.
-(define-syntax-parse-rule (kw-concat-impl (~seq v t) ...)
-  (unsigned-concat [v (~> t t/normalize-type t/abstract-integer-width sub1) 0] ...))
+(define-syntax-parse-rule (kw-concat-impl (~seq a ta) ...)
+  (unsigned-concat [a (~> ta t/normalize-type t/abstract-integer-width sub1) 0] ...))
 
-(define (kw-concat-impl-signature . ts)
-  (define ts^ (for/list ([t (in-list ts)]
-                         [i (in-naturals)] #:when (odd? i))
-                (~> t t/static-data-value t/normalize-type)))
-  (define w (for/sum ([t (in-list ts^)])
-              ; TODO assert that t contains an integer type
-              (t/abstract-integer-width t)))
+(define (kw-concat-impl-return-type . ts)
+  (define ts^ (for/list ([it (in-list ts)]
+                         [n (in-naturals)] #:when (odd? n))
+                (~> it t/static-data-value t/normalize-type)))
+  (define w (for/sum ([it (in-list ts^)])
+              ; TODO assert that it contains an integer type
+              (t/abstract-integer-width it)))
   (match (first ts^)
     [(t/signed _)   (t/signed w)]
     [(t/unsigned _) (t/unsigned w)]))
 
 (define-syntax kw-array (meta/builtin-function #'vector))
 
-(define (vector-signature . ts)
+(define (vector-return-type . ts)
   (t/array (length ts) (t/union ts)))
 
 (define-syntax kw-array-ref (meta/builtin-function #'vector-ref))
 
-(define (vector-ref-signature ta tb)
+(define (vector-ref-return-type ta tb)
   ; TODO check the type of tb
   (define ta^ (t/normalize-type ta))
   (match ta^
@@ -236,8 +236,8 @@
 
 ; cast does not actually convert the given value because
 ; a call to the conversion function is already inserted by the expander.
-(define (cast-impl t e)
-  e)
+(define (cast-impl a b)
+  b)
 
-(define (cast-impl-signature ta tb)
+(define (cast-impl-return-type ta tb)
   (t/static-data-value ta))

@@ -9,7 +9,7 @@
   "std.rkt"
   "slot.rkt"
   "signal.rkt"
-  (prefix-in t/ "types.rkt"))
+  (only-in "types.rkt" normalize-type))
 
 (provide
   slot-ref
@@ -66,7 +66,7 @@
     (define data (slot-data slt))
     (printf "~a : ~v = ~a\n"
       name
-      (t/normalize-type (slot-type slt))
+      (normalize-type (slot-type slt))
       (if (signal? data)
         (signal-take data duration)
         data))))

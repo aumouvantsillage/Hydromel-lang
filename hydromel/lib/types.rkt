@@ -29,12 +29,12 @@
 
 ; Parameterized data types are exposed as functions
 ; whose result is a type.
-(define (signed-signature tn)
+(define (signed-return-type tn)
   (match tn
     [(static-data n _) (static-data (signed n) (type-impl))]
     [_                 (error "Signed width must be a static integer" tn)]))
 
-(define (unsigned-signature tn)
+(define (unsigned-return-type tn)
   (match tn
     [(static-data n _) (static-data (unsigned n) (type-impl))]
     [_                 (error "Unsigned width must be a static integer" tn)]))
@@ -49,7 +49,7 @@
 
 (struct array datatype (size elt-type) #:transparent)
 
-(define (array-signature tn te)
+(define (array-return-type tn te)
   (match (list tn te)
     [(list (static-data n _) (static-data t _)) (static-data (array n t) (type-impl))]
     [_                                          (error "Cannot determine array type" tn te)]))
@@ -77,7 +77,7 @@
 (define (bit-impl)
   (unsigned 1))
 
-(define (bit-impl-signature)
+(define (bit-impl-return-type)
   (static-data (bit-impl) (type-impl)))
 
 (define-syntax natural (meta/builtin-function #'natural-impl))
@@ -85,7 +85,7 @@
 (define (natural-impl)
   (unsigned #f))
 
-(define (natural-impl-signature)
+(define (natural-impl-return-type)
   (static-data (natural-impl) (type-impl)))
 
 (define-syntax integer (meta/builtin-function #'integer-impl))
@@ -93,7 +93,7 @@
 (define (integer-impl)
   (signed #f))
 
-(define (integer-impl-signature)
+(define (integer-impl-return-type)
   (static-data (integer-impl) (type-impl)))
 
 (define-syntax type (meta/builtin-function #'type-impl))
@@ -101,7 +101,7 @@
 (define (type-impl)
   (subtype (any)))
 
-(define (type-impl-signature)
+(define (type-impl-return-type)
   (static-data (type-impl) (type-impl)))
 
 ; Type helpers.

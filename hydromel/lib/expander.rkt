@@ -394,7 +394,7 @@
        (slot-type x))]
 
   [(_ (~and (call-expr name arg ...) expr))
-   #:with sig-name (format-id #'here "~a-signature" #'name)
+   #:with sig-name (format-id #'here "~a-return-type" #'name)
    #'(let* ([arg-types (list (type-of arg) ...)]
             [res-type (apply sig-name arg-types)])
        (if (andmap static-data? arg-types)
