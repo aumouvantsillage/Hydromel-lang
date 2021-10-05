@@ -106,6 +106,12 @@
 
 ; Type helpers.
 
+(define (resize t w)
+  (match t
+    [(signed _)   (signed w)]
+    [(unsigned _) (unsigned w)]
+    [_ (error "Resize expects integer type.")]))
+
 (define (literal-type x)
   (unless (base/integer? x)
     (error "Cannot determine type of literal" x))

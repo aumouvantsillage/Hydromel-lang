@@ -132,14 +132,10 @@
 (define-syntax &/ (meta/builtin-function #'quotient))
 
 (define (+:return-type ta tb)
-  (define ta^ (t/normalize-type ta))
-  (define tb^ (t/normalize-type tb))
-  (match (list ta^ tb^)
-    [(list (t/unsigned na) (t/unsigned nb)) (t/unsigned (add1 (max na nb)))]
-    [(list (t/unsigned na) (t/signed   nb)) (t/signed   (add1 (max (add1 na) nb)))]
-    [(list (t/signed   na) (t/unsigned nb)) (t/signed   (add1 (max na (add1 nb))))]
-    [(list (t/signed   na) (t/signed   nb)) (t/signed   (add1 (max na nb)))]
-    [_ (error "Arithmetic operation expects integer operands." ta^ tb^)]))
+  (define tr (t/common-supertype (t/normalize-type ta) (t/normalize-type tb)))
+  (match tr
+    [(t/abstract-integer w) (t/resize tr (add1 w))]
+    [_ (error "Arithmetic operation expects integer operands." ta tb)]))
 
 (define (-:return-type ta [tb #f])
   (if tb
@@ -160,6 +156,8 @@
 
 (define-syntax &range (meta/builtin-function #'range:impl))
 
+; TODO Empty ranges are no longer supported.
+; TODO Do we need an explicit "descending" range specifier?
 (define (range:impl a b)
   (if (<= a b)
     (range a (add1 b))
@@ -187,11 +185,8 @@
                  [(t/unsigned    n)   (min-unsigned-value n)]
                  [(t/signed      n)   (min-signed-value   n)]
                  [_                   (error "Invalid type for right slice index.")]))
-  (define width (max 0 (add1 (- left right))))
-  (match (t/normalize-type ta)
-    [(t/unsigned _) (t/unsigned width)]
-    [(t/signed   _) (t/signed   width)]
-    [_ (error "Slice expects integer value.")]))
+  (t/resize (t/normalize-type ta)
+            (max 0 (add1 (- left right)))))
 
 (define-syntax concat (meta/builtin-function #'concat:impl))
 

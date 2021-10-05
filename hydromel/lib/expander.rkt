@@ -31,7 +31,7 @@
   slot-expr signal-expr lift-expr concat-expr
   or-expr and-expr rel-expr add-expr mult-expr
   if-expr prefix-expr range-expr slice-expr
-  array-expr array-for-expr
+  array-expr array-for-expr concat-for-expr
   type-of)
 
 ; ------------------------------------------------------------------------------
@@ -338,6 +338,16 @@
   [(_ body)
    #'body])
 
+(define-syntax-parser concat-for-expr
+  [(_ body (~seq iter-name iter-expr) nr ...)
+   #'(for/fold ([res 0])
+               ([iter-name (in-list iter-expr)])
+       (bitwise-ior
+         (arithmetic-shift res 1)
+         (concat-for-expr body nr ...)))]
+
+  [(_ body)
+   #'body])
 ; ------------------------------------------------------------------------------
 ; Type inference and checking
 ; ------------------------------------------------------------------------------
@@ -369,7 +379,9 @@
 ; Generate type inference code for an expression.
 ; TODO Warn on circular dependencies in register-expr
 (define-syntax-parser type-of*
-  #:literals [name-expr literal-expr register-expr when-clause field-expr call-expr slot-expr signal-expr array-for-expr lift-expr type-of]
+  #:literals [name-expr literal-expr register-expr when-clause
+              field-expr call-expr slot-expr signal-expr
+              array-for-expr concat-for-expr lift-expr type-of]
   ; This is a special case for (type-of) forms generated in checker.rkt
   ; Maybe we should generate these forms in expander instead.
   [(_ (~and (type-of expr) this-expr))
@@ -419,6 +431,17 @@
 
   [(_ (array-for-expr body))
    #'(type-of body)]
+
+  [(_ (concat-for-expr body (~seq iter-name iter-expr) ...+))
+   #:with (rng ...)   (generate-temporaries (attribute iter-name))
+   #:with (left ...)  (generate-temporaries (attribute iter-name))
+   #:with (right ...) (generate-temporaries (attribute iter-name))
+   ; TODO Check that (type-of body) is (abstract-integer 1) for all iterator values
+   #'(let* ([rng       iter-expr] ...
+            [left      (first rng)] ...
+            [right     (last rng)] ...
+            [iter-name (make-slot #f (common-supertype (literal-type left) (literal-type right)))] ...)
+       (resize (type-of body) (* (abs (- left right)) ...)))]
 
   [(_ (lift-expr (name sexpr) ...+ expr))
    #'(let ([name (make-slot #f (type-of sexpr))] ...)
@@ -927,9 +950,24 @@
   (slot-set! (c24-inst x) (signal 10 20 30))
 
   (test-case "Can make a vector comprehension"
-    (check-sig-equal? (slot-ref c24-inst y) (signal (vector 11 12 13) (vector 21 22 23) (vector 31 32 33)) 3)))
+    (check-sig-equal? (slot-ref c24-inst y) (signal (vector 11 12 13) (vector 21 22 23) (vector 31 32 33)) 3))
+
+  (component C25
+    (data-port x in  (call-expr unsigned (literal-expr 4)))
+    (data-port y out (call-expr unsigned (literal-expr 4)))
+    (assignment (name-expr y)
+      (lift-expr [x^ (slot-expr (name-expr x))]
+        (concat-for-expr
+          (call-expr unsigned-slice (name-expr x^) (name-expr i) (name-expr i))
+          i (call-expr range:impl (literal-expr 0) (literal-expr 3))))))
+
+  (define c25-inst (C25-make))
+  (slot-set! (c25-inst x) (signal 10 11 12))
+
+  (test-case "Can make a slice comprehension"
+    (check-sig-equal? (slot-ref c25-inst y) (signal 5 13 3) 3)))
 
 ; TODO test multidimensional ports
 ; TODO test multidimensional arrays
-; TODO test concat comprehensions
+; TODO test multidimensional concat comprehensions
 ; TODO test multidimensional array comprehensions
