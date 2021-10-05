@@ -158,22 +158,18 @@
 (define (quotient:return-type ta tb)
   ta)
 
-; TODO descending ranges
 (define-syntax &range (meta/builtin-function #'range:impl))
 
 (define (range:impl a b)
-  (range a (add1 b)))
+  (if (<= a b)
+    (range a (add1 b))
+    (range a (sub1 b) -1)))
 
 (define (range:impl:return-type ta tb)
-  (define ta^ (t/normalize-type ta))
-  (define tb^ (t/normalize-type tb))
-  (t/range
-    (match (list ta^ tb^)
-      [(list (t/unsigned na) (t/unsigned nb)) (t/unsigned (max na nb))]
-      [(list (t/unsigned na) (t/signed   nb)) (t/signed   (max (add1 na) nb))]
-      [(list (t/signed   na) (t/unsigned nb)) (t/signed   (max na (add1 nb)))]
-      [(list (t/signed   na) (t/signed   nb)) (t/signed   (max na nb))]
-      [_ (error "Range expects integer boundaries.")])))
+  (define tr (t/common-supertype (t/normalize-type ta) (t/normalize-type tb)))
+  (unless (t/abstract-integer? tr)
+    (error "Range expects integer boundaries."))
+  (t/range tr))
 
 ; The slicing operation defaults to the unsigned version.
 ; The signed case is handled automatically because the expander inserts
