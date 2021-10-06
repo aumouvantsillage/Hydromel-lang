@@ -55,8 +55,8 @@
   [_
    #'(begin)])
 
-; Second pass:  create the scope hierarchy and bindings to local metadata (see add-scopes).
-; Third pass: perform semantic checking (see check).
+; Second pass: create the scope hierarchy and bindings to local metadata.
+; Third pass:  perform semantic checking.
 ; Fourth pass: add labels for the type checker.
 (define-syntax (compile-hydromel stx)
   (~> stx add-scopes check label))
@@ -93,9 +93,12 @@
 
           [_ #f]))))
 
+  ; ----------------------------------------------------------------------------
+  ; Scoping.
+  ; ----------------------------------------------------------------------------
+
   (define current-design-unit (make-parameter #f))
 
-  ; Second pass:  create the scope hierarchy and bindings to local metadata.
   (define (add-scopes stx)
     (syntax-parse stx
       [s:stx/design-unit
@@ -175,7 +178,10 @@
 
       [_ this-syntax]))
 
-  ; Third pass: perform semantic checking.
+  ; ----------------------------------------------------------------------------
+  ; Semantic checking.
+  ; ----------------------------------------------------------------------------
+
   (define (check stx)
     (syntax-parse stx
       #:literals [compile-hydromel design-unit]
@@ -539,6 +545,10 @@
       ; TODO support field access in structured types
 
       [_ (raise-syntax-error #f "Expression not suitable for field access" expr)])))
+
+; ------------------------------------------------------------------------------
+; Tests.
+; ------------------------------------------------------------------------------
 
 (module+ test
   (require

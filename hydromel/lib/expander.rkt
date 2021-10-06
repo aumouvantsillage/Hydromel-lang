@@ -485,6 +485,10 @@
                indexed-array-expr array-expr
   "should not be used outside of begin-tiny-hdl")
 
+; ------------------------------------------------------------------------------
+; Tests.
+; ------------------------------------------------------------------------------
+
 (module+ test
   (require
     rackunit
