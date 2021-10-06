@@ -145,15 +145,17 @@
        #:with (body ...) (with-scope (map add-scopes (attribute s.body)))
        (s/l (statement-block body ...))]
 
-      [s:stx/array-for-expr
+      [s:stx/comprehension
        #:with (iter-expr ...) (map add-scopes (attribute s.iter-expr))
-       ; The loop counter is bound as a constant inside a new scope
+       ; The loop counters are bound as constants inside a new scope
        ; so that only the comprehension body can use it.
+       ; TODO make a new scope for each counter:
+       ;      iter-expr[n] should be able to use iter-name[n-1]
        #:with body (with-scope
                      (for ([name (in-list (attribute s.iter-name))])
                        (bind! name (meta/constant #f)))
                      (add-scopes #'s.body))
-       (s/l (array-for-expr body (~@ s.iter-name iter-expr) ...))]
+       (s/l (s.mode body (~@ s.iter-name iter-expr) ...))]
 
       ; Attach the current scope as a syntax property to the current name,
       ; allowing to perform lookups in the semantic checking pass.
@@ -329,13 +331,13 @@
 
          [else stx])]
 
-      [s:stx/array-for-expr
+      [s:stx/comprehension
        #:with (iter-expr ...) (map check (attribute s.iter-expr))
        #:with body (check #'s.body)
        (for ([it (in-list (attribute iter-expr))])
          (unless (static? it)
            (raise-syntax-error #f "Non-static expression cannot be used as comprehension range" it)))
-       (s/l (array-for-expr body (~@ s.iter-name iter-expr) ...))]
+       (s/l (s.mode body (~@ s.iter-name iter-expr) ...))]
 
       [_ this-syntax]))
 
@@ -389,7 +391,7 @@
       [s:stx/name-expr         (define c (lookup #'s.name)) (or (meta/constant? c) (meta/parameter? c))]
       [s:stx/field-expr        (or  (static? #'s.expr) (meta/constant? (resolve stx)))]
       [s:stx/indexed-port-expr (and (static? #'s.expr) (andmap static? (attribute s.index)))]
-      [s:stx/array-for-expr    (and (static? #'s.body) (andmap static? (attribute s.iter-expr)))]
+      [s:stx/comprehension     (and (static? #'s.body) (andmap static? (attribute s.iter-expr)))]
       [s:stx/call-expr         (andmap static? (attribute s.arg))]
       [_                       #f]))
 
@@ -470,16 +472,16 @@
 
   (define (lift-if-needed stx)
     (syntax-parse stx
-      #:literals [indexed-port-expr field-expr array-for-expr concat-expr]
+      #:literals [indexed-port-expr field-expr]
       [(indexed-port-expr expr ...)
        (lift-if-needed* stx (attribute expr)
          (λ (lst) (q/l (indexed-port-expr #,@lst))))]
       [(field-expr expr sel ...)
        (lift-if-needed* stx (list #'expr)
          (λ (lst) (q/l (field-expr #,(first lst) sel ...))))]
-      [(array-for-expr body iter ...)
-       (lift-if-needed* stx (list #'body)
-         (λ (lst) (q/l (array-for-expr #,(first lst) iter ...))))]
+      [s:stx/comprehension
+       (lift-if-needed* stx (list #'s.body)
+         (λ (lst) (q/l (s.mode #,(first lst) (~@ s.iter-name s.iter-expr) ...))))]
       [s:stx/call-expr
        (lift-if-needed* stx (attribute s.arg)
          (λ (lst) (q/l (call-expr s.fn-name #,@lst))))]
@@ -1095,4 +1097,18 @@
   (slot-set! (c36-inst x) (signal 10 20 30))
 
   (test-case "Can make a vector comprehension"
-    (check-sig-equal? (slot-ref c36-inst y) (signal (vector 11 12 13) (vector 21 22 23) (vector 31 32 33)) 3)))
+    (check-sig-equal? (slot-ref c36-inst y) (signal (vector 11 12 13) (vector 21 22 23) (vector 31 32 33)) 3))
+
+  (begin-hydromel
+    (component C37
+      (data-port x in  (call-expr unsigned (literal-expr 4)))
+      (data-port y out (call-expr unsigned (literal-expr 4)))
+      (assignment (name-expr y)
+        (concat-for-expr (slice-expr (name-expr x) (name-expr i))
+                         i (range-expr (literal-expr 0) .. (literal-expr 3))))))
+
+  (define c37-inst (C37-make))
+  (slot-set! (c37-inst x) (signal 10 11 12))
+
+  (test-case "Can make a slice comprehension"
+    (check-sig-equal? (slot-ref c37-inst y) (signal 5 13 3) 3)))

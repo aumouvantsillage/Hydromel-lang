@@ -100,9 +100,13 @@
     (pattern (register-expr init-expr   (~optional init-cond:when-clause)
                             update-expr (~optional update-cond:when-clause))))
 
-  (define-syntax-class array-for-expr
-    #:literals [array-for-expr]
-    (pattern (array-for-expr body (~seq iter-name iter-expr) ...+)))
+  (define-syntax-class comprehension
+    (pattern (mode:comprehension-mode body (~seq iter-name iter-expr) ...+)))
+
+  (define-syntax-class comprehension-mode
+    #:literals [array-for-expr concat-for-expr]
+    (pattern array-for-expr)
+    (pattern concat-for-expr))
 
   (define-syntax-class when-clause
     #:literals [when-clause]

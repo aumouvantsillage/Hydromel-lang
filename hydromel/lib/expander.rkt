@@ -338,16 +338,11 @@
   [(_ body)
    #'body])
 
-(define-syntax-parser concat-for-expr
-  [(_ body (~seq iter-name iter-expr) nr ...)
-   #'(for/fold ([res 0])
-               ([iter-name (in-list iter-expr)])
-       (bitwise-ior
-         (arithmetic-shift res 1)
-         (concat-for-expr body nr ...)))]
+(define-syntax-parse-rule (concat-for-expr body (~seq iter-name iter-expr) ...)
+   (for*/fold ([res 0])
+              ([iter-name (in-list iter-expr)] ...)
+     (bitwise-ior (arithmetic-shift res 1) body)))
 
-  [(_ body)
-   #'body])
 ; ------------------------------------------------------------------------------
 ; Type inference and checking
 ; ------------------------------------------------------------------------------
