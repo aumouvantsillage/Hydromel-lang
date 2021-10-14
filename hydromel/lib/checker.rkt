@@ -1121,4 +1121,24 @@
   (slot-set! (c37-inst x) (signal 10 11 12))
 
   (test-case "Can make a slice comprehension"
-    (check-sig-equal? (slot-ref c37-inst y) (signal 5 13 3) 3)))
+    (check-sig-equal? (slot-ref c37-inst y) (signal 5 13 3) 3))
+
+  (begin-hydromel
+    (interface I6
+      (data-port z in (call-expr unsigned (literal-expr 1))))
+
+    (component C38
+      (composite-port x ((literal-expr 4)) I6)
+      (data-port y out (call-expr unsigned (literal-expr 4)))
+      (assignment (name-expr y)
+        (concat-for-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z)
+                         i (range-expr (literal-expr 3) .. (literal-expr 0)))))
+
+    (define c38-inst (C38-make))
+    (slot-set! (c38-inst x 0) (signal 1 0 0))
+    (slot-set! (c38-inst x 1) (signal 1 1 0))
+    (slot-set! (c38-inst x 2) (signal 0 1 1))
+    (slot-set! (c38-inst x 3) (signal 0 0 1))
+
+    (test-case "Can make a slice comprehension using an array composite port"
+      (check-sig-equal? (slot-ref c38-inst y) (signal 3 6 12) 3))))

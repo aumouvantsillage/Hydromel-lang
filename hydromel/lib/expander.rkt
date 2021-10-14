@@ -321,7 +321,7 @@
 (define-syntax-parser lift-expr
   #:literals [slot-expr]
   ; Lift a signal expression. Since the expression returns a signal,
-  ; we must lift signal-first to avoid created a signal of signals.
+  ; we must lift signal-first to avoid creating a signal of signals.
   ; This is typically used when indexed-port-expr contains signals as indices.
   [(_ binding ...+ (slot-expr expr))
    #'(lift-expr binding ... (signal-first (slot-expr expr)))]
@@ -338,10 +338,27 @@
   [(_ body)
    #'body])
 
-(define-syntax-parse-rule (concat-for-expr body (~seq iter-name iter-expr) ...)
-   (for*/fold ([res 0])
-              ([iter-name (in-list iter-expr)] ...)
-     (bitwise-ior (arithmetic-shift res 1) body)))
+(define (ddd x)
+  (displayln x)
+  x)
+
+(define-syntax-parser concat-for-expr
+  #:literals [lift-expr]
+  ; When a lift-expr is wrapped in a comprehension, we evaluate it iteratively
+  ; to generate a list of signals. Then we convert it to a signal of lists
+  ; that we can concatenate.
+  [(_ (lift-expr binding ... body) (~seq iter-name iter-expr) ...)
+   #'(for/signal ([lst (apply signal-bundle (for*/list ([iter-name (in-list iter-expr)] ...)
+                                              (lift-expr binding ... body)))])
+       (for/fold ([res 0])
+                 ([it (in-list lst)])
+         (bitwise-ior (arithmetic-shift res 1) it)))]
+
+
+  [(_ body (~seq iter-name iter-expr) ...)
+   #'(for*/fold ([res 0])
+                ([iter-name (in-list iter-expr)] ...)
+       (bitwise-ior (arithmetic-shift res 1) body))])
 
 ; ------------------------------------------------------------------------------
 ; Type inference and checking
@@ -964,7 +981,29 @@
   (slot-set! (c25-inst x) (signal 10 11 12))
 
   (test-case "Can make a slice comprehension"
-    (check-sig-equal? (slot-ref c25-inst y) (signal 5 13 3) 3)))
+    (check-sig-equal? (slot-ref c25-inst y) (signal 5 13 3) 3))
+
+  (interface I9
+    (data-port z in (call-expr unsigned (literal-expr 1))))
+
+  (component C26
+    (composite-port x ((literal-expr 4)) I9)
+    (data-port y out (call-expr unsigned (literal-expr 4)))
+    (assignment (name-expr y)
+      (concat-for-expr
+        (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z))]
+          (name-expr x^))
+        i (call-expr range:impl (literal-expr 3) (literal-expr 0)))))
+
+  (define c26-inst (C26-make))
+  (slot-set! (c26-inst x 0 z) (signal 1 0 0))
+  (slot-set! (c26-inst x 1 z) (signal 1 1 0))
+  (slot-set! (c26-inst x 2 z) (signal 0 1 1))
+  (slot-set! (c26-inst x 3 z) (signal 0 0 1))
+
+  (test-case "Can make a slice comprehension using an array composite port"
+    (check-sig-equal? (slot-ref c26-inst y) (signal 3 6 12) 3)))
+
 
 ; TODO test multidimensional ports
 ; TODO test multidimensional arrays
