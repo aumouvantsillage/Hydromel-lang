@@ -31,6 +31,7 @@
   this-reg
   signal-bundle
   signal-unbundle
+  signal-bundle-list
   signal-bundle-vector
   >>)
 
@@ -217,6 +218,9 @@
 
 ; Convert one or more signals into a signal where each element is a list.
 (define signal-bundle (signal-lift list))
+
+(define (signal-bundle-list lst)
+  (apply signal-bundle lst))
 
 ; For signals with list values. Return signals with the first or the rest
 ; of each sample.

@@ -331,16 +331,14 @@
    #'(for/signal ([name sexpr] ...) expr)])
 
 (define-syntax-parser array-for-expr
-  [(_ body (~seq iter-name iter-expr) nr ...)
-   #'(for/vector ([iter-name (in-list iter-expr)])
-       (array-for-expr body nr ...))]
+  #:literals [lift-expr]
+  [(_ (lift-expr binding ... body) (~seq iter-name iter-expr) ...)
+   #'(signal-bundle-vector (for*/vector ([iter-name (in-list iter-expr)] ...)
+                             (lift-expr binding ... body)))]
 
-  [(_ body)
-   #'body])
-
-(define (ddd x)
-  (displayln x)
-  x)
+  [(_ body (~seq iter-name iter-expr) ...)
+   #'(for*/vector ([iter-name (in-list iter-expr)] ...)
+       body)])
 
 (define-syntax-parser concat-for-expr
   #:literals [lift-expr]
@@ -348,8 +346,8 @@
   ; to generate a list of signals. Then we convert it to a signal of lists
   ; that we can concatenate.
   [(_ (lift-expr binding ... body) (~seq iter-name iter-expr) ...)
-   #'(for/signal ([lst (apply signal-bundle (for*/list ([iter-name (in-list iter-expr)] ...)
-                                              (lift-expr binding ... body)))])
+   #'(for/signal ([lst (signal-bundle-list (for*/list ([iter-name (in-list iter-expr)] ...)
+                                             (lift-expr binding ... body)))])
        (for/fold ([res 0])
                  ([it (in-list lst)])
          (bitwise-ior (arithmetic-shift res 1) it)))]
@@ -434,17 +432,17 @@
   [(_ (slot-expr x))
    #'(type-of x)]
 
-  [(_ (array-for-expr body (~seq iter-name iter-expr) nr ...))
-   #'(let* ([rng       iter-expr]
-            [left      (first rng)]
-            [right     (last rng)]
-            [iter-name (make-slot #f (common-supertype (literal-type left) (literal-type right)))])
-       (array (length rng) (type-of* (array-for-expr body nr ...))))]
+  [(_ (array-for-expr body (~seq iter-name iter-expr) ...))
+   #:with (rng ...)   (generate-temporaries (attribute iter-name))
+   #:with (left ...)  (generate-temporaries (attribute iter-name))
+   #:with (right ...) (generate-temporaries (attribute iter-name))
+   #'(let* ([rng       iter-expr] ...
+            [left      (first rng)] ...
+            [right     (last rng)] ...
+            [iter-name (make-slot #f (common-supertype (literal-type left) (literal-type right)))] ...)
+       (array (* (add1 (abs (- left right))) ...) (type-of body)))]
 
-  [(_ (array-for-expr body))
-   #'(type-of body)]
-
-  [(_ (concat-for-expr body (~seq iter-name iter-expr) ...+))
+  [(_ (concat-for-expr body (~seq iter-name iter-expr) ...))
    #:with (rng ...)   (generate-temporaries (attribute iter-name))
    #:with (left ...)  (generate-temporaries (attribute iter-name))
    #:with (right ...) (generate-temporaries (attribute iter-name))
@@ -453,7 +451,7 @@
             [left      (first rng)] ...
             [right     (last rng)] ...
             [iter-name (make-slot #f (common-supertype (literal-type left) (literal-type right)))] ...)
-       (resize (type-of body) (* (abs (- left right)) ...)))]
+       (resize (type-of body) (* (add1 (abs (- left right))) ...)))]
 
   [(_ (lift-expr (name sexpr) ...+ expr))
    #'(let ([name (make-slot #f (type-of sexpr))] ...)
@@ -1002,7 +1000,25 @@
   (slot-set! (c26-inst x 3 z) (signal 0 0 1))
 
   (test-case "Can make a slice comprehension using an array composite port"
-    (check-sig-equal? (slot-ref c26-inst y) (signal 3 6 12) 3)))
+    (check-sig-equal? (slot-ref c26-inst y) (signal 3 6 12) 3))
+
+  (component C27
+    (composite-port x ((literal-expr 4)) I9)
+    (data-port y out (call-expr array (literal-expr 4) (call-expr unsigned (literal-expr 1))))
+    (assignment (name-expr y)
+      (array-for-expr
+        (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z))]
+          (name-expr x^))
+        i (call-expr range:impl (literal-expr 3) (literal-expr 0)))))
+
+  (define c27-inst (C27-make))
+  (slot-set! (c27-inst x 0 z) (signal 1 0 0))
+  (slot-set! (c27-inst x 1 z) (signal 1 1 0))
+  (slot-set! (c27-inst x 2 z) (signal 0 1 1))
+  (slot-set! (c27-inst x 3 z) (signal 0 0 1))
+
+  (test-case "Can make an array comprehension using an array composite port"
+    (check-sig-equal? (slot-ref c27-inst y) (signal #(0 0 1 1) #(0 1 1 0) #(1 1 0 0)) 3)))
 
 
 ; TODO test multidimensional ports
