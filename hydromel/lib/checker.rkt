@@ -472,25 +472,36 @@
       [_
        ; If stx has a static value, wrap it in a signal-expr.
        ; If stx resolves to a signal, wrap it in a slot-expr.
-       (cond [(static? stx)                (q/l (signal-expr #,stx))]
-             [(meta/signal? (resolve stx)) (q/l (slot-expr #,stx))]
-             [else                         stx])]))
+       (cond [(static? this-syntax)                (q/l (signal-expr #,this-syntax))]
+             [(meta/signal? (resolve this-syntax)) (q/l (slot-expr   #,this-syntax))]
+             [else                                 this-syntax])]))
 
   (define (lift-if-needed stx)
     (syntax-parse stx
-      #:literals [indexed-port-expr field-expr]
+      #:literals [indexed-port-expr field-expr lift-expr]
       [(indexed-port-expr expr ...)
        (lift-if-needed* stx (attribute expr)
          (λ (lst) (q/l (indexed-port-expr #,@lst))))]
+
       [(field-expr expr sel ...)
        (lift-if-needed* stx (list #'expr)
          (λ (lst) (q/l (field-expr #,(first lst) sel ...))))]
+
       [s:stx/comprehension
-       (lift-if-needed* stx (list #'s.body)
-         (λ (lst) (q/l (s.mode #,(first lst) (~@ s.iter-name s.iter-expr) ...))))]
+       ; If a comprehension needs lifting, we force the lift-expr form
+       ; back into the comprehension body.
+       ; This is useful if the bindings of the lift-expr depend on the
+       ; loop counters of the comprehension.
+       (syntax-parse (lift-if-needed* stx (list #'s.body)
+                       (λ (lst) (q/l (s.mode #,(first lst) (~@ s.iter-name s.iter-expr) ...))))
+         [(lift-expr binding ... (mode body iter ...))
+          (q/l (mode (lift-expr binding ... body) iter ...))]
+         [_ this-syntax])]
+
       [s:stx/call-expr
        (lift-if-needed* stx (attribute s.arg)
          (λ (lst) (q/l (call-expr s.fn-name #,@lst))))]
+
       [_
        stx]))
 
@@ -1107,7 +1118,7 @@
   (slot-set! (c36-inst x) (signal 10 20 30))
 
   (test-case "Can make a vector comprehension"
-    (check-sig-equal? (slot-ref c36-inst y) (signal (vector 11 12 13) (vector 21 22 23) (vector 31 32 33)) 3))
+    (check-sig-equal? (slot-ref c36-inst y) (signal #(11 12 13) #(21 22 23) #(31 32 33)) 3))
 
   (begin-hydromel
     (component C37
@@ -1132,13 +1143,30 @@
       (data-port y out (call-expr unsigned (literal-expr 4)))
       (assignment (name-expr y)
         (concat-for-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z)
-                         i (range-expr (literal-expr 3) .. (literal-expr 0)))))
+                         i (range-expr (literal-expr 3) .. (literal-expr 0))))))
 
-    (define c38-inst (C38-make))
-    (slot-set! (c38-inst x 0) (signal 1 0 0))
-    (slot-set! (c38-inst x 1) (signal 1 1 0))
-    (slot-set! (c38-inst x 2) (signal 0 1 1))
-    (slot-set! (c38-inst x 3) (signal 0 0 1))
+  (define c38-inst (C38-make))
+  (slot-set! (c38-inst x 0 z) (signal 1 0 0))
+  (slot-set! (c38-inst x 1 z) (signal 1 1 0))
+  (slot-set! (c38-inst x 2 z) (signal 0 1 1))
+  (slot-set! (c38-inst x 3 z) (signal 0 0 1))
 
-    (test-case "Can make a slice comprehension using an array composite port"
-      (check-sig-equal? (slot-ref c38-inst y) (signal 3 6 12) 3))))
+  (test-case "Can make a slice comprehension using an array composite port"
+    (check-sig-equal? (slot-ref c38-inst y) (signal 3 6 12) 3))
+
+  (begin-hydromel
+    (component C39
+      (composite-port x ((literal-expr 4)) I6)
+      (data-port y out (call-expr array (literal-expr 4) (call-expr unsigned (literal-expr 1))))
+      (assignment (name-expr y)
+        (array-for-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z)
+                        i (range-expr (literal-expr 3) .. (literal-expr 0))))))
+
+  (define c39-inst (C39-make))
+  (slot-set! (c39-inst x 0 z) (signal 1 0 0))
+  (slot-set! (c39-inst x 1 z) (signal 1 1 0))
+  (slot-set! (c39-inst x 2 z) (signal 0 1 1))
+  (slot-set! (c39-inst x 3 z) (signal 0 0 1))
+
+  (test-case "Can make an array comprehension using an array composite port"
+    (check-sig-equal? (slot-ref c39-inst y) (signal #(0 0 1 1) #(0 1 1 0) #(1 1 0 0)) 3)))
