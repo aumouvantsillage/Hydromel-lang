@@ -41,6 +41,8 @@
   array-ref                             vector-ref:return-type
   signed_width                          min-signed-width:return-type
   unsigned_width                        min-unsigned-width:return-type
+  as_signed      as_signed:impl         as_signed:impl:return-type
+  as_unsigned    as_unsigned:impl       as_unsigned:impl:return-type
   cast           cast:impl              cast:impl:return-type
   (all-from-out  "logic.rkt"))
 
@@ -169,7 +171,7 @@
 
 (define (arithmetic-shift-right a b)
   (arithmetic-shift a (- b)))
-  
+
 (define (arithmetic-shift-right:return-type ta tb)
   (define ta^ (t/normalize-type ta))
   (match (ta^ tb)
@@ -246,6 +248,30 @@
   (match ta^
     [(t/array _ te) te]
     [_              (error "Not an array type" ta)]))
+
+(define-syntax as_signed (meta/builtin-function #'as_signed:impl))
+
+(define (as_signed:impl a)
+  a)
+
+(define (as_signed:impl:return-type ta)
+  (define ta^ (t/normalize-type ta))
+  (match ta^
+    [(t/signed   _) ta^]
+    [(t/unsigned n) (t/signed n)]
+    [_ (error "Cannot cast value to signed")]))
+
+(define-syntax as_unsigned (meta/builtin-function #'as_unsigned:impl))
+
+(define (as_unsigned:impl a)
+  a)
+
+(define (as_unsigned:impl:return-type ta)
+  (define ta^ (t/normalize-type ta))
+  (match ta^
+    [(t/signed   n) (t/unsigned n)]
+    [(t/unsigned _) ta^]
+    [_ (error "Cannot cast value to unsigned")]))
 
 (define-syntax cast (meta/builtin-function #'cast:impl))
 
