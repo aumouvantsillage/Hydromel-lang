@@ -26,6 +26,10 @@
        (token 'ID (string->symbol lexeme))]
       [(:+ numeric)
        (token 'INT (string->number lexeme))]
+      [(:seq "b'" (:+ (char-set "01")))
+       (token 'INT (string->number (string-append "#b" lexeme)))]
+      [(:seq "x'" (:+ (char-set "0123456789abcdefABCDEF")))
+       (token 'INT (string->number (string-append "#x" lexeme)))]
       [(from/to "\"" "\"")
        (token 'STRING (trim-ends "\"" lexeme "\""))]
       [(from/stop-before "#" "\n")
