@@ -19,15 +19,13 @@
 ; Returns the minimum bit width to store the integer `v`
 ; as an unsigned logic value.
 (define (min-unsigned-width v)
-  (cond [(zero?     v) 1]
-        [(positive? v) (exact-floor (add1 (log v 2)))]
-        [else          (add1 (min-unsigned-width (sub1 (- v))))]))
+  (cond [(positive? v) (integer-length v)]
+        [else          (min-signed-width v)]))
 
 ; Returns the minimum bit width to store the integer `v`
 ; as an signed logic value.
 (define (min-signed-width v)
-  (define w (min-unsigned-width v))
-  (if (negative? v) w (add1 w)))
+  (add1 (integer-length v)))
 
 (define (min-unsigned-value w)
   0)
@@ -110,7 +108,7 @@
   (define (test-unsigned-width v w)
     (test-equal? (format "Min width of ~au is ~a" v w) (min-unsigned-width v) w))
 
-  (test-unsigned-width 0    0)
+  (test-unsigned-width 0    1)
   (test-unsigned-width 1    1)
   (test-unsigned-width 2    2)
   (test-unsigned-width 3    2)
