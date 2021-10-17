@@ -102,7 +102,8 @@ statement-block:
 @maybe-rel-expr:    rel-expr    | maybe-range-expr
 @maybe-range-expr:  range-expr  | maybe-add-expr
 @maybe-add-expr:    add-expr    | maybe-mult-expr
-@maybe-mult-expr:   mult-expr   | maybe-prefix-expr
+@maybe-mult-expr:   mult-expr   | maybe-shift-expr
+@maybe-shift-expr:  shift-expr  | maybe-prefix-expr
 @maybe-prefix-expr: prefix-expr | simple-expr
 
 if-expr:
@@ -117,7 +118,8 @@ and-expr:    maybe-and-expr "and" maybe-rel-expr
 rel-expr:    maybe-add-expr ("<" | ">" | "<=" | ">=" | "==" | "/=" | "in") maybe-range-expr
 range-expr:  maybe-add-expr ".." maybe-add-expr
 add-expr:    maybe-add-expr ("+" | "-") maybe-mult-expr
-mult-expr:   maybe-mult-expr ("*" | "/") maybe-prefix-expr
+mult-expr:   maybe-mult-expr ("*" | "/") maybe-shift-expr
+shift-expr:  maybe-shift-expr ("<<" | ">>") maybe-prefix-expr
 prefix-expr: ("-" | "not") simple-expr
 
 ; TODO Add comprehensions

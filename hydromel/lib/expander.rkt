@@ -29,7 +29,7 @@
   indexed-port-expr indexed-array-expr
   call-expr register-expr when-clause
   slot-expr signal-expr lift-expr concat-expr
-  or-expr and-expr rel-expr add-expr mult-expr
+  or-expr and-expr rel-expr add-expr mult-expr shift-expr
   if-expr prefix-expr range-expr slice-expr
   array-expr array-for-expr concat-for-expr
   type-of)
@@ -495,7 +495,7 @@
   "should be used inside a register expression")
 
 ; Concatenation expressions are converted to function calls in the checker.
-(disable-forms import or-expr and-expr rel-expr add-expr mult-expr
+(disable-forms import or-expr and-expr rel-expr add-expr mult-expr shift-expr
                if-expr prefix-expr range-expr slice-expr concat-expr
                indexed-array-expr array-expr
   "should not be used outside of begin-tiny-hdl")

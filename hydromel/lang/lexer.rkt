@@ -17,7 +17,7 @@
             "interface" "component" "end"
             "type" "port" "in" "out" "flip" "splice"
             "constant" "instance" "signal"
-            "or" "and" "not" "xor" ">=" "<=" "==" "/=" ".."
+            "or" "and" "not" "xor" ">=" "<=" "==" "/=" ".." "<<" ">>"
             "if" "then" "else" "for" "loop"
             "register" "when"
             (char-set ".:,()[]{}=+-*/<>"))

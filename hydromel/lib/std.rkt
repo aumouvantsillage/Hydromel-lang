@@ -19,28 +19,30 @@
     (prefix-in meta/ "meta.rkt")))
 
 (provide
-  int->bool      int->bool:impl int->bool:impl:return-type
-  &if            if:impl        if:impl:return-type
-  &not                          bitwise-not:return-type
-  &and                          bitwise-and:return-type
-  &or                           bitwise-ior:return-type
-  &xor                          bitwise-xor:return-type
-  &==            eq:impl        eq:impl:return-type
-  &/=            ne:impl        ne:impl:return-type
-  &>             gt:impl        gt:impl:return-type
-  &+                            +:return-type
-  &-                            -:return-type
-  &*                            *:return-type
-  &/                            quotient:return-type
-  &range         range:impl     range:impl:return-type
-  slice                         unsigned-slice:return-type
-  concat         concat:impl    concat:impl:return-type
-  make-array                    vector:return-type
-  array-ref                     vector-ref:return-type
-  (all-from-out  "logic.rkt")
-  signed_width                  min-signed-width:return-type
-  unsigned_width                min-unsigned-width:return-type
-  cast           cast:impl      cast:impl:return-type)
+  int->bool      int->bool:impl         int->bool:impl:return-type
+  &if            if:impl                if:impl:return-type
+  &not                                  bitwise-not:return-type
+  &and                                  bitwise-and:return-type
+  &or                                   bitwise-ior:return-type
+  &xor                                  bitwise-xor:return-type
+  &==            eq:impl                eq:impl:return-type
+  &/=            ne:impl                ne:impl:return-type
+  &>             gt:impl                gt:impl:return-type
+  &+                                    +:return-type
+  &-                                    -:return-type
+  &*                                    *:return-type
+  &/                                    quotient:return-type
+  &<<                                   arithmetic-shift:return-type
+  &>>            arithmetic-shift-right arithmetic-shift-right:return-type
+  &range         range:impl             range:impl:return-type
+  slice                                 unsigned-slice:return-type
+  concat         concat:impl            concat:impl:return-type
+  make-array                            vector:return-type
+  array-ref                             vector-ref:return-type
+  signed_width                          min-signed-width:return-type
+  unsigned_width                        min-unsigned-width:return-type
+  cast           cast:impl              cast:impl:return-type
+  (all-from-out  "logic.rkt"))
 
 ; Convert an integer to a boolean.
 ; This function is used in generated conditional statements.
@@ -153,6 +155,28 @@
 
 (define (quotient:return-type ta tb)
   ta)
+
+(define-syntax &<< (meta/builtin-function #'arithmetic-shift))
+(define-syntax &>> (meta/builtin-function #'arithmetic-shift-right))
+
+(define (arithmetic-shift:return-type ta tb)
+  (define ta^ (t/normalize-type ta))
+  (match (ta^ tb)
+    [(list (t/abstract-integer na) (t/static-data nb _)) (t/resize ta^ (max 0 (+ na nb)))]
+    [(list (t/abstract-integer na) (t/unsigned nb))      (t/resize ta^ (+ na (max-unsigned-value nb)))]
+    [(list (t/abstract-integer na) (t/signed nb))        (t/resize ta^ (+ na (max-signed-value nb)))]
+    [_ (error "Shift operation expects integer operands.")]))
+
+(define (arithmetic-shift-right a b)
+  (arithmetic-shift a (- b)))
+  
+(define (arithmetic-shift-right:return-type ta tb)
+  (define ta^ (t/normalize-type ta))
+  (match (ta^ tb)
+    [(list (t/abstract-integer na) (t/static-data nb _)) (t/resize ta^ (max 0 (- na nb)))]
+    [(list (t/abstract-integer na) (t/unsigned nb))      ta^]
+    [(list (t/abstract-integer na) (t/signed nb))        (t/resize ta^ (- na (min-signed-value nb)))]
+    [_ (error "Shift operation expects integer operands.")]))
 
 (define-syntax &range (meta/builtin-function #'range:impl))
 

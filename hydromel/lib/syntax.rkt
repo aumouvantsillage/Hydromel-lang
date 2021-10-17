@@ -113,9 +113,10 @@
     (pattern (when-clause expr)))
 
   (define-syntax-class call-expr
-    #:literals [call-expr or-expr and-expr rel-expr add-expr mult-expr if-expr prefix-expr
-                range-expr slice-expr concat-expr indexed-array-expr array-expr]
-    (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr) left op right)
+    #:literals [call-expr or-expr and-expr rel-expr add-expr mult-expr shift-expr
+                if-expr prefix-expr range-expr slice-expr concat-expr array-expr
+                indexed-array-expr]
+    (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr shift-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
       #:attr fn-name (format-id #'op "&~a" #'op))
     (pattern (prefix-expr op right)
