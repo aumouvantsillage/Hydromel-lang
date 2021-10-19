@@ -53,7 +53,7 @@
 
   (define-syntax-class typedef
     #:literals [typedef]
-    (pattern (typedef name parame ... expr)))
+    (pattern (typedef name param ... expr)))
 
   (define-syntax-class constant
     #:literals [constant]

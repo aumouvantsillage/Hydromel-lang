@@ -8,6 +8,7 @@
   syntax/parse/define
   "expander.rkt"
   "std.rkt"
+  "types.rkt"
   (prefix-in stx/ "syntax.rkt")
   (for-syntax
     racket
@@ -33,6 +34,12 @@
      (let ([prefix (format-id #'s.name "~a::" #'s.name)])
        #`(require (prefix-in #,prefix s.path)))
      #'(require s.path))]
+
+  [(_ s:stx/typedef)
+   #:with impl-name (format-id #'s.name "~a:impl" #'s.name)
+   #'(begin
+       (provide s.name)
+       (define-syntax s.name (meta/builtin-function #'impl-name)))]
 
   [(_ s:stx/constant)
    #:with alt-name (generate-temporary (format-id #'s.name "hdrml:constant:~a" #'s.name))
@@ -113,6 +120,11 @@
       [s:stx/parameter
        (bind! #'s.name (meta/parameter))
        (add-scopes* this-syntax)]
+
+      [s:stx/typedef
+       (when (current-design-unit)
+         (bind! #'s.name (meta/builtin-function (format-id #'s.name "~a:impl" #'s.name))))
+       (with-scope (add-scopes* this-syntax))]
 
       [s:stx/constant #:when (current-design-unit)
        (bind! #'s.name (meta/design-unit-ref (current-design-unit) #'s.name))
@@ -200,6 +212,11 @@
       [s:stx/parameter
        #:with type (check #'s.type)
        (s/l (parameter s.name type))]
+
+      [s:stx/typedef
+       #:with (param ...) (map check (attribute s.param))
+       #:with expr        (check #'s.expr)
+       (s/l (typedef s.name param ... expr))]
 
       [s:stx/constant
        #:with expr (check #'s.expr)
@@ -1169,4 +1186,19 @@
   (slot-set! (c39-inst x 3 z) (signal 0 0 1))
 
   (test-case "Can make an array comprehension using an array composite port"
-    (check-sig-equal? (slot-ref c39-inst y) (signal #(0 0 1 1) #(0 1 1 0) #(1 1 0 0)) 3)))
+    (check-sig-equal? (slot-ref c39-inst y) (signal #(0 0 1 1) #(0 1 1 0) #(1 1 0 0)) 3))
+
+  (begin-hydromel
+    (typedef word (call-expr unsigned (literal-expr 32)))
+    (typedef utwice (parameter n (call-expr natural)) (call-expr unsigned (mult-expr (name-expr n) * (literal-expr 2))))
+
+    (component C40
+      (data-port x in (call-expr word))
+      (data-port y out (call-expr utwice (literal-expr 16)))
+      (assignment (name-expr y) (name-expr x))))
+
+  (define c40-inst (C40-make))
+
+  (test-case "Can declare module-level types"
+    (check-equal? (slot-type (slot-ref* c40-inst x)) (unsigned 32))
+    (check-equal? (slot-type (slot-ref* c40-inst y)) (unsigned 32))))
