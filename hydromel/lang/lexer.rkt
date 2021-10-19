@@ -18,7 +18,7 @@
             "type" "port" "in" "out" "flip" "splice"
             "constant" "instance" "signal"
             "or" "and" "not" "xor" ">=" "<=" "==" "/=" ".." "<<" ">>"
-            "if" "then" "else" "for" "loop"
+            "if" "then" "else" "elseif" "for" "loop"
             "register" "when"
             (char-set ".:,()[]{}=+-*/<>"))
        (token lexeme (string->symbol lexeme))]
@@ -27,9 +27,9 @@
       [(:+ numeric)
        (token 'INT (string->number lexeme))]
       [(:seq "b'" (:+ (char-set "01")))
-       (token 'INT (string->number (string-append "#b" lexeme)))]
+       (token 'INT (string->number (string-replace lexeme "b'" "#b")))]
       [(:seq "x'" (:+ (char-set "0123456789abcdefABCDEF")))
-       (token 'INT (string->number (string-append "#x" lexeme)))]
+       (token 'INT (string->number (string-replace lexeme "x'" "#x")))]
       [(from/to "\"" "\"")
        (token 'STRING (trim-ends "\"" lexeme "\""))]
       [(from/stop-before "#" "\n")

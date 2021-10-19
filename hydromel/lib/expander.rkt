@@ -132,7 +132,7 @@
 ; TODO add type checking on parameters
 (define-syntax-parse-rule (typedef name ((~literal parameter) param-name param-type) ... expr)
   #:with (arg-name   ...) (generate-temporaries (attribute param-name))
-  #:with impl-name  (format-id this-syntax "~a:impl"             #'name)
+  #:with impl-name  (format-id #'name "~a:impl"             #'name)
   #:with rtype-name (format-id this-syntax "~a:impl:return-type" #'name)
   (begin
     (provide impl-name rtype-name)

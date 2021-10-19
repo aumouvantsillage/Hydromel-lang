@@ -12,7 +12,7 @@
 ;
 ; This will create an AST node of the form: (a (a-item ...))
 
-begin-hydromel: (import | interface | component | constant | type | function)*
+begin-hydromel: (import | interface | component | constant | typedef | function)*
 
 import: /"import" STRING (/"as" ID)?
 
@@ -110,8 +110,9 @@ if-expr:
   /"if" expression /"then" expression else-clause
 
 @else-clause:
-  /"else" expression |
-  /"elseif" expression /"then" expression else-clause
+  /"else" /"if" expression /"then" expression else-clause |
+  /"elseif"     expression /"then" expression else-clause |
+  /"else"                          expression
 
 or-expr:     maybe-or-expr  ("or" | "xor") maybe-and-expr
 and-expr:    maybe-and-expr "and" maybe-rel-expr
