@@ -13,6 +13,7 @@
 
 (provide
   slot-ref
+  slot-ref*
   slot-set!
   slot-table
   print-slot-table)

@@ -26,7 +26,7 @@ component: /"component" ID parameter-list? component-item* /"end"
   data-port |
   composite-port |
   constant |
-  type
+  typedef
 
 @component-item:
   interface-item |
@@ -43,7 +43,7 @@ parameter: ID /":" type-expression
 
 constant: /"constant" ID /"=" expression
 
-type: /"type" ID parameter-list? (/"=" type-expression)?
+typedef: /"type" ID parameter-list? (/"=" type-expression)?
 
 function: /"function" ID parameter-list (/"=" expression)?
 

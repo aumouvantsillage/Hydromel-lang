@@ -51,6 +51,10 @@
     (pattern flip)
     (pattern splice))
 
+  (define-syntax-class typedef
+    #:literals [typedef]
+    (pattern (typedef name parame ... expr)))
+
   (define-syntax-class constant
     #:literals [constant]
     (pattern (constant name expr)))

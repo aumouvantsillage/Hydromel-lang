@@ -22,7 +22,7 @@
   import design-unit interface component
   parameter data-port composite-port alias
   flip splice
-  constant local-signal instance
+  typedef constant local-signal instance
   if-statement for-statement statement-block
   assignment connect-statement
   literal-expr name-expr field-expr
@@ -128,6 +128,22 @@
 ; TODO add type checking
 (define-syntax-parse-rule (parameter _ ...)
   (begin))
+
+; TODO add type checking on parameters
+(define-syntax-parse-rule (typedef name ((~literal parameter) param-name param-type) ... expr)
+  #:with (arg-name   ...) (generate-temporaries (attribute param-name))
+  #:with impl-name  (format-id #'name "~a:impl"             #'name)
+  #:with rtype-name (format-id #'name "~a:impl:return-type" #'name)
+  (begin
+    (provide impl-name rtype-name)
+    (define (impl-name arg-name ...)
+      (define types (make-hash))
+      (syntax-parameterize ([inferred-types (make-rename-transformer #'types)])
+        (define param-name (make-slot arg-name (static-data arg-name param-type))) ...
+        expr))
+    (define (rtype-name arg-name ...)
+      (static-data (impl-name (static-data-value arg-name) ...) (type:impl)))))
+
 
 ; A constant expands to a slot assigned to a variable.
 (define-syntax-parser constant
@@ -416,7 +432,7 @@
        (slot-type x))]
 
   [(_ (~and (call-expr name arg ...) expr))
-   #:with sig-name (format-id #'here "~a:return-type" #'name)
+   #:with sig-name (format-id #'expr "~a:return-type" #'name)
    #'(let* ([arg-types (list (type-of arg) ...)]
             [res-type (apply sig-name arg-types)])
        (if (andmap static-data? arg-types)
@@ -1018,8 +1034,21 @@
   (slot-set! (c27-inst x 3 z) (signal 0 0 1))
 
   (test-case "Can make an array comprehension using an array composite port"
-    (check-sig-equal? (slot-ref c27-inst y) (signal #(0 0 1 1) #(0 1 1 0) #(1 1 0 0)) 3)))
+    (check-sig-equal? (slot-ref c27-inst y) (signal #(0 0 1 1) #(0 1 1 0) #(1 1 0 0)) 3))
 
+  (typedef word (call-expr unsigned (literal-expr 32)))
+  (typedef utwice (parameter n (call-expr natural:impl)) (call-expr unsigned (call-expr * (name-expr n) (literal-expr 2))))
+
+  (component C28
+    (data-port x in (call-expr word:impl))
+    (data-port y out (call-expr utwice:impl (literal-expr 16)))
+    (assignment (name-expr y) (slot-expr (name-expr x))))
+
+  (define c28-inst (C28-make))
+
+  (test-case "Can declare module-level types"
+    (check-equal? (slot-type (slot-ref* c28-inst x)) (unsigned 32))
+    (check-equal? (slot-type (slot-ref* c28-inst y)) (unsigned 32))))
 
 ; TODO test multidimensional ports
 ; TODO test multidimensional arrays
