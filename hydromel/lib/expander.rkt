@@ -30,7 +30,7 @@
   call-expr register-expr when-clause
   slot-expr signal-expr lift-expr concat-expr
   or-expr and-expr rel-expr add-expr mult-expr shift-expr
-  if-expr prefix-expr range-expr slice-expr
+  let-expr if-expr case-expr choices prefix-expr range-expr slice-expr
   array-expr array-for-expr concat-for-expr
   type-of)
 
@@ -132,7 +132,7 @@
 ; TODO add type checking on parameters
 (define-syntax-parse-rule (typedef name ((~literal parameter) param-name param-type) ... expr)
   #:with (arg-name   ...) (generate-temporaries (attribute param-name))
-  #:with impl-name  (format-id #'name "~a:impl"             #'name)
+  #:with impl-name  (format-id #'name      "~a:impl"             #'name)
   #:with rtype-name (format-id this-syntax "~a:impl:return-type" #'name)
   (begin
     (provide impl-name rtype-name)
@@ -307,12 +307,18 @@
   (let ([expr-type (type-of expr)])
     (expr-type (fn-name arg ...))))
 
+(define-syntax-parse-rule (choices expr ...)
+  (list expr ...))
+
 (define-syntax-parser register-expr
   #:literals [when-clause]
   [(_ i (when-clause r) d (when-clause e)) #'(register/re i r e d)]
   [(_ i (when-clause r) d)                 #'(register/r  i r   d)]
   [(_ i d (when-clause e))                 #'(register/e  i   e d)]
   [(_ i d)                                 #'(register    i     d)])
+
+(define-syntax-parse-rule (let-expr (~seq name expr) ... body)
+  (let* ([name expr] ...) body))
 
 ; A slot expression is a wrapper element added by the semantic checker to
 ; identify an expression that refers to a port or local signal for reading.
@@ -405,7 +411,7 @@
 ; Generate type inference code for an expression.
 ; TODO Warn on circular dependencies in register-expr
 (define-syntax-parser type-of*
-  #:literals [name-expr literal-expr register-expr when-clause
+  #:literals [name-expr literal-expr choices register-expr when-clause
               field-expr call-expr slot-expr signal-expr
               array-for-expr concat-for-expr lift-expr type-of]
   ; This is a special case for (type-of) forms generated in checker.rkt
@@ -418,6 +424,9 @@
 
   [(_ (literal-expr n))
    #'(static-data n (literal-type n))]
+
+  [(_ (choices expr ...))
+   #'(tuple (list (type-of expr) ...))]
 
   [(_ (register-expr i (~optional (when-clause r)) d (~optional (when-clause e))))
    #:with infer-r (if (attribute r) #'(type-of r) #'(void))
@@ -433,9 +442,10 @@
 
   [(_ (~and (call-expr name arg ...) expr))
    #:with sig-name (format-id #'expr "~a:return-type" #'name)
-   #'(let* ([arg-types (list (type-of arg) ...)]
-            [res-type (apply sig-name arg-types)])
-       (if (andmap static-data? arg-types)
+   #:with (tv-name ...) (generate-temporaries (attribute arg))
+   #'(let* ([tv-name (type-of arg)] ...
+            [res-type (sig-name tv-name ...)])
+       (if (and (static-data? tv-name) ...)
          (static-data (name arg ...) res-type)
          res-type))]
 
@@ -512,7 +522,7 @@
 
 ; Concatenation expressions are converted to function calls in the checker.
 (disable-forms import or-expr and-expr rel-expr add-expr mult-expr shift-expr
-               if-expr prefix-expr range-expr slice-expr concat-expr
+               if-expr case-expr prefix-expr range-expr slice-expr concat-expr
                indexed-array-expr array-expr
   "should not be used outside of begin-tiny-hdl")
 

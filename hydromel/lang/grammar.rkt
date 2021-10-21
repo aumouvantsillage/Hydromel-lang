@@ -91,12 +91,12 @@ statement-block:
 ; Expressions ------------------------------------------------------------------
 
 ; TODO other expressions
-@expression: maybe-if-expr
+@expression: maybe-cond-expr
 
 @expression-list:
   expression (/"," expression)* /","?
 
-@maybe-if-expr:     if-expr     | maybe-or-expr
+@maybe-cond-expr:   cond-expr   | maybe-or-expr
 @maybe-or-expr:     or-expr     | maybe-and-expr
 @maybe-and-expr:    and-expr    | maybe-rel-expr
 @maybe-rel-expr:    rel-expr    | maybe-range-expr
@@ -106,6 +106,13 @@ statement-block:
 @maybe-shift-expr:  shift-expr  | maybe-prefix-expr
 @maybe-prefix-expr: prefix-expr | simple-expr
 
+@cond-expr:
+  if-expr |
+  case-expr
+
+@let-binding:
+  ID /"=" expression
+
 if-expr:
   /"if" expression /"then" expression else-clause
 
@@ -113,6 +120,20 @@ if-expr:
   /"else" /"if" expression /"then" expression else-clause |
   /"elseif"     expression /"then" expression else-clause |
   /"else"                          expression
+
+case-expr:
+  /"case" expression /"of"
+    (case-clause+ |
+     case-clause* case-default-clause)
+
+@case-clause:
+  choices /"=>" expression
+
+@case-default-clause:
+  /"_" /"=>" expression
+
+choices:
+  expression-list
 
 or-expr:     maybe-or-expr  ("or" | "xor") maybe-and-expr
 and-expr:    maybe-and-expr "and" maybe-rel-expr

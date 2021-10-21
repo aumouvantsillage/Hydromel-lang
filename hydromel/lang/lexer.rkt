@@ -17,10 +17,10 @@
             "interface" "component" "end"
             "type" "port" "in" "out" "flip" "splice"
             "constant" "instance" "signal"
-            "or" "and" "not" "xor" ">=" "<=" "==" "/=" ".." "<<" ">>"
-            "if" "then" "else" "elseif" "for" "loop"
+            "or" "and" "not" "xor" ">=" "<=" "==" "/=" ".." "<<" ">>" "=>"
+            "if" "then" "else" "elseif" "case" "of" "for" "loop"
             "register" "when"
-            (char-set ".:,()[]{}=+-*/<>"))
+            (char-set ".:,()[]{}=+-*/<>_"))
        (token lexeme (string->symbol lexeme))]
       [(:seq alphabetic (:* (:or alphabetic numeric (char-set "_") "::")))
        (token 'ID (string->symbol lexeme))]

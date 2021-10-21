@@ -165,7 +165,7 @@
        ; The loop counters are bound as constants inside a new scope
        ; so that only the comprehension body can use it.
        ; TODO make a new scope for each counter:
-       ;      iter-expr[n] should be able to use iter-name[n-1]
+       ;      iter-expr[n] should be able to use iter-name[m<n]
        #:with body (with-scope
                      (for ([name (in-list (attribute s.iter-name))])
                        (bind! name (meta/constant #f)))
@@ -362,6 +362,13 @@
            (raise-syntax-error #f "Non-static expression cannot be used as comprehension range" it)))
        (s/l (s.mode body (~@ s.iter-name iter-expr) ...))]
 
+      [s:stx/choices
+       #:with (expr ...) (map check (attribute s.expr))
+       (for ([it (in-list (attribute expr))])
+         (unless (static? it)
+           (raise-syntax-error #f "Non-static expression cannot be used as choice" it)))
+       (s/l (choices expr ...))]
+
       [_ this-syntax]))
 
   ; Fourth pass: label all expressions for the type checker.
@@ -415,6 +422,7 @@
       [s:stx/field-expr        (or  (static? #'s.expr) (meta/constant? (resolve stx)))]
       [s:stx/indexed-port-expr (and (static? #'s.expr) (andmap static? (attribute s.index)))]
       [s:stx/comprehension     (and (static? #'s.body) (andmap static? (attribute s.iter-expr)))]
+      [s:stx/choices           (andmap static? (attribute s.expr))]
       [s:stx/call-expr         (andmap static? (attribute s.arg))]
       [_                       #f]))
 
@@ -1201,4 +1209,26 @@
 
   (test-case "Can declare module-level types"
     (check-equal? (slot-type (slot-ref* c40-inst x)) (unsigned 32))
-    (check-equal? (slot-type (slot-ref* c40-inst y)) (unsigned 32))))
+    (check-equal? (slot-type (slot-ref* c40-inst y)) (unsigned 32)))
+
+  (begin-hydromel
+    (component C41
+      (data-port s in (call-expr unsigned (literal-expr 3)))
+      (data-port a in (call-expr unsigned (literal-expr 8)))
+      (data-port b in (call-expr unsigned (literal-expr 8)))
+      (data-port c in (call-expr unsigned (literal-expr 8)))
+      (data-port y out (call-expr unsigned (literal-expr 8)))
+      (assignment (name-expr y)
+        (case-expr (name-expr s)
+          (choices (literal-expr 0) (literal-expr 2)) (name-expr a)
+          (choices (literal-expr 1) (literal-expr 3)) (name-expr b)
+                                                      (name-expr c)))))
+
+  (define c41-inst (C41-make))
+  (slot-set! (c41-inst s) (signal 0 1 2 3 4))
+  (slot-set! (c41-inst a) (signal 10))
+  (slot-set! (c41-inst b) (signal 20))
+  (slot-set! (c41-inst c) (signal 30))
+
+  (test-case "Can use case expression"
+    (check-sig-equal? (slot-ref c41-inst y) (signal 10 20 10 20 30) 5)))

@@ -116,9 +116,13 @@
     #:literals [when-clause]
     (pattern (when-clause expr)))
 
+  (define-syntax-class choices
+    #:literals [choices]
+    (pattern (choices expr ...)))
+    
   (define-syntax-class call-expr
     #:literals [call-expr or-expr and-expr rel-expr add-expr mult-expr shift-expr
-                if-expr prefix-expr range-expr slice-expr concat-expr array-expr
+                if-expr case-expr prefix-expr range-expr slice-expr concat-expr array-expr
                 indexed-array-expr]
     (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr shift-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
@@ -128,6 +132,8 @@
       #:attr fn-name (format-id #'op "&~a" #'op))
     (pattern (if-expr arg ...)
       #:attr fn-name #'&if)
+    (pattern (case-expr arg ...)
+      #:attr fn-name #'&case)
     (pattern (range-expr left op right)
       #:attr (arg 1) (list #'left #'right)
       #:attr fn-name #'&range)

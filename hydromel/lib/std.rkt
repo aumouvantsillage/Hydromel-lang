@@ -21,6 +21,7 @@
 (provide
   int->bool      int->bool:impl         int->bool:impl:return-type
   &if            if:impl                if:impl:return-type
+  &case          case:impl              case:impl:return-type
   &not                                  bitwise-not:return-type
   &and                                  bitwise-and:return-type
   &or                                   bitwise-ior:return-type
@@ -66,8 +67,24 @@
         ...
         [else els]))
 
-(define (if:impl:return-type tc . ts)
-  (t/union ts))
+(define-syntax-parse-rule (if:impl:return-type (~seq tc tt) ... te)
+  (t/union (list tt ... te)))
+
+; The Hydromel case statement is expanded to a call-expr
+; to &case as if it were a function.
+(define-syntax &case (meta/builtin-function #'case:impl))
+
+(define-syntax-parse-rule (case:impl expr (~seq ch thn) ... els)
+  (let ([x expr])
+    (cond [(member x ch) thn]
+          ...
+          [else els])))
+
+(define-syntax-parser case:impl:return-type
+  [(_ tx (~seq tc tt) ...)
+   #'(t/union (list tt ...))]
+  [(_ tx (~seq tc tt) ... te)
+   #'(t/union (list tt ... te))])
 
 ; Returns the minimum width to encode a given number
 ; as an unsigned integer.
