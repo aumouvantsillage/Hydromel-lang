@@ -229,14 +229,14 @@
                #:literals [name-expr]
                [(name-expr name) #'name]
                [_                #'target])
-  #:with target-type #'(type-of target)
-  #:with expr-type   #'(type-of expr)
   (begin
     (set-slot-data! slt expr)
     (add-type-check
-      (unless (<: expr-type target-type)
-        ; TODO show source code instead of generated code, or source location only.
-        (raise-syntax-error #f (format "Expression type is incompatible with target, found ~v, expected ~v" expr-type target-type) #'expr)))))
+      (let ([target-type (type-of target)]
+            [expr-type   (type-of expr)])
+        (unless (<: expr-type target-type)
+          ; TODO show source code instead of generated code, or source location only.
+          (raise-syntax-error #f (format "Expression type is incompatible with target, found ~v, expected ~v" expr-type target-type) #'expr))))))
 
 ; Connect two interface instances.
 ; See std.rkt for the implementation of connect.
