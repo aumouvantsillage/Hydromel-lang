@@ -16,8 +16,11 @@
 ; In most cases, use make-slot to construct a slot instance.
 (struct slot (data typer) #:mutable #:transparent)
 
+; Create a slot for given data and type.
+; This is implemented as a macro because we want to evaluate
+; the type argument only when the slot-typer thunk is called.
 (define-syntax-parse-rule (make-slot data type)
-  (let ([res #f]
+  (let ([res      #f]
         [visiting #f])
     (slot data (thunk
                  (when visiting

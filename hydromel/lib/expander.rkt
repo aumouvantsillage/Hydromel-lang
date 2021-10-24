@@ -185,15 +185,18 @@
 ; expression in a slot.
 ; Like output ports, local signals do not need to be wrapped in a slot, but
 ; it helps expanding expressions without managing several special cases.
-(define-syntax-parse-rule (local-signal name (~optional type) expr)
-  #:with expr-type   #'(type-of expr)
-  #:with target-type (or (attribute type) #'expr-type)
-  (begin
-    (define name (make-slot expr target-type))
-    (add-type-check
-      (unless (<: expr-type target-type)
-        ; TODO show source code instead of generated code, or source location only.
-        (raise-syntax-error #f (format "Expression type is incompatible with type annotation, found ~v, expected ~v" expr-type target-type) #'expr)))))
+(define-syntax-parser local-signal
+  [(_ name expr)
+   #'(define name (make-slot expr (type-of expr)))]
+
+  [(_ name type expr)
+   #'(begin
+       (define name (make-slot expr type))
+       (add-type-check
+         (let ([expr-type (type-of expr)])
+           (unless (<: expr-type type)
+             ; TODO show source code instead of generated code, or source location only.
+             (raise-syntax-error #f (format "Expression type is incompatible with type annotation, found ~v, expected ~v" expr-type type) #'expr)))))])
 
 ; A composite port expands to a variable that stores the result of a constructor
 ; call for the corresponding interface.
