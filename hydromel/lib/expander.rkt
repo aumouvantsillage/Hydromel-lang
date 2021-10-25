@@ -192,11 +192,7 @@
   [(_ name type expr)
    #'(begin
        (define name (make-slot expr type))
-       (add-type-check
-         (let ([expr-type (type-of expr)])
-           (unless (<: expr-type type)
-             ; TODO show source code instead of generated code, or source location only.
-             (raise-syntax-error #f (format "Expression type is incompatible with type annotation, found ~v, expected ~v" expr-type type) #'expr)))))])
+       (add-type-check name expr "Expression type is incompatible with type annotation"))])
 
 ; A composite port expands to a variable that stores the result of a constructor
 ; call for the corresponding interface.
@@ -225,18 +221,13 @@
 ; An assignment fills the target port's slot with the signal
 ; from the right-hand side.
 (define-syntax-parse-rule (assignment target expr)
-  #:with slt (syntax-parse #'target
-               #:literals [name-expr]
-               [(name-expr name) #'name]
-               [_                #'target])
-  #:with target-type #'(type-of target)
-  #:with expr-type   #'(type-of expr)
-  (begin
+  #:with slt-expr (syntax-parse #'target
+                    #:literals [name-expr]
+                    [(name-expr name) #'name]
+                    [_                #'target])
+  (let ([slt slt-expr])
     (set-slot-data! slt expr)
-    (add-type-check
-      (unless (<: expr-type target-type)
-        ; TODO show source code instead of generated code, or source location only.
-        (raise-syntax-error #f (format "Expression type is incompatible with target, found ~v, expected ~v" expr-type target-type) #'expr)))))
+    (add-type-check slt expr "Expression type is incompatible with target")))
 
 ; Connect two interface instances.
 ; See std.rkt for the implementation of connect.
@@ -452,7 +443,7 @@
          (static-data (name arg ...) res-type)
          res-type))]
 
-  ; TODO: do not implemented these since they will be implemented as call-exprs
+  ; TODO: do not implement these since they will be implemented as call-exprs
   ; [(field-expr expr field-name type-name)]
 
   [(_ (signal-expr x))
@@ -502,8 +493,15 @@
 
   [(_ other) #'other])
 
-(define-syntax-parse-rule (add-type-check expr)
-  (set! type-checks (cons (thunk expr) type-checks)))
+(define-syntax-parse-rule (add-type-check slt expr msg)
+  (set! type-checks (cons
+                      (thunk
+                        (let ([expr-type     (type-of expr)]
+                              [expected-type (slot-type slt)])
+                          (unless (<: expr-type expected-type)
+                            ; TODO show source code instead of generated code, or source location only.
+                            (raise-syntax-error #f (format "~a, found ~v, expected ~v" msg expr-type expected-type) #'expr))))
+                       type-checks)))
 
 ; ------------------------------------------------------------------------------
 ; Disabled forms.
