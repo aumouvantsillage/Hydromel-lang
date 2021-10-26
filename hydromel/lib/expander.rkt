@@ -27,7 +27,7 @@
   assignment connect-statement
   literal-expr name-expr field-expr
   indexed-port-expr indexed-array-expr
-  call-expr register-expr when-clause
+  call-expr call-expr/cast register-expr when-clause
   slot-expr signal-expr lift-expr concat-expr
   or-expr and-expr rel-expr add-expr mult-expr shift-expr
   let-expr if-expr case-expr choices prefix-expr range-expr slice-expr
@@ -295,6 +295,9 @@
 
 ; A call expression expands to a Racket function call.
 (define-syntax-parse-rule (call-expr fn-name arg ...)
+  (fn-name arg ...))
+
+(define-syntax-parse-rule (call-expr/cast fn-name arg ...)
   #:with expr this-syntax
   ; The type acts as a function that casts its argument.
   ; If no type was found, it will be the identity function.
@@ -406,7 +409,7 @@
 ; TODO Warn on circular dependencies in register-expr
 (define-syntax-parser type-of*
   #:literals [name-expr literal-expr choices register-expr when-clause
-              field-expr call-expr slot-expr signal-expr
+              field-expr call-expr call-expr/cast slot-expr signal-expr
               array-for-expr concat-for-expr lift-expr type-of]
   ; This is a special case for (type-of) forms generated in checker.rkt
   ; Maybe we should generate these forms in expander instead.
@@ -434,12 +437,12 @@
    #'(let ([x (dict-ref (remove-dynamic-indices expr) 'field-name)])
        (slot-type x))]
 
-  [(_ (~and (call-expr name arg ...) expr))
-   #:with sig-name (format-id #'expr "~a:return-type" #'name)
-   #:with (tv-name ...) (generate-temporaries (attribute arg))
-   #'(let* ([tv-name (type-of arg)] ...
-            [res-type (sig-name tv-name ...)])
-       (if (and (static-data? tv-name) ...)
+  [(_ (~and ((~or* call-expr call-expr/cast) name arg ...) expr))
+   #:with rt (format-id #'expr "~a:return-type" #'name)
+   #:with (tv ...) (generate-temporaries (attribute arg))
+   #'(let* ([tv (type-of arg)] ...
+            [res-type (rt tv ...)])
+       (if (and (static-data? tv) ...)
          (static-data (name arg ...) res-type)
          res-type))]
 
@@ -501,7 +504,7 @@
                           (unless (<: expr-type expected-type)
                             ; TODO show source code instead of generated code, or source location only.
                             (raise-syntax-error #f (format "~a, found ~v, expected ~v" msg expr-type expected-type) #'expr))))
-                       type-checks)))
+                      type-checks)))
 
 ; ------------------------------------------------------------------------------
 ; Disabled forms.
@@ -931,8 +934,8 @@
     (assignment (name-expr z)
       (lift-expr [x^ (slot-expr (name-expr x))]
                  [y^ (slot-expr (name-expr y))]
-        (call-expr concat:impl (name-expr x^) (call-expr signed (literal-expr 4))
-                               (name-expr y^) (call-expr signed (literal-expr 4))))))
+        (call-expr/cast concat:impl (name-expr x^) (call-expr signed (literal-expr 4))
+                                    (name-expr y^) (call-expr signed (literal-expr 4))))))
 
   (define c20-inst (C20-make))
   (slot-set! (c20-inst x) (signal 0 5 -2))

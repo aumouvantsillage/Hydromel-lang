@@ -77,4 +77,10 @@
 
 (struct record-type ())
 
-(struct builtin-function (name))
+(struct function (name cast?))
+
+(define (make-function name)
+  (function name #f))
+
+(define (make-function/cast name)
+  (function name #t))

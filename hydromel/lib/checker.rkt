@@ -39,7 +39,7 @@
    #:with impl-name (format-id #'s.name "~a:impl" #'s.name)
    #'(begin
        (provide s.name)
-       (define-syntax s.name (meta/builtin-function #'impl-name)))]
+       (define-syntax s.name (meta/make-function #'impl-name)))]
 
   [(_ s:stx/constant)
    #:with alt-name (generate-temporary (format-id #'s.name "hdrml:constant:~a" #'s.name))
@@ -123,7 +123,7 @@
 
       [s:stx/typedef
        (when (current-design-unit)
-         (bind! #'s.name (meta/builtin-function (format-id #'s.name "~a:impl" #'s.name))))
+         (bind! #'s.name (meta/make-function (format-id #'s.name "~a:impl" #'s.name))))
        (with-scope (add-scopes* this-syntax))]
 
       [s:stx/constant #:when (current-design-unit)
@@ -330,22 +330,24 @@
 
       [s:stx/call-expr
        #:with (arg ...) (map check (attribute s.arg))
+       (define fn (lookup #'s.fn-name))
        ; TODO check that fn is a built-in or custom function.
-       #:with fn-name (let ([fn (lookup #'s.fn-name)])
-                        (if (meta/builtin-function? fn)
-                          (meta/builtin-function-name fn)
-                          #'s.fn-name))
+       (define/syntax-parse fn-name (if (meta/function? fn)
+                                      (meta/function-name fn)
+                                      #'s.fn-name))
        ; Bitwise concatenation is a special case where we interleave
        ; argument values with their inferred types.
-       #:with (arg+ ...) (if (equal? (syntax->datum #'fn-name) 'concat:impl)
-                           #'((~@ arg (type-of arg)) ...)
-                           #'(arg ...))
-       (s/l (call-expr fn-name arg+ ...))]
+       (define/syntax-parse (arg+ ...) (if (equal? (syntax->datum #'fn-name) 'concat:impl)
+                                         #'((~@ arg (type-of arg)) ...)
+                                         #'(arg ...)))
+       (if (and (meta/function? fn) (meta/function-cast? fn))
+         (s/l (call-expr/cast fn-name arg+ ...))
+         (s/l (call-expr      fn-name arg+ ...)))]
 
       [s:stx/name-expr
        (match (lookup #'s.name)
          ; A function name is converted to a function call with no argument.
-         [(meta/builtin-function fn-name)
+         [(meta/function fn-name _)
           (q/l (call-expr #,fn-name))]
 
          ; For a global constant name, append a suffix to access the actual constant.
@@ -522,6 +524,10 @@
          [(lift-expr binding ... (mode body iter ...))
           (q/l (mode (lift-expr binding ... body) iter ...))]
          [_ this-syntax])]
+
+      [s:stx/call-expr/cast
+       (lift-if-needed* stx (attribute s.arg)
+         (λ (lst) (q/l (call-expr/cast s.fn-name #,@lst))))]
 
       [s:stx/call-expr
        (lift-if-needed* stx (attribute s.arg)

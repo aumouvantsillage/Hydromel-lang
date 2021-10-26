@@ -50,7 +50,7 @@
 ; Convert an integer to a boolean.
 ; This function is used in generated conditional statements.
 ; It is not available from Hydromel source code.
-(define-syntax int->bool (meta/builtin-function #'int->bool:impl))
+(define-syntax int->bool (meta/make-function #'int->bool:impl))
 
 (define (int->bool:impl a)
   (not (zero? a)))
@@ -60,7 +60,7 @@
 
 ; The Hydromel if statement is expanded to a call-expr
 ; to &if as if it were a function.
-(define-syntax &if (meta/builtin-function #'if:impl))
+(define-syntax &if (meta/make-function #'if:impl))
 
 (define-syntax-parse-rule (if:impl (~seq cnd thn) ... els)
   (cond [(int->bool:impl cnd) thn]
@@ -72,7 +72,7 @@
 
 ; The Hydromel case statement is expanded to a call-expr
 ; to &case as if it were a function.
-(define-syntax &case (meta/builtin-function #'case:impl))
+(define-syntax &case (meta/make-function #'case:impl))
 
 (define-syntax-parse-rule (case:impl expr (~seq ch thn) ... els)
   (let ([x expr])
@@ -88,7 +88,7 @@
 
 ; Returns the minimum width to encode a given number
 ; as an unsigned integer.
-(define-syntax unsigned_width (meta/builtin-function #'min-unsigned-width))
+(define-syntax unsigned_width (meta/make-function #'min-unsigned-width))
 
 (define (min-unsigned-width:return-type ta)
   (define ta^ (t/normalize-type ta))
@@ -96,7 +96,7 @@
 
 ; Returns the minimum width to encode a given number
 ; as an signed integer.
-(define-syntax signed_width (meta/builtin-function #'min-signed-width))
+(define-syntax signed_width (meta/make-function #'min-signed-width))
 
 (define (min-signed-width:return-type ta)
   (define ta^ (t/normalize-type ta))
@@ -106,10 +106,10 @@
                 [_ (error "Cannot compute data size.")])))
 
 ; Boolean operators are all bitwise.
-(define-syntax &not (meta/builtin-function #'bitwise-not))
-(define-syntax &and (meta/builtin-function #'bitwise-and))
-(define-syntax &or  (meta/builtin-function #'bitwise-ior))
-(define-syntax &xor (meta/builtin-function #'bitwise-xor))
+(define-syntax &not (meta/make-function/cast #'bitwise-not))
+(define-syntax &and (meta/make-function      #'bitwise-and))
+(define-syntax &or  (meta/make-function      #'bitwise-ior))
+(define-syntax &xor (meta/make-function      #'bitwise-xor))
 
 (define (bitwise:return-type ta tb)
   (define ta^ (t/normalize-type ta))
@@ -120,15 +120,15 @@
     [(list (t/abstract-integer  na) (t/signed   nb))          (t/signed   (max na nb))]
     [_ (error "Bitwise operation expects integer operands.")]))
 
-(define (bitwise-not:return-type ta) ta)
+(define bitwise-not:return-type identity)
 (define bitwise-and:return-type bitwise:return-type)
 (define bitwise-ior:return-type bitwise:return-type)
 (define bitwise-xor:return-type bitwise:return-type)
 
 ; Comparison operations return integers 0 and 1.
-(define-syntax &== (meta/builtin-function #'eq:impl))
-(define-syntax &/= (meta/builtin-function #'ne:impl))
-(define-syntax &>  (meta/builtin-function #'gt:impl))
+(define-syntax &== (meta/make-function #'eq:impl))
+(define-syntax &/= (meta/make-function #'ne:impl))
+(define-syntax &>  (meta/make-function #'gt:impl))
 
 (define (eq:impl a b)
   (if (= a b) 1 0))
@@ -147,10 +147,10 @@
 (define gt:impl:return-type comparison:return-type)
 
 ; Use the built-in arithmetic operators.
-(define-syntax &+ (meta/builtin-function #'+))
-(define-syntax &- (meta/builtin-function #'-))
-(define-syntax &* (meta/builtin-function #'*))
-(define-syntax &/ (meta/builtin-function #'quotient))
+(define-syntax &+ (meta/make-function #'+))
+(define-syntax &- (meta/make-function #'-))
+(define-syntax &* (meta/make-function #'*))
+(define-syntax &/ (meta/make-function #'quotient))
 
 (define (+:return-type ta tb)
   (define tr (t/common-supertype (t/normalize-type ta) (t/normalize-type tb)))
@@ -175,8 +175,8 @@
 (define (quotient:return-type ta tb)
   ta)
 
-(define-syntax &<< (meta/builtin-function #'arithmetic-shift))
-(define-syntax &>> (meta/builtin-function #'arithmetic-shift-right))
+(define-syntax &<< (meta/make-function #'arithmetic-shift))
+(define-syntax &>> (meta/make-function #'arithmetic-shift-right))
 
 (define (arithmetic-shift:return-type ta tb)
   (define ta^ (t/normalize-type ta))
@@ -197,7 +197,7 @@
     [(list (t/abstract-integer na) (t/signed nb))        (t/resize ta^ (- na (min-signed-value nb)))]
     [_ (error "Shift operation expects integer operands.")]))
 
-(define-syntax &range (meta/builtin-function #'range:impl))
+(define-syntax &range (meta/make-function #'range:impl))
 
 ; TODO Empty ranges are no longer supported.
 ; TODO Do we need an explicit "descending" range specifier?
@@ -215,7 +215,7 @@
 ; The slicing operation defaults to the unsigned version.
 ; The signed case is handled automatically because the expander inserts
 ; a conversion to the type returned by the return-type.
-(define-syntax slice (meta/builtin-function #'unsigned-slice))
+(define-syntax slice (meta/make-function/cast #'unsigned-slice))
 
 (define (unsigned-slice:return-type ta tb tc)
   (define left (match tb
@@ -231,11 +231,11 @@
   (t/resize (t/normalize-type ta)
             (max 0 (add1 (- left right)))))
 
-(define-syntax concat (meta/builtin-function #'concat:impl))
+(define-syntax concat (meta/make-function/cast #'concat:impl))
 
 ; The binary concatenetion operation defaults to the unsigned version.
 ; The signed case is handled automatically because the expander inserts
-; a conversion to the type returned by the return-type.
+; a conversion to the type returned by concat:impl:return-type.
 ; Since this function needs to know the width of its arguments,
 ; their types are inserted by the checker.
 (define-syntax-parse-rule (concat:impl (~seq a ta) ...)
@@ -252,12 +252,12 @@
     [(t/signed _)   (t/signed w)]
     [(t/unsigned _) (t/unsigned w)]))
 
-(define-syntax make-array (meta/builtin-function #'vector))
+(define-syntax make-array (meta/make-function #'vector))
 
 (define (vector:return-type . ts)
   (t/array (length ts) (t/union ts)))
 
-(define-syntax array-ref (meta/builtin-function #'vector-ref))
+(define-syntax array-ref (meta/make-function #'vector-ref))
 
 (define (vector-ref:return-type ta tb)
   ; TODO check the type of tb
@@ -266,10 +266,11 @@
     [(t/array _ te) te]
     [_              (error "Not an array type" ta)]))
 
-(define-syntax as_signed (meta/builtin-function #'as_signed:impl))
+(define-syntax as_signed (meta/make-function/cast #'as_signed:impl))
 
-(define (as_signed:impl a)
-  a)
+; as_signed does not actually convert the given value because
+; a call to the conversion function is inserted by the expander.
+(define as_signed:impl identity)
 
 (define (as_signed:impl:return-type ta)
   (define ta^ (t/normalize-type ta))
@@ -278,10 +279,11 @@
     [(t/unsigned n) (t/signed n)]
     [_ (error "Cannot cast value to signed")]))
 
-(define-syntax as_unsigned (meta/builtin-function #'as_unsigned:impl))
+(define-syntax as_unsigned (meta/make-function/cast #'as_unsigned:impl))
 
-(define (as_unsigned:impl a)
-  a)
+; as_unsigned does not actually convert the given value because
+; a call to the conversion function is inserted by the expander.
+(define as_unsigned:impl identity)
 
 (define (as_unsigned:impl:return-type ta)
   (define ta^ (t/normalize-type ta))
@@ -290,7 +292,7 @@
     [(t/unsigned _) ta^]
     [_ (error "Cannot cast value to unsigned")]))
 
-(define-syntax cast (meta/builtin-function #'cast:impl))
+(define-syntax cast (meta/make-function/cast #'cast:impl))
 
 ; cast does not actually convert the given value because
 ; a call to the conversion function is already inserted by the expander.

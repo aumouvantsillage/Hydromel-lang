@@ -45,7 +45,9 @@
 
 (struct tuple datatype (elt-types) #:transparent)
 
-(struct union datatype (types) #:transparent)
+(struct union datatype (types)
+  #:transparent
+  #:property prop:procedure (λ (t v) ((normalize-type t) v)))
 
 (struct array datatype (size elt-type) #:transparent)
 
@@ -72,37 +74,29 @@
 
 ; Standard derived types.
 
-(define-syntax bit (meta/builtin-function #'bit:impl))
+(define-syntax type (meta/make-function #'type:impl))
 
-(define (bit:impl)
-  (unsigned 1))
+(define type:impl (const (subtype (any))))
 
-(define (bit:impl:return-type)
-  (static-data (bit:impl) (type:impl)))
+(define type:impl:return-type (const (static-data (type:impl) (type:impl))))
 
-(define-syntax natural (meta/builtin-function #'natural:impl))
+(define-syntax bit (meta/make-function #'bit:impl))
 
-(define (natural:impl)
-  (unsigned #f))
+(define bit:impl (const (unsigned 1)))
 
-(define (natural:impl:return-type)
-  (static-data (natural:impl) (type:impl)))
+(define bit:impl:return-type (const (static-data (bit:impl) (type:impl))))
 
-(define-syntax integer (meta/builtin-function #'integer:impl))
+(define-syntax natural (meta/make-function #'natural:impl))
 
-(define (integer:impl)
-  (signed #f))
+(define natural:impl (const (unsigned #f)))
 
-(define (integer:impl:return-type)
-  (static-data (integer:impl) (type:impl)))
+(define natural:impl:return-type (const (static-data (natural:impl) (type:impl))))
 
-(define-syntax type (meta/builtin-function #'type:impl))
+(define-syntax integer (meta/make-function #'integer:impl))
 
-(define (type:impl)
-  (subtype (any)))
+(define integer:impl (const (signed #f)))
 
-(define (type:impl:return-type)
-  (static-data (type:impl) (type:impl)))
+(define integer:impl:return-type (const (static-data (integer:impl) (type:impl))))
 
 ; Type helpers.
 

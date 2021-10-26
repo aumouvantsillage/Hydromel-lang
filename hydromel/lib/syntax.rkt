@@ -119,11 +119,16 @@
   (define-syntax-class choices
     #:literals [choices]
     (pattern (choices expr ...)))
-    
+
+  (define-syntax-class call-expr/cast
+    #:literals [call-expr/cast]
+    (pattern (call-expr/cast fn-name arg ...)))
+
   (define-syntax-class call-expr
     #:literals [call-expr or-expr and-expr rel-expr add-expr mult-expr shift-expr
                 if-expr case-expr prefix-expr range-expr slice-expr concat-expr array-expr
                 indexed-array-expr]
+    #:attributes [fn-name (arg 1)]
     (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr shift-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
       #:attr fn-name (format-id #'op "&~a" #'op))
@@ -150,7 +155,8 @@
       #:attr fn-name #'concat)
     (pattern (array-expr arg ...)
       #:attr fn-name #'make-array)
-    (pattern (call-expr fn-name arg ...)))
+    (pattern (call-expr fn-name arg ...))
+    (pattern :call-expr/cast))
 
   (define-syntax-class lift-expr
     #:literals [lift-expr]
