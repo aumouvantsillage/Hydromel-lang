@@ -141,7 +141,7 @@
                                 (set! visiting #f)
                                 res]))))]
   [(_ data type)
-   #'(slot data (thunk type))])   
+   #'(slot data (thunk type))])
 
 ; Parameters are expanded in macro design-unit.
 ; TODO add type checking
@@ -286,11 +286,7 @@
 ; If the name refers to a slot, unwrap it.
 ; A name can also refer to a composite port...
 (define-syntax-parse-rule (name-expr name ...)
-  #:with expr this-syntax
-  #:with name^ #'(concat-name name ...)
-  (if (slot? name^)
-    (slot-data name^)
-    name^))
+  (slot-data* (concat-name name ...)))
 
 ; Append a suffix to a name-expr if specified.
 (define-syntax-parser concat-name

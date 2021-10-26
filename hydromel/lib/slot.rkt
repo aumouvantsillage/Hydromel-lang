@@ -9,6 +9,7 @@
 (provide
   (struct-out slot)
   slot-type
+  slot-data*
   connect)
 
 ; A slot contains a value and a function that computes its type.
@@ -17,6 +18,11 @@
 
 (define (slot-type slt)
   ((slot-typer slt)))
+
+(define (slot-data* slt)
+  (if (slot? slt)
+    (slot-data slt)
+    slt))
 
 (define (connect left right)
   (for ([(k vl) (in-dict left)])
