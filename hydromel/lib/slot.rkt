@@ -8,29 +8,12 @@
 
 (provide
   (struct-out slot)
-  make-slot
   slot-type
   connect)
 
 ; A slot contains a value and a function that computes its type.
 ; In most cases, use make-slot to construct a slot instance.
 (struct slot (data typer) #:mutable #:transparent)
-
-; Create a slot for given data and type.
-; This is implemented as a macro because we want to evaluate
-; the type argument only when the slot-typer thunk is called.
-(define-syntax-parse-rule (make-slot data type)
-  (let ([res      #f]
-        [visiting #f])
-    (slot data (thunk
-                 (when visiting
-                   ; TODO display signal names, locate error in source code
-                   (error "Could not infer type due to cross-dependencies"))
-                 (unless res
-                   (set! visiting #t)
-                   (set! res type)
-                   (set! visiting #f))
-                 res))))
 
 (define (slot-type slt)
   ((slot-typer slt)))

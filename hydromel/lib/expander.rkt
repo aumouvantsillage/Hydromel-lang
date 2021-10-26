@@ -124,6 +124,25 @@
 ; Declarations
 ; ------------------------------------------------------------------------------
 
+; Create a slot for given data and type.
+; This is implemented as a macro because we want to evaluate
+; the type argument only when the slot-typer thunk is called.
+(define-syntax-parser make-slot
+  #:literals [type-of]
+  [(_ data (type-of expr))
+   #'(let ([res      #f]
+           [visiting #f])
+       (slot data (thunk
+                    (cond [res res]
+                          ; TODO display signal names, locate error in source code
+                          [visiting (raise-syntax-error #f "Could not infer type due to cross-dependencies" #'expr)]
+                          [else (set! visiting #t)
+                                (set! res (type-of expr))
+                                (set! visiting #f)
+                                res]))))]
+  [(_ data type)
+   #'(slot data (thunk type))])   
+
 ; Parameters are expanded in macro design-unit.
 ; TODO add type checking
 (define-syntax-parse-rule (parameter _ ...)
