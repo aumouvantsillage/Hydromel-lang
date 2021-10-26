@@ -79,16 +79,6 @@
 ; or whether it appears at the module level.
 (define-syntax-parameter in-design-unit #f)
 
-; A hash table of inferred types for expressions in a given context.
-(define-syntax-parameter inferred-types
-  (λ (stx)
-    (raise-syntax-error (syntax-e stx) "can only be used inside design-unit")))
-
-; A list of type checking thunks to run after all slots have been filled.
-(define-syntax-parameter type-checks
-  (λ (stx)
-    (raise-syntax-error (syntax-e stx) "can only be used inside design-unit")))
-
 ; An interface or a component expands to a constructor function
 ; that returns a hash-map with public or debug data.
 ; Interfaces and components differ by the element types they are allowed
@@ -103,15 +93,10 @@
   (begin
     (provide ctor-name)
     (define (ctor-name arg-name ...)
-      (define types  (make-hash))
-      (define checks '())
-      (splicing-syntax-parameterize ([in-design-unit #t]
-                                     [inferred-types (make-rename-transformer #'types)]
-                                     [type-checks    (make-rename-transformer #'checks)])
-        (define param-name (make-slot arg-name (static-data arg-name param-type))) ...
-        body ...)
-      (for ([f (in-list (reverse checks))])
-        (f))
+      (with-type-checks
+        (splicing-syntax-parameterize ([in-design-unit #t])
+          (define param-name (make-slot arg-name (static-data arg-name param-type))) ...
+          body ...))
       (make-hash `((* . (spliced-name ...)) (field-name . ,field-name) ...)))))
 
 (define-syntax-parse-rule (interface name body ...)
@@ -156,8 +141,7 @@
   (begin
     (provide impl-name rtype-name)
     (define (impl-name arg-name ...)
-      (define types (make-hash))
-      (syntax-parameterize ([inferred-types (make-rename-transformer #'types)])
+      (with-types
         (define param-name (make-slot arg-name (static-data arg-name param-type))) ...
         expr))
     (define (rtype-name arg-name ...)
@@ -175,11 +159,9 @@
    #:with name^ (format-id #'name "~a-constant" #'name)
    #'(begin
        (provide name^)
-       ; The expression will not be type-checked, so we create a temporary type
-       ; dictionary that will be used only once.
-       (define name^ (let ([types (make-hash)])
-                       (syntax-parameterize ([inferred-types (make-rename-transformer #'types)])
-                         (constant->slot expr)))))])
+       ; The declaration is not in a type-checking context so we create a
+       ; temporary type dictionary that will be used only once.
+       (define name^ (with-types (constant->slot expr))))])
 
 ; A constant infers its type immediately before computing its value.
 ; Here, we benefit from the fact that type-of will return a
@@ -396,6 +378,17 @@
 ; Type inference and checking
 ; ------------------------------------------------------------------------------
 
+; A hash table of inferred types for expressions in a given context.
+(define-syntax-parameter inferred-types
+  (λ (stx)
+    (raise-syntax-error (syntax-e stx) "can only be used inside design-unit")))
+
+; Wrap the given body in a typing context.
+(define-syntax-parse-rule (with-types body ...)
+  (splicing-let [(types (make-hash))]
+    (splicing-syntax-parameterize ([inferred-types (make-rename-transformer #'types)])
+      body ...)))
+
 ; Generate type inference code and memoize the computed type.
 ; This code is meant to be executed lazily, either in a slot type
 ; or inside a signal, so that out-of-order dependencies are correctly handled.
@@ -511,14 +504,30 @@
 
   [(_ other) #'other])
 
+; A list of type checking thunks to run after all slots have been filled.
+(define-syntax-parameter type-checks
+  (λ (stx)
+    (raise-syntax-error (syntax-e stx) "can only be used inside design-unit")))
+
+; Wrap the given body in a type checking context.
+(define-syntax-parse-rule (with-type-checks body ...)
+  (splicing-let [(checks '())]
+    (splicing-syntax-parameterize ([type-checks (make-rename-transformer #'checks)])
+      (with-types
+        body ...))
+    (for ([f (in-list (reverse checks))])
+      (f))))
+
+(define (type-check slt expr-stx expr-type msg)
+  (define expected-type (slot-type slt))
+  (unless (<: expr-type expected-type)
+    ; TODO show source code instead of generated code, or source location only.
+    (raise-syntax-error #f (format "~a, found ~v, expected ~v" msg expr-type expected-type) expr-stx)))
+
 (define-syntax-parse-rule (add-type-check slt expr msg)
   (set! type-checks (cons
                       (thunk
-                        (let ([expr-type     (type-of expr)]
-                              [expected-type (slot-type slt)])
-                          (unless (<: expr-type expected-type)
-                            ; TODO show source code instead of generated code, or source location only.
-                            (raise-syntax-error #f (format "~a, found ~v, expected ~v" msg expr-type expected-type) #'expr))))
+                        (type-check slt #'expr (type-of expr) msg))
                       type-checks)))
 
 ; ------------------------------------------------------------------------------
