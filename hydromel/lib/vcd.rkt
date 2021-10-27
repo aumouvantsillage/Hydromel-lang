@@ -6,7 +6,7 @@
 
 (require
   threading
-  "logic.rkt"
+  (only-in "numeric.rkt" integer->bit-string)
   (only-in "types.rkt" normalize-type abstract-integer-width)
   "signal.rkt"
   "slot.rkt")

@@ -6,7 +6,7 @@
 
 (require
   (prefix-in base/ racket/base)
-  (prefix-in l/ "logic.rkt")
+  (prefix-in num/ "numeric.rkt")
   (for-syntax
     (prefix-in meta/ "meta.rkt")))
 
@@ -25,7 +25,7 @@
 
 (struct signed abstract-integer ()
   #:transparent
-  #:property prop:procedure (λ (t v) (l/signed v (abstract-integer-width t))))
+  #:property prop:procedure (λ (t v) (num/signed v (abstract-integer-width t))))
 
 ; Parameterized data types are exposed as functions
 ; whose result is a type.
@@ -41,7 +41,7 @@
 
 (struct unsigned abstract-integer ()
   #:transparent
-  #:property prop:procedure (λ (t v) (l/unsigned v (abstract-integer-width t))))
+  #:property prop:procedure (λ (t v) (num/unsigned v (abstract-integer-width t))))
 
 (struct tuple datatype (elt-types) #:transparent)
 
@@ -110,13 +110,13 @@
   (unless (base/integer? x)
     (error "Cannot determine type of literal" x))
   (if (>= x 0)
-    (unsigned (l/min-unsigned-width x))
-    (signed   (l/min-signed-width   x))))
+    (unsigned (num/min-unsigned-width x))
+    (signed   (num/min-signed-width   x))))
 
 (define (normalize-type t)
   (match t
-    [(static-data n (unsigned #f)) (unsigned (l/min-unsigned-width n))]
-    [(static-data n (signed   #f)) (signed   (l/min-unsigned-width n))]
+    [(static-data n (unsigned #f)) (unsigned (num/min-unsigned-width n))]
+    [(static-data n (signed   #f)) (signed   (num/min-unsigned-width n))]
     [(static-data _ t)             (normalize-type t)]
     [(union ts)                    (foldl common-supertype #f (map normalize-type ts))]
     [(subtype t)                   (subtype (normalize-type t))]

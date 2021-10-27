@@ -8,7 +8,7 @@
   "signal.rkt"
   "slot.rkt"
   (prefix-in t/ "types.rkt")
-  (only-in "logic.rkt"
+  (only-in "numeric.rkt"
     min-unsigned-width min-signed-width
     min-signed-value   max-signed-value
     min-unsigned-value max-unsigned-value
@@ -45,7 +45,7 @@
   as_signed      as_signed:impl         as_signed:impl:return-type
   as_unsigned    as_unsigned:impl       as_unsigned:impl:return-type
   cast           cast:impl              cast:impl:return-type
-  (all-from-out  "logic.rkt"))
+  (all-from-out  "numeric.rkt"))
 
 ; Convert an integer to a boolean.
 ; This function is used in generated conditional statements.
