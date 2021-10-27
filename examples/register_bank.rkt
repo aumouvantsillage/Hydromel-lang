@@ -9,7 +9,7 @@
   hydromel/lib/signal
   hydromel/lib/helpers
   hydromel/lib/vcd
-  "register-bank.hdrml")
+  "register_bank.mel")
 
 (define inst (register_bank-make (unsigned 8) 4))
 

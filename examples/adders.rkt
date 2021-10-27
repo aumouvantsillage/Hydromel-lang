@@ -8,7 +8,7 @@
   hydromel
   hydromel/lib/signal
   hydromel/lib/helpers
-  "adders.hdrml")
+  "adders.mel")
 
 ; (define inst (ripple_carry_adder_rec-make 4))
 (define inst (ripple_carry_adder_iter-make 4))

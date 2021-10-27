@@ -9,7 +9,7 @@
   hydromel/lib/signal
   hydromel/lib/helpers
   hydromel/lib/vcd
-  "fifo.hdrml")
+  "fifo.mel")
 
 (define inst (fifo_rec_b-make (unsigned 8) 0 3))
 

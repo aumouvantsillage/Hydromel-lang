@@ -8,7 +8,7 @@
   hydromel
   hydromel/lib/signal
   hydromel/lib/helpers
-  "full_adder.hdrml")
+  "full_adder.mel")
 
 (define inst (full_adder-make))
 

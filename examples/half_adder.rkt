@@ -8,7 +8,7 @@
   hydromel
   hydromel/lib/signal
   hydromel/lib/helpers
-  "half_adder.hdrml")
+  "half_adder.mel")
 
 (define inst (half_adder-make))
 

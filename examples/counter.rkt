@@ -8,7 +8,7 @@
   hydromel
   hydromel/lib/signal
   hydromel/lib/helpers
-  "counter.hdrml")
+  "counter.mel")
 
 (define inst (counter-make 3))
 
