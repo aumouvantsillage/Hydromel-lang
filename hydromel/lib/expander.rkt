@@ -16,7 +16,6 @@
     racket/match
     racket/syntax
     racket/function
-    racket/dict
     syntax/stx))
 
 (provide
@@ -322,7 +321,7 @@
   #:with expr this-syntax
   ; The type acts as a function that casts its argument.
   ; If no type was found, it will be the identity function.
-  (let ([expr-type (type-of expr)])
+  (let ([expr-type (type-of/recall expr)])
     (expr-type (fn-name arg ...))))
 
 (define-syntax-parse-rule (choices expr ...)
@@ -413,7 +412,8 @@
     (splicing-syntax-parameterize ([inferred-types (make-rename-transformer #'types)])
       body ...)))
 
-; Generate type inference code and memoize the computed type.
+; Generate type inference code.
+; Memoize the computed type if it is needed at runtime.
 ; This code is meant to be executed lazily, either in a slot type
 ; or inside a signal, so that out-of-order dependencies are correctly handled.
 ; Only constants infer their types immediately.
@@ -421,14 +421,16 @@
   #:literals [call-expr/cast]
   [(_ (~and (call-expr/cast _ ...) expr))
    #:with key (typing-key #'expr)
-   #'(dict-ref inferred-types 'key
-       (thunk
-         (define res (type-of* expr))
-         (dict-set! inferred-types 'key res)
-         res))]
+   #'(let ([res (type-of* expr)])
+       (dict-set! inferred-types 'key res)
+       res)]
 
   [(_ expr)
    #'(type-of* expr)])
+
+(define-syntax-parse-rule (type-of/recall expr)
+  #:with key (typing-key #'expr)
+  (dict-ref inferred-types 'key))
 
 ; Expression types are memoized in a dictionary whose keys are:
 ; either the 'label syntax property (generated in checker.rkt)
