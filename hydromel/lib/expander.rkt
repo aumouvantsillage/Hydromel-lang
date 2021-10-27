@@ -16,6 +16,7 @@
     racket/match
     racket/syntax
     racket/function
+    racket/dict
     syntax/stx))
 
 (provide
@@ -136,15 +137,18 @@
    #'(make-slot #f type type)])
 
 (define-syntax-parse-rule (make-slot-actual-typer default-type expr)
+  (make-slot-actual-typer* default-type (thunk (type-of expr))))
+
+(define (make-slot-actual-typer* default-type actual-typer)
   (let ([res      #f]
         [visiting #f])
     (λ (actual)
       (cond [(and default-type (not actual)) default-type]
             [res res]
             ; TODO display signal names, locate error in source code
-            [visiting (or default-type (raise-syntax-error #f "Could not infer type due to cross-dependencies" #'expr))]
+            [visiting (or default-type (error "Could not infer type due to cross-dependencies"))]
             [else (set! visiting #t)
-                  (set! res (type-of expr))
+                  (set! res (actual-typer))
                   (set! visiting #f)
                   res]))))
 
@@ -413,13 +417,18 @@
 ; This code is meant to be executed lazily, either in a slot type
 ; or inside a signal, so that out-of-order dependencies are correctly handled.
 ; Only constants infer their types immediately.
-(define-syntax-parse-rule (type-of expr)
-  #:with key (typing-key #'expr)
-  (dict-ref inferred-types 'key
-    (thunk
-      (let ([t (type-of* expr)])
-        (dict-set! inferred-types 'key t)
-        t))))
+(define-syntax-parser type-of
+  #:literals [call-expr/cast]
+  [(_ (~and (call-expr/cast _ ...) expr))
+   #:with key (typing-key #'expr)
+   #'(dict-ref inferred-types 'key
+       (thunk
+         (define res (type-of* expr))
+         (dict-set! inferred-types 'key res)
+         res))]
+
+  [(_ expr)
+   #'(type-of* expr)])
 
 ; Expression types are memoized in a dictionary whose keys are:
 ; either the 'label syntax property (generated in checker.rkt)
