@@ -93,11 +93,13 @@
   (begin
     (provide ctor-name)
     (define (ctor-name arg-name ...)
-      (with-type-checks
-        (splicing-syntax-parameterize ([in-design-unit #t])
-          (define param-name (make-slot arg-name (static-data arg-name param-type))) ...
+      (splicing-syntax-parameterize ([in-design-unit #t])
+        (with-types
+          (define param-name (make-slot arg-name (static-data arg-name param-type) (static-data arg-name (literal-type arg-name)))) ...
           body ...))
-      (make-hash `((* . (spliced-name ...)) (field-name . ,field-name) ...)))))
+      (define res (make-hash `((* . (spliced-name ...)) (field-name . ,field-name) ...)))
+      (type-check res)
+      res)))
 
 (define-syntax-parse-rule (interface name body ...)
   (design-unit name body ...))
@@ -111,29 +113,50 @@
 
 ; Create a slot for given data and type.
 ; This is implemented as a macro because we want to evaluate
-; the type argument only when the slot-typer thunk is called.
+; expression types lazily.
 (define-syntax-parser make-slot
   #:literals [type-of]
+  [(_ data type (type-of expr))
+   #'(let ([t type])
+       (slot data t (make-slot-actual-typer t expr)))]
+
   [(_ data (type-of expr))
-   #'(let ([res      #f]
-           [visiting #f])
-       (slot data (thunk
-                    (cond [res res]
-                          ; TODO display signal names, locate error in source code
-                          [visiting (raise-syntax-error #f "Could not infer type due to cross-dependencies" #'expr)]
-                          [else (set! visiting #t)
-                                (set! res (type-of expr))
-                                (set! visiting #f)
-                                res]))))]
+   #'(make-slot data #f (type-of expr))]
+
+  [(_ (type-of expr))
+   #'(make-slot #f #f (type-of expr))]
+
+  [(_ data type expr-type)
+   #'(slot data type (λ (a) (if a expr-type type)))]
+
   [(_ data type)
-   #'(slot data (thunk type))])
+   #'(make-slot data type type)]
+
+  [(_ type)
+   #'(make-slot #f type type)])
+
+(define-syntax-parse-rule (make-slot-actual-typer default-type expr)
+  (let ([res      #f]
+        [visiting #f])
+    (λ (actual)
+      (cond [(and default-type (not actual)) default-type]
+            [res res]
+            ; TODO display signal names, locate error in source code
+            [visiting (or default-type (raise-syntax-error #f "Could not infer type due to cross-dependencies" #'expr))]
+            [else (set! visiting #t)
+                  (set! res (type-of expr))
+                  (set! visiting #f)
+                  res]))))
+
+(define-syntax-parse-rule (update-slot! slt expr)
+  (let ([s slt])
+    (set-slot-data!         s expr)
+    (set-slot-actual-typer! s (make-slot-actual-typer (slot-declared-type s) expr))))
 
 ; Parameters are expanded in macro design-unit.
-; TODO add type checking
 (define-syntax-parse-rule (parameter _ ...)
   (begin))
 
-; TODO add type checking on parameters
 (define-syntax-parse-rule (typedef name ((~literal parameter) param-name param-type) ... expr)
   #:with (arg-name   ...) (generate-temporaries (attribute param-name))
   #:with impl-name  (format-id #'name      "~a:impl"             #'name)
@@ -142,7 +165,8 @@
     (provide impl-name rtype-name)
     (define (impl-name arg-name ...)
       (with-types
-        (define param-name (make-slot arg-name (static-data arg-name param-type))) ...
+        (define param-name (make-slot arg-name (static-data arg-name param-type) (static-data arg-name (literal-type arg-name)))) ...
+        (type-check param-name) ...
         expr))
     (define (rtype-name arg-name ...)
       (static-data (impl-name (static-data-value arg-name) ...) (type:impl)))))
@@ -180,7 +204,7 @@
 ; the current component instance.
 ; We use a slot for output ports as well to keep a simple port access mechanism.
 (define-syntax-parse-rule (data-port name _ type)
-  (define name (make-slot #f type)))
+  (define name (make-slot type)))
 
 ; A local signal expands to a variable containing the result of the given
 ; expression in a slot.
@@ -191,9 +215,7 @@
    #'(define name (make-slot expr (type-of expr)))]
 
   [(_ name type expr)
-   #'(begin
-       (define name (make-slot expr type))
-       (add-type-check name expr "Expression type is incompatible with type annotation"))])
+   #'(define name (make-slot expr type (type-of expr)))])
 
 ; A composite port expands to a variable that stores the result of a constructor
 ; call for the corresponding interface.
@@ -222,13 +244,11 @@
 ; An assignment fills the target port's slot with the signal
 ; from the right-hand side.
 (define-syntax-parse-rule (assignment target expr)
-  #:with slt-expr (syntax-parse #'target
-                    #:literals [name-expr]
-                    [(name-expr name) #'name]
-                    [_                #'target])
-  (let ([slt slt-expr])
-    (set-slot-data! slt expr)
-    (add-type-check slt expr "Expression type is incompatible with target")))
+  #:with slt (syntax-parse #'target
+               #:literals [name-expr]
+               [(name-expr name) #'name]
+               [_                #'target])
+  (update-slot! slt expr))
 
 ; Connect two interface instances.
 ; See std.rkt for the implementation of connect.
@@ -394,12 +414,12 @@
 ; or inside a signal, so that out-of-order dependencies are correctly handled.
 ; Only constants infer their types immediately.
 (define-syntax-parse-rule (type-of expr)
-   #:with key (typing-key #'expr)
-   (dict-ref inferred-types 'key
-     (thunk
-       (let ([t (type-of* expr)])
-         (dict-set! inferred-types 'key t)
-         t))))
+  #:with key (typing-key #'expr)
+  (dict-ref inferred-types 'key
+    (thunk
+      (let ([t (type-of* expr)])
+        (dict-set! inferred-types 'key t)
+        t))))
 
 ; Expression types are memoized in a dictionary whose keys are:
 ; either the 'label syntax property (generated in checker.rkt)
@@ -470,7 +490,7 @@
    #'(let* ([rng       iter-expr] ...
             [left      (first rng)] ...
             [right     (last rng)] ...
-            [iter-name (make-slot #f (common-supertype (literal-type left) (literal-type right)))] ...)
+            [iter-name (make-slot (common-supertype (literal-type left) (literal-type right)))] ...)
        (array (* (add1 (abs (- left right))) ...) (type-of body)))]
 
   [(_ (concat-for-expr body (~seq iter-name iter-expr) ...))
@@ -481,11 +501,11 @@
    #'(let* ([rng       iter-expr] ...
             [left      (first rng)] ...
             [right     (last rng)] ...
-            [iter-name (make-slot #f (common-supertype (literal-type left) (literal-type right)))] ...)
+            [iter-name (make-slot (common-supertype (literal-type left) (literal-type right)))] ...)
        (resize (type-of body) (* (add1 (abs (- left right))) ...)))]
 
   [(_ (lift-expr (name sexpr) ...+ expr))
-   #'(let ([name (make-slot #f (type-of sexpr))] ...)
+   #'(let ([name (make-slot (type-of sexpr))] ...)
        (type-of expr))]
 
   [_ #'(any)])
@@ -504,31 +524,21 @@
 
   [(_ other) #'other])
 
-; A list of type checking thunks to run after all slots have been filled.
-(define-syntax-parameter type-checks
-  (λ (stx)
-    (raise-syntax-error (syntax-e stx) "can only be used inside design-unit")))
+(define (type-check inst)
+  (match inst
+    [(slot _ t _) #:when t
+     (define u (slot-type* inst))
+     (unless (<: u t)
+       ; TODO show source code instead of generated code, or source location only.
+       (raise-result-error 'type-check t u))]
 
-; Wrap the given body in a type checking context.
-(define-syntax-parse-rule (with-type-checks body ...)
-  (splicing-let [(checks '())]
-    (splicing-syntax-parameterize ([type-checks (make-rename-transformer #'checks)])
-      (with-types
-        body ...))
-    (for ([f (in-list (reverse checks))])
-      (f))))
+    [(hash-table ('* _) (_ vs) ...)
+     (for-each type-check vs)]
 
-(define (type-check slt expr-stx expr-type msg)
-  (define expected-type (slot-type slt))
-  (unless (<: expr-type expected-type)
-    ; TODO show source code instead of generated code, or source location only.
-    (raise-syntax-error #f (format "~a, found ~v, expected ~v" msg expr-type expected-type) expr-stx)))
+    [(vector vs ...)
+     (for-each type-check vs)]
 
-(define-syntax-parse-rule (add-type-check slt expr msg)
-  (set! type-checks (cons
-                      (thunk
-                        (type-check slt #'expr (type-of expr) msg))
-                      type-checks)))
+    [_ (void)]))
 
 ; ------------------------------------------------------------------------------
 ; Disabled forms.

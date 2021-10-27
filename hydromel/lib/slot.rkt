@@ -9,15 +9,19 @@
 (provide
   (struct-out slot)
   slot-type
+  slot-type*
   slot-data*
   connect)
 
 ; A slot contains a value and a function that computes its type.
 ; In most cases, use make-slot to construct a slot instance.
-(struct slot (data typer) #:mutable #:transparent)
+(struct slot (data declared-type actual-typer) #:mutable #:transparent)
 
 (define (slot-type slt)
-  ((slot-typer slt)))
+  ((slot-actual-typer slt) #f))
+
+(define (slot-type* slt)
+  ((slot-actual-typer slt) #t))
 
 (define (slot-data* slt)
   (if (slot? slt)

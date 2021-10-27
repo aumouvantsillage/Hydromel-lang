@@ -31,7 +31,7 @@
 
 (define (slot-table inst [parent #hash()] [path #f])
   (match inst
-    [(slot sig _) #:when sig
+    [(slot sig _ _) #:when sig
      (hash-set parent path inst)]
 
     [(hash-table _ ...)

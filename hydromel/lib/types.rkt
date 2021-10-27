@@ -136,14 +136,16 @@
 
 (define (<: t u)
   (match (list (normalize-type t) (normalize-type u))
-    [(list (signed n)   (signed m))   (<= n m)]
-    [(list (unsigned n) (unsigned m)) (<= n m)]
-    [(list (signed n)   (unsigned m)) #f]
-    [(list (unsigned n) (signed m))   (<  n m)]
-    [(list (array n v)  (array m w))  (and (= n m) (<: v w))]
-    [(list (union vs)   _)            (for/and ([it (in-list vs)])
-                                        (<: it u))]
-    [(list _            (union vs))   (for/or ([it (in-list vs)])
-                                        (<: t it))]
+    [(list (abstract-integer n) (signed #f))   #t]
+    [(list (unsigned n)         (unsigned #f)) #t]
+    [(list (signed n)           (signed m))    (<= n m)]
+    [(list (unsigned n)         (unsigned m))  (<= n m)]
+    [(list (signed n)           (unsigned m))  #f]
+    [(list (unsigned n)         (signed m))    (<  n m)]
+    [(list (array n v)          (array m w))   (and (= n m) (<: v w))]
+    [(list (union vs)           _)             (for/and ([it (in-list vs)])
+                                                 (<: it u))]
+    [(list _                    (union vs))    (for/or ([it (in-list vs)])
+                                                 (<: t it))]
     ; TODO tuple, array, record
     [_ #f]))
