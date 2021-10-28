@@ -375,12 +375,13 @@
 
   ; Fourth pass: label all expressions for the type checker.
   (define (label stx)
-    (syntax-property
-      (syntax-parse stx
-        [(item ...)
-         #`#,(map label (attribute item))]
-        [_ this-syntax])
-      'label (gensym 'type)))
+    (define stx^ (syntax-parse stx
+                   [(op arg ...)
+                    #:with (arg^ ...) (map label (attribute arg))
+                    (syntax/loc stx (op arg^ ...))]
+                   [_ stx]))
+    (define/syntax-parse lbl (generate-temporary 'type))
+    (syntax-property stx^ 'type-label (syntax/loc stx^ lbl)))
 
   ; Returns a list of ports in interface intf after splicing.
   (define (splice-interface intf flip?)

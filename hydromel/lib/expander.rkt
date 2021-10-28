@@ -94,9 +94,9 @@
   (begin
     (provide ctor-name)
     (define (ctor-name arg-name ...)
+      (generate-types body) ...
+      (define param-name (make-slot arg-name (static-data arg-name param-type) (static-data arg-name (literal-type arg-name)))) ...
       (splicing-syntax-parameterize ([in-design-unit #t])
-        (generate-types body) ...
-        (define param-name (make-slot arg-name (static-data arg-name param-type) (static-data arg-name (literal-type arg-name)))) ...
         body ...)
       (define res (make-hash `((* . (spliced-name ...)) (field-name . ,field-name) ...)))
       (type-check res)
@@ -317,10 +317,7 @@
 
 (define-syntax-parse-rule (call-expr/cast fn-name arg ...)
   #:with expr this-syntax
-  ; The type acts as a function that casts its argument.
-  ; If no type was found, it will be the identity function.
-  (let ([expr-type id (type-of expr)])
-    (expr-type (fn-name arg ...))))
+  ((type-of expr) (fn-name arg ...)))
 
 (define-syntax-parse-rule (choices expr ...)
   (list expr ...))
@@ -402,15 +399,15 @@
 ; or inside a signal, so that out-of-order dependencies are correctly handled.
 ; Only constants infer their types immediately.
 (define-syntax-parse-rule (type-of expr)
-   #:with key (typing-key #'expr)
+   #:with key (type-function-name #'expr)
    (key))
 
 ; Expression types are memoized in a dictionary whose keys are:
 ; either the 'label syntax property (generated in checker.rkt)
 ; or the source location of the expression (for expander tests only).
-(define-for-syntax (typing-key stx)
+(define-for-syntax (type-function-name stx)
   (or
-    (syntax-property stx 'label)
+    (syntax-property stx 'type-label)
     (datum->syntax stx (string->symbol (format "~a$~a:~a:~a"
                                                (syntax-source stx)
                                                (syntax-line stx)
@@ -418,34 +415,76 @@
                                                (syntax-span stx))))))
 
 (define-syntax-parser generate-types
-  #:literals [lift-expr]
-  [(_ (lift-expr (name sexpr) ...+ expr))
-   #'(begin
-       (generate-types sexpr) ...
-       (splicing-let ([name (make-slot (type-of sexpr))] ...)
-         (generate-types expr)))]
+  #:literals [slot-expr signal-expr lift-expr array-for-expr concat-for-expr]
 
-  [(_ (~and (_ arg ...) expr))
-   #:with name (typing-key #'expr)
+  [(_ (~and ((~or* slot-expr signal-expr) body) this-expr))
+   #:with this-type-name (type-function-name #'this-expr)
+   #:with body-type-name (type-function-name #'body)
+   (printf "Slot ~a ~a\n" #'this-type-name #'this-expr)
    #'(begin
-       (define (name)
-         (type-of* expr))
-       (generate-types arg) ...)]
+       (generate-types body)
+       (define this-type-name body-type-name))]
+
+  [(_ (~and (lift-expr (name val) ...+ body) this-expr))
+   #:with this-type-name (type-function-name #'this-expr)
+   #:with body-type-name (type-function-name #'body)
+   (printf "Lift ~a ~a\n" #'this-type-name #'this-expr)
+   #'(begin
+       (generate-types val) ...
+       (splicing-let ([name (make-slot (type-of val))] ...)
+         (generate-types body)
+         (define this-type-name body-type-name)))]
+
+  [(_ (~and (array-for-expr body (~seq iter-name iter-expr) ...) this-expr))
+   #:with this-type-name (type-function-name #'this-expr)
+   #:with (rng ...)   (generate-temporaries (attribute iter-name))
+   #:with (left ...)  (generate-temporaries (attribute iter-name))
+   #:with (right ...) (generate-temporaries (attribute iter-name))
+   #'(splicing-letrec ([rng       iter-expr] ...
+                       [left      (first rng)] ...
+                       [right     (last rng)] ...
+                       [iter-name (make-slot (common-supertype (literal-type left) (literal-type right)))] ...)
+       (generate-types body)
+       (define (this-type-name)
+         (array (* (add1 (abs (- left right))) ...) (type-of body))))]
+
+  [(_ (~and (concat-for-expr body (~seq iter-name iter-expr) ...) this-expr))
+   #:with this-type-name (type-function-name #'this-expr)
+   #:with (rng ...)   (generate-temporaries (attribute iter-name))
+   #:with (left ...)  (generate-temporaries (attribute iter-name))
+   #:with (right ...) (generate-temporaries (attribute iter-name))
+   ; TODO Check that (type-of body) is (abstract-integer 1) for all iterator values
+   #'(splicing-letrec ([rng       iter-expr] ...
+                       [left      (first rng)] ...
+                       [right     (last rng)] ...
+                       [iter-name (make-slot (common-supertype (literal-type left) (literal-type right)))] ...)
+       (generate-types body)
+       (define (this-type-name)
+         (resize (type-of body) (* (add1 (abs (- left right))) ...))))]
+
+  [(_ (~and (_ arg ...) this-expr))
+   #:with this-type-name (type-function-name #'this-expr)
+   (printf "Other ~a ~a\n" #'this-type-name #'this-expr)
+   #'(begin
+       (generate-types arg) ...
+       (define (this-type-name)
+         (generate-type-body this-expr)))]
 
   [_ #'(begin)])
 
 ; Generate type inference code for an expression.
 ; TODO Warn on circular dependencies in register-expr
-(define-syntax-parser type-of*
+(define-syntax-parser generate-type-body
   #:literals [name-expr literal-expr choices register-expr when-clause
-              field-expr call-expr call-expr/cast slot-expr signal-expr
-              array-for-expr concat-for-expr lift-expr type-of]
+              field-expr call-expr call-expr/cast type-of]
   ; This is a special case for (type-of) forms generated in checker.rkt
   ; Maybe we should generate these forms in expander instead.
   [(_ (~and (type-of expr) this-expr))
    #'(static-data this-expr (call-expr type:impl))]
 
-  [(_ (name-expr name ...))
+  [(_ (~and (name-expr name ...) this-expr))
+   #:with this-type-name (type-function-name #'this-expr)
+   (printf "Name ~a ~a\n" #'this-type-name #'this-expr)
    #'(slot-type (concat-name name ...))]
 
   [(_ (literal-expr n))
@@ -455,58 +494,20 @@
    #'(tuple (list (type-of expr) ...))]
 
   [(_ (register-expr i (~optional (when-clause r)) d (~optional (when-clause e))))
-   #:with infer-r (if (attribute r) #'(type-of r) #'(void))
-   #:with infer-e (if (attribute e) #'(type-of e) #'(void))
-   #'(begin
-       infer-r
-       infer-e
-       (union (list (type-of i) (type-of d))))]
+   #'(union (list (type-of i) (type-of d)))]
 
   [(_ (field-expr expr field-name))
-   #'(let ([x (dict-ref (remove-dynamic-indices expr) 'field-name)])
-       (slot-type x))]
+   #'(slot-type (dict-ref (remove-dynamic-indices expr) 'field-name))]
 
   [(_ (~and ((~or* call-expr call-expr/cast) name arg ...) expr))
    #:with rt (format-id #'expr "~a:return-type" #'name)
    #:with (tv ...) (generate-temporaries (attribute arg))
-   #'(let* ([tv (type-of arg)] ...
-            [res-type (rt tv ...)])
+   #'(begin
+       (define tv (type-of arg)) ...
+       (define res-type (rt tv ...))
        (if (and (static-data? tv) ...)
          (static-data (name arg ...) res-type)
          res-type))]
-
-  ; TODO: do not implement these since they will be implemented as call-exprs
-  ; [(field-expr expr field-name type-name)]
-
-  [(_ (signal-expr x))
-   #'(type-of x)]
-
-  [(_ (slot-expr x))
-   #'(type-of x)]
-
-  [(_ (array-for-expr body (~seq iter-name iter-expr) ...))
-   #:with (rng ...)   (generate-temporaries (attribute iter-name))
-   #:with (left ...)  (generate-temporaries (attribute iter-name))
-   #:with (right ...) (generate-temporaries (attribute iter-name))
-   #'(let* ([rng       iter-expr] ...
-            [left      (first rng)] ...
-            [right     (last rng)] ...
-            [iter-name (make-slot (common-supertype (literal-type left) (literal-type right)))] ...)
-       (array (* (add1 (abs (- left right))) ...) (type-of body)))]
-
-  [(_ (concat-for-expr body (~seq iter-name iter-expr) ...))
-   #:with (rng ...)   (generate-temporaries (attribute iter-name))
-   #:with (left ...)  (generate-temporaries (attribute iter-name))
-   #:with (right ...) (generate-temporaries (attribute iter-name))
-   ; TODO Check that (type-of body) is (abstract-integer 1) for all iterator values
-   #'(let* ([rng       iter-expr] ...
-            [left      (first rng)] ...
-            [right     (last rng)] ...
-            [iter-name (make-slot (common-supertype (literal-type left) (literal-type right)))] ...)
-       (resize (type-of body) (* (add1 (abs (- left right))) ...)))]
-
-  [(_ (lift-expr (name sexpr) ...+ expr))
-   #'(type-of expr)]
 
   [_ #'(any)])
 
