@@ -380,7 +380,7 @@
         [(item ...)
          #`#,(map label (attribute item))]
         [_ this-syntax])
-      'label (gensym 'hdrml:elt)))
+      'label (gensym 'type)))
 
   ; Returns a list of ports in interface intf after splicing.
   (define (splice-interface intf flip?)

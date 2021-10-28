@@ -16,6 +16,7 @@
     racket/match
     racket/syntax
     racket/function
+    racket/dict
     syntax/stx))
 
 (provide
@@ -30,7 +31,7 @@
   call-expr call-expr/cast register-expr when-clause
   slot-expr signal-expr lift-expr concat-expr
   or-expr and-expr rel-expr add-expr mult-expr shift-expr
-  let-expr if-expr case-expr choices prefix-expr range-expr slice-expr
+  if-expr case-expr choices prefix-expr range-expr slice-expr
   array-expr array-for-expr concat-for-expr
   type-of)
 
@@ -94,9 +95,9 @@
     (provide ctor-name)
     (define (ctor-name arg-name ...)
       (splicing-syntax-parameterize ([in-design-unit #t])
-        (with-types
-          (define param-name (make-slot arg-name (static-data arg-name param-type) (static-data arg-name (literal-type arg-name)))) ...
-          body ...))
+        (generate-types body) ...
+        (define param-name (make-slot arg-name (static-data arg-name param-type) (static-data arg-name (literal-type arg-name)))) ...
+        body ...)
       (define res (make-hash `((* . (spliced-name ...)) (field-name . ,field-name) ...)))
       (type-check res)
       res)))
@@ -167,10 +168,9 @@
   (begin
     (provide impl-name rtype-name)
     (define (impl-name arg-name ...)
-      (with-types
-        (define param-name (make-slot arg-name (static-data arg-name param-type) (static-data arg-name (literal-type arg-name)))) ...
-        (type-check param-name) ...
-        expr))
+      (define param-name (make-slot arg-name (static-data arg-name param-type) (static-data arg-name (literal-type arg-name)))) ...
+      (type-check param-name) ...
+      expr)
     (define (rtype-name arg-name ...)
       (static-data (impl-name (static-data-value arg-name) ...) (type:impl)))))
 
@@ -186,9 +186,7 @@
    #:with name^ (format-id #'name "~a-constant" #'name)
    #'(begin
        (provide name^)
-       ; The declaration is not in a type-checking context so we create a
-       ; temporary type dictionary that will be used only once.
-       (define name^ (with-types (constant->slot expr))))])
+       (define name^ (constant->slot expr)))])
 
 ; A constant infers its type immediately before computing its value.
 ; Here, we benefit from the fact that type-of will return a
@@ -321,7 +319,7 @@
   #:with expr this-syntax
   ; The type acts as a function that casts its argument.
   ; If no type was found, it will be the identity function.
-  (let ([expr-type (type-of/recall expr)])
+  (let ([expr-type id (type-of expr)])
     (expr-type (fn-name arg ...))))
 
 (define-syntax-parse-rule (choices expr ...)
@@ -333,9 +331,6 @@
   [(_ i (when-clause r) d)                 #'(register/r  i r   d)]
   [(_ i d (when-clause e))                 #'(register/e  i   e d)]
   [(_ i d)                                 #'(register    i     d)])
-
-(define-syntax-parse-rule (let-expr (~seq name expr) ... body)
-  (let* ([name expr] ...) body))
 
 ; A slot expression is a wrapper element added by the semantic checker to
 ; identify an expression that refers to a port or local signal for reading.
@@ -401,36 +396,14 @@
 ; Type inference and checking
 ; ------------------------------------------------------------------------------
 
-; A hash table of inferred types for expressions in a given context.
-(define-syntax-parameter inferred-types
-  (λ (stx)
-    (raise-syntax-error (syntax-e stx) "can only be used inside design-unit")))
-
-; Wrap the given body in a typing context.
-(define-syntax-parse-rule (with-types body ...)
-  (splicing-let [(types (make-hash))]
-    (splicing-syntax-parameterize ([inferred-types (make-rename-transformer #'types)])
-      body ...)))
-
 ; Generate type inference code.
 ; Memoize the computed type if it is needed at runtime.
 ; This code is meant to be executed lazily, either in a slot type
 ; or inside a signal, so that out-of-order dependencies are correctly handled.
 ; Only constants infer their types immediately.
-(define-syntax-parser type-of
-  #:literals [call-expr/cast]
-  [(_ (~and (call-expr/cast _ ...) expr))
+(define-syntax-parse-rule (type-of expr)
    #:with key (typing-key #'expr)
-   #'(let ([res (type-of* expr)])
-       (dict-set! inferred-types 'key res)
-       res)]
-
-  [(_ expr)
-   #'(type-of* expr)])
-
-(define-syntax-parse-rule (type-of/recall expr)
-  #:with key (typing-key #'expr)
-  (dict-ref inferred-types 'key))
+   (key))
 
 ; Expression types are memoized in a dictionary whose keys are:
 ; either the 'label syntax property (generated in checker.rkt)
@@ -438,11 +411,28 @@
 (define-for-syntax (typing-key stx)
   (or
     (syntax-property stx 'label)
-    (datum->syntax stx (format "~a$~a:~a:~a"
-                               (syntax-source stx)
-                               (syntax-line stx)
-                               (syntax-column stx)
-                               (syntax-span stx)))))
+    (datum->syntax stx (string->symbol (format "~a$~a:~a:~a"
+                                               (syntax-source stx)
+                                               (syntax-line stx)
+                                               (syntax-column stx)
+                                               (syntax-span stx))))))
+
+(define-syntax-parser generate-types
+  #:literals [lift-expr]
+  [(_ (lift-expr (name sexpr) ...+ expr))
+   #'(begin
+       (generate-types sexpr) ...
+       (splicing-let ([name (make-slot (type-of sexpr))] ...)
+         (generate-types expr)))]
+
+  [(_ (~and (_ arg ...) expr))
+   #:with name (typing-key #'expr)
+   #'(begin
+       (define (name)
+         (type-of* expr))
+       (generate-types arg) ...)]
+
+  [_ #'(begin)])
 
 ; Generate type inference code for an expression.
 ; TODO Warn on circular dependencies in register-expr
@@ -516,8 +506,7 @@
        (resize (type-of body) (* (add1 (abs (- left right))) ...)))]
 
   [(_ (lift-expr (name sexpr) ...+ expr))
-   #'(let ([name (make-slot (type-of sexpr))] ...)
-       (type-of expr))]
+   #'(type-of expr)]
 
   [_ #'(any)])
 
@@ -541,7 +530,7 @@
      (define u (slot-type* inst))
      (unless (<: u t)
        ; TODO show source code instead of generated code, or source location only.
-       (raise-result-error 'type-check t u))]
+       (raise-result-error 'type-check (format "~a" t) u))]
 
     [(hash-table ('* _) (_ vs) ...)
      (for-each type-check vs)]
