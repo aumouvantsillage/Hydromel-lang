@@ -406,13 +406,14 @@
 ; either the 'label syntax property (generated in checker.rkt)
 ; or the source location of the expression (for expander tests only).
 (define-for-syntax (type-label stx)
-  (or
-    (syntax-property stx 'type-label)
-    (datum->syntax stx (string->symbol (format "~a$~a:~a:~a"
-                                               (syntax-source stx)
-                                               (syntax-line stx)
-                                               (syntax-column stx)
-                                               (syntax-span stx))))))
+  (format-id stx "type-of:~a"
+    (or
+      (syntax-property stx 'label)
+      (string->symbol (format "~a$~a:~a:~a"
+                              (syntax-source stx)
+                              (syntax-line stx)
+                              (syntax-column stx)
+                              (syntax-span stx))))))
 
 (define-syntax-parser typing-functions
   #:literals [slot-expr signal-expr lift-expr array-for-expr concat-for-expr]
@@ -420,7 +421,6 @@
   [(_ (~and ((~or* slot-expr signal-expr) body) this-expr))
    #:with this-type-label (type-label #'this-expr)
    #:with body-type-label (type-label #'body)
-   (printf "Slot ~a ~a\n" #'this-type-label #'this-expr)
    #'(begin
        (typing-functions body)
        (define this-type-label body-type-label))]
@@ -428,7 +428,6 @@
   [(_ (~and (lift-expr (name val) ...+ body) this-expr))
    #:with this-type-label (type-label #'this-expr)
    #:with body-type-label (type-label #'body)
-   (printf "Lift ~a ~a\n" #'this-type-label #'this-expr)
    #'(begin
        (typing-functions val) ...
        (splicing-let ([name (make-slot (type-of val))] ...)
@@ -464,7 +463,6 @@
 
   [(_ (~and (_ arg ...) this-expr))
    #:with this-type-label (type-label #'this-expr)
-   (printf "Other ~a ~a\n" #'this-type-label #'this-expr)
    #'(begin
        (typing-functions arg) ...
        (define (this-type-label)
@@ -484,7 +482,6 @@
 
   [(_ (~and (name-expr name ...) this-expr))
    #:with this-type-label (type-label #'this-expr)
-   (printf "Name ~a ~a\n" #'this-type-label #'this-expr)
    #'(slot-type (concat-name name ...))]
 
   [(_ (literal-expr n))

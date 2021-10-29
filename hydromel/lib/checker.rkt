@@ -380,8 +380,7 @@
                     #:with (arg^ ...) (map label (attribute arg))
                     (syntax/loc stx (op arg^ ...))]
                    [_ stx]))
-    (define/syntax-parse lbl (generate-temporary 'type))
-    (syntax-property stx^ 'type-label (syntax/loc stx^ lbl)))
+    (syntax-property stx^ 'label (gensym 'expr)))
 
   ; Returns a list of ports in interface intf after splicing.
   (define (splice-interface intf flip?)
