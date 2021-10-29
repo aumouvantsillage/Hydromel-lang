@@ -94,7 +94,7 @@
   (begin
     (provide ctor-name)
     (define (ctor-name arg-name ...)
-      (generate-types body) ...
+      (typing-functions body) ...
       (define param-name (make-slot arg-name (static-data arg-name param-type) (static-data arg-name (literal-type arg-name)))) ...
       (splicing-syntax-parameterize ([in-design-unit #t])
         body ...)
@@ -399,13 +399,13 @@
 ; or inside a signal, so that out-of-order dependencies are correctly handled.
 ; Only constants infer their types immediately.
 (define-syntax-parse-rule (type-of expr)
-   #:with key (type-function-name #'expr)
+   #:with key (type-label #'expr)
    (key))
 
 ; Expression types are memoized in a dictionary whose keys are:
 ; either the 'label syntax property (generated in checker.rkt)
 ; or the source location of the expression (for expander tests only).
-(define-for-syntax (type-function-name stx)
+(define-for-syntax (type-label stx)
   (or
     (syntax-property stx 'type-label)
     (datum->syntax stx (string->symbol (format "~a$~a:~a:~a"
@@ -414,29 +414,29 @@
                                                (syntax-column stx)
                                                (syntax-span stx))))))
 
-(define-syntax-parser generate-types
+(define-syntax-parser typing-functions
   #:literals [slot-expr signal-expr lift-expr array-for-expr concat-for-expr]
 
   [(_ (~and ((~or* slot-expr signal-expr) body) this-expr))
-   #:with this-type-name (type-function-name #'this-expr)
-   #:with body-type-name (type-function-name #'body)
-   (printf "Slot ~a ~a\n" #'this-type-name #'this-expr)
+   #:with this-type-label (type-label #'this-expr)
+   #:with body-type-label (type-label #'body)
+   (printf "Slot ~a ~a\n" #'this-type-label #'this-expr)
    #'(begin
-       (generate-types body)
-       (define this-type-name body-type-name))]
+       (typing-functions body)
+       (define this-type-label body-type-label))]
 
   [(_ (~and (lift-expr (name val) ...+ body) this-expr))
-   #:with this-type-name (type-function-name #'this-expr)
-   #:with body-type-name (type-function-name #'body)
-   (printf "Lift ~a ~a\n" #'this-type-name #'this-expr)
+   #:with this-type-label (type-label #'this-expr)
+   #:with body-type-label (type-label #'body)
+   (printf "Lift ~a ~a\n" #'this-type-label #'this-expr)
    #'(begin
-       (generate-types val) ...
+       (typing-functions val) ...
        (splicing-let ([name (make-slot (type-of val))] ...)
-         (generate-types body)
-         (define this-type-name body-type-name)))]
+         (typing-functions body)
+         (define this-type-label body-type-label)))]
 
   [(_ (~and (array-for-expr body (~seq iter-name iter-expr) ...) this-expr))
-   #:with this-type-name (type-function-name #'this-expr)
+   #:with this-type-label (type-label #'this-expr)
    #:with (rng ...)   (generate-temporaries (attribute iter-name))
    #:with (left ...)  (generate-temporaries (attribute iter-name))
    #:with (right ...) (generate-temporaries (attribute iter-name))
@@ -444,12 +444,12 @@
                        [left      (first rng)] ...
                        [right     (last rng)] ...
                        [iter-name (make-slot (common-supertype (literal-type left) (literal-type right)))] ...)
-       (generate-types body)
-       (define (this-type-name)
+       (typing-functions body)
+       (define (this-type-label)
          (array (* (add1 (abs (- left right))) ...) (type-of body))))]
 
   [(_ (~and (concat-for-expr body (~seq iter-name iter-expr) ...) this-expr))
-   #:with this-type-name (type-function-name #'this-expr)
+   #:with this-type-label (type-label #'this-expr)
    #:with (rng ...)   (generate-temporaries (attribute iter-name))
    #:with (left ...)  (generate-temporaries (attribute iter-name))
    #:with (right ...) (generate-temporaries (attribute iter-name))
@@ -458,23 +458,23 @@
                        [left      (first rng)] ...
                        [right     (last rng)] ...
                        [iter-name (make-slot (common-supertype (literal-type left) (literal-type right)))] ...)
-       (generate-types body)
-       (define (this-type-name)
+       (typing-functions body)
+       (define (this-type-label)
          (resize (type-of body) (* (add1 (abs (- left right))) ...))))]
 
   [(_ (~and (_ arg ...) this-expr))
-   #:with this-type-name (type-function-name #'this-expr)
-   (printf "Other ~a ~a\n" #'this-type-name #'this-expr)
+   #:with this-type-label (type-label #'this-expr)
+   (printf "Other ~a ~a\n" #'this-type-label #'this-expr)
    #'(begin
-       (generate-types arg) ...
-       (define (this-type-name)
-         (generate-type-body this-expr)))]
+       (typing-functions arg) ...
+       (define (this-type-label)
+         (typing-function-body this-expr)))]
 
   [_ #'(begin)])
 
 ; Generate type inference code for an expression.
 ; TODO Warn on circular dependencies in register-expr
-(define-syntax-parser generate-type-body
+(define-syntax-parser typing-function-body
   #:literals [name-expr literal-expr choices register-expr when-clause
               field-expr call-expr call-expr/cast type-of]
   ; This is a special case for (type-of) forms generated in checker.rkt
@@ -483,8 +483,8 @@
    #'(static-data this-expr (call-expr type:impl))]
 
   [(_ (~and (name-expr name ...) this-expr))
-   #:with this-type-name (type-function-name #'this-expr)
-   (printf "Name ~a ~a\n" #'this-type-name #'this-expr)
+   #:with this-type-label (type-label #'this-expr)
+   (printf "Name ~a ~a\n" #'this-type-label #'this-expr)
    #'(slot-type (concat-name name ...))]
 
   [(_ (literal-expr n))
