@@ -136,7 +136,8 @@
    #'(make-slot #f type type)])
 
 (define-syntax-parse-rule (make-slot-actual-typer default-type expr)
-  (make-slot-actual-typer* default-type (thunk (type-of expr))))
+  #:with typer (type-label #'expr)
+  (make-slot-actual-typer* default-type typer))
 
 (define (make-slot-actual-typer* default-type actual-typer)
   (let ([res      #f]
