@@ -94,7 +94,6 @@
   (begin
     (provide ctor-name)
     (define (ctor-name arg-name ...)
-      (typing-functions body) ...
       (define param-name (make-slot arg-name (static-data arg-name param-type) (static-data arg-name (literal-type arg-name)))) ...
       (splicing-syntax-parameterize ([in-design-unit #t])
         body ...)
@@ -179,13 +178,16 @@
 (define-syntax-parser constant
   ; Local constant in an interface or component.
   [(constant name expr) #:when (syntax-parameter-value #'in-design-unit)
-   #'(define name (constant->slot expr))]
+   #'(begin
+       (typing-functions expr)
+       (define name (constant->slot expr)))]
 
   ; Module-level context constant.
   [(constant name expr)
    #:with name^ (format-id #'name "~a-constant" #'name)
    #'(begin
        (provide name^)
+       (typing-functions expr)
        (define name^ (constant->slot expr)))])
 
 ; A constant infers its type immediately before computing its value.
@@ -213,10 +215,14 @@
 ; it helps expanding expressions without managing several special cases.
 (define-syntax-parser local-signal
   [(_ name expr)
-   #'(define name (make-slot expr (type-of expr)))]
+   #'(begin
+       (typing-functions expr)
+       (define name (make-slot expr (type-of expr))))]
 
   [(_ name type expr)
-   #'(define name (make-slot expr type (type-of expr)))])
+   #'(begin
+       (typing-functions expr)
+       (define name (make-slot expr type (type-of expr))))])
 
 ; A composite port expands to a variable that stores the result of a constructor
 ; call for the corresponding interface.
@@ -249,7 +255,9 @@
                #:literals [name-expr]
                [(name-expr name) #'name]
                [_                #'target])
-  (update-slot! slt expr))
+  (begin
+    (typing-functions expr)
+    (update-slot! slt expr)))
 
 ; Connect two interface instances.
 ; See std.rkt for the implementation of connect.
