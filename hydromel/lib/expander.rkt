@@ -490,7 +490,6 @@
    #'(static-data this-expr (call-expr type:impl))]
 
   [(_ (~and (name-expr name ...) this-expr))
-   #:with this-type-label (type-label #'this-expr)
    #'(slot-type (concat-name name ...))]
 
   [(_ (literal-expr n))
