@@ -74,11 +74,13 @@
 ; to &case as if it were a function.
 (define-syntax &case (meta/make-function #'case:impl))
 
-(define-syntax-parse-rule (case:impl expr (~seq ch thn) ... els)
-  (let ([x expr])
-    (cond [(member x ch) thn]
-          ...
-          [else els])))
+(define-syntax-parser case:impl
+  [(_ expr (~seq ch thn) ...)
+   #'(let ([x expr])
+       (cond [(member x ch) thn] ...))]
+  [(_ expr (~seq ch thn) ... els)
+   #'(let ([x expr])
+       (cond [(member x ch) thn] ... [else els]))])
 
 (define-syntax-parser case:impl:return-type
   [(_ tx (~seq tc tt) ...)
@@ -180,7 +182,7 @@
 
 (define (arithmetic-shift:return-type ta tb)
   (define ta^ (t/normalize-type ta))
-  (match (ta^ tb)
+  (match (list ta^ tb)
     [(list (t/abstract-integer na) (t/static-data nb _)) (t/resize ta^ (max 0 (+ na nb)))]
     [(list (t/abstract-integer na) (t/unsigned nb))      (t/resize ta^ (+ na (max-unsigned-value nb)))]
     [(list (t/abstract-integer na) (t/signed nb))        (t/resize ta^ (+ na (max-signed-value nb)))]
@@ -191,7 +193,7 @@
 
 (define (arithmetic-shift-right:return-type ta tb)
   (define ta^ (t/normalize-type ta))
-  (match (ta^ tb)
+  (match (list ta^ tb)
     [(list (t/abstract-integer na) (t/static-data nb _)) (t/resize ta^ (max 0 (- na nb)))]
     [(list (t/abstract-integer na) (t/unsigned nb))      ta^]
     [(list (t/abstract-integer na) (t/signed nb))        (t/resize ta^ (- na (min-signed-value nb)))]
