@@ -163,8 +163,8 @@
 
 (define-syntax-parse-rule (typedef name ((~literal parameter) param-name param-type) ... expr)
   #:with (arg-name   ...) (generate-temporaries (attribute param-name))
-  #:with impl-name  (format-id #'name      "~a:impl"             #'name)
-  #:with rtype-name (format-id this-syntax "~a:impl:return-type" #'name)
+  #:with impl-name  (format-id #'name "~a:impl"             #'name)
+  #:with rtype-name (format-id #'name "~a:impl:return-type" #'name)
   (begin
     (provide impl-name rtype-name)
     (define (impl-name arg-name ...)
@@ -505,7 +505,7 @@
    #'(slot-type (dict-ref (remove-dynamic-indices expr) 'field-name))]
 
   [(_ (~and ((~or* call-expr call-expr/cast) name arg ...) expr))
-   #:with rt (format-id #'expr "~a:return-type" #'name)
+   #:with rt (format-id #'name "~a:return-type" #'name)
    #:with (tv ...) (generate-temporaries (attribute arg))
    #'(begin
        (define tv (type-of arg)) ...

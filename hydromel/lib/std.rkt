@@ -29,6 +29,9 @@
   &==            eq:impl                eq:impl:return-type
   &/=            ne:impl                ne:impl:return-type
   &>             gt:impl                gt:impl:return-type
+  &<             lt:impl                lt:impl:return-type
+  &>=            ge:impl                ge:impl:return-type
+  &<=            le:impl                le:impl:return-type
   &+                                    +:return-type
   &-                                    -:return-type
   &*                                    *:return-type
@@ -131,6 +134,9 @@
 (define-syntax &== (meta/make-function #'eq:impl))
 (define-syntax &/= (meta/make-function #'ne:impl))
 (define-syntax &>  (meta/make-function #'gt:impl))
+(define-syntax &<  (meta/make-function #'lt:impl))
+(define-syntax &>= (meta/make-function #'ge:impl))
+(define-syntax &<= (meta/make-function #'le:impl))
 
 (define (eq:impl a b)
   (if (= a b) 1 0))
@@ -141,12 +147,24 @@
 (define (gt:impl a b)
   (if (> a b) 1 0))
 
+(define (lt:impl a b)
+  (if (< a b) 1 0))
+
+(define (ge:impl a b)
+  (if (>= a b) 1 0))
+
+(define (le:impl a b)
+  (if (<= a b) 1 0))
+
 (define (comparison:return-type ta tb)
   (t/unsigned 1))
 
 (define eq:impl:return-type comparison:return-type)
 (define ne:impl:return-type comparison:return-type)
 (define gt:impl:return-type comparison:return-type)
+(define lt:impl:return-type comparison:return-type)
+(define ge:impl:return-type comparison:return-type)
+(define le:impl:return-type comparison:return-type)
 
 ; Use the built-in arithmetic operators.
 (define-syntax &+ (meta/make-function #'+))
