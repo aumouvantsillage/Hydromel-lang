@@ -4,4 +4,4 @@
 
 #lang info
 (define collection "hydromel")
-(define deps '("threading-lib" "brag"))
+(define deps '("threading-lib" "collections-lib" "pvector" "brag"))

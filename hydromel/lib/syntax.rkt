@@ -127,7 +127,7 @@
   (define-syntax-class call-expr
     #:literals [call-expr or-expr and-expr rel-expr add-expr mult-expr shift-expr
                 if-expr case-expr prefix-expr range-expr slice-expr concat-expr array-expr
-                indexed-array-expr cast-expr]
+                indexed-array-expr cast-expr assign-expr]
     #:attributes [fn-name (arg 1)]
     (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr shift-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
@@ -154,6 +154,9 @@
     (pattern (indexed-array-expr expr index)
       #:attr (arg 1) (list #'expr #'index)
       #:attr fn-name #'_at_)
+    (pattern (assign-expr (indexed-array-expr expr index) right)
+      #:attr (arg 1) (list #'expr #'index #'right)
+      #:attr fn-name #'_set_at_)
     (pattern (concat-expr arg ...)
       #:attr fn-name #'_concat_)
     (pattern (array-expr arg ...)

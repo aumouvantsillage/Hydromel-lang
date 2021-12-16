@@ -6,6 +6,9 @@
 
 (require
   rackunit
+  (only-in data/collection
+    nth)
+  data/pvector
   "../lib/expander.rkt"
   "../lib/signal.rkt"
   "../lib/std.rkt"
@@ -435,10 +438,10 @@
   (data-port y out (call-expr unsigned (literal-expr 8)))
   (assignment (name-expr y) (lift-expr [x^ (slot-expr (name-expr x))]
                                        [i^ (slot-expr (name-expr i))]
-                              (call-expr vector-ref (name-expr x^) (name-expr i^)))))
+                              (call-expr nth (name-expr x^) (name-expr i^)))))
 
 (define c22-inst (C22-make))
-(slot-set! (c22-inst x) (signal (vector 10 20 30 40)))
+(slot-set! (c22-inst x) (signal (pvector 10 20 30 40)))
 (slot-set! (c22-inst i) (signal 0 1 2 3))
 
 (test-case "Can read an array"
@@ -446,12 +449,12 @@
 
 (component C23
   (data-port y out (call-expr array (literal-expr 3) (call-expr unsigned (literal-expr 8))))
-  (assignment (name-expr y) (signal-expr (call-expr vector (literal-expr 10) (literal-expr 20) (literal-expr 30)))))
+  (assignment (name-expr y) (signal-expr (call-expr pvector (literal-expr 10) (literal-expr 20) (literal-expr 30)))))
 
 (define c23-inst (C23-make))
 
 (test-case "Can make a vector"
-  (check-sig-equal? (slot-ref c23-inst y) (signal (vector 10 20 30)) 1))
+  (check-sig-equal? (slot-ref c23-inst y) (signal (pvector 10 20 30)) 1))
 
 (component C24
   (data-port x in (call-expr unsigned (literal-expr 8)))
@@ -466,7 +469,7 @@
 (slot-set! (c24-inst x) (signal 10 20 30))
 
 (test-case "Can make a vector comprehension"
-  (check-sig-equal? (slot-ref c24-inst y) (signal (vector 11 12 13) (vector 21 22 23) (vector 31 32 33)) 3))
+  (check-sig-equal? (slot-ref c24-inst y) (signal (pvector 11 12 13) (pvector 21 22 23) (pvector 31 32 33)) 3))
 
 (component C25
   (data-port x in  (call-expr unsigned (literal-expr 4)))

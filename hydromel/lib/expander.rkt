@@ -8,6 +8,7 @@
   syntax/parse/define
   racket/stxparam
   racket/splicing
+  data/pvector
   "signal.rkt"
   "slot.rkt"
   "std.rkt"
@@ -32,7 +33,7 @@
   slot-expr signal-expr lift-expr concat-expr
   or-expr and-expr rel-expr add-expr mult-expr shift-expr
   if-expr case-expr choices prefix-expr range-expr slice-expr
-  array-expr array-for-expr concat-for-expr cast-expr
+  array-expr array-for-expr concat-for-expr cast-expr assign-expr
   type-of)
 
 ; ------------------------------------------------------------------------------
@@ -377,7 +378,7 @@
                              (lift-expr binding ... body)))]
 
   [(_ body (~seq iter-name iter-expr) ...)
-   #'(for*/vector ([iter-name (in-list iter-expr)] ...)
+   #'(for*/pvector ([iter-name (in-list iter-expr)] ...)
        body)])
 
 (define-syntax-parser concat-for-expr
@@ -567,5 +568,5 @@
 ; Concatenation expressions are converted to function calls in the checker.
 (disable-forms import or-expr and-expr rel-expr add-expr mult-expr shift-expr
                if-expr case-expr prefix-expr range-expr slice-expr concat-expr
-               indexed-array-expr array-expr cast-expr
+               indexed-array-expr array-expr cast-expr assign-expr
   "should not be used outside of begin-tiny-hdl")

@@ -8,7 +8,6 @@ component register_bank(T : type, LENGTH : natural)
 
     signal r : array(LENGTH, T) =
         register([0 for n in 0..LENGTH-1],
-                 [if addr == n then d else r[n]
-                  for n in 0..LENGTH-1] when write)
+                 r[addr] := d when write)
     q = r[addr]
 end

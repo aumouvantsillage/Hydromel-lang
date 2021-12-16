@@ -15,6 +15,9 @@
     unsigned-slice     unsigned-concat)
   syntax/parse/define
   threading
+  (only-in data/collection
+    nth set-nth)
+  data/pvector
   (for-syntax
     (prefix-in meta/ "meta.rkt")))
 
@@ -41,8 +44,9 @@
   _range_        range:impl             range:impl:return-type
   _slice_                               unsigned-slice:return-type
   _concat_       concat:impl            concat:impl:return-type
-  _array_                               vector:return-type
-  _at_                                  vector-ref:return-type
+  _array_                               pvector:return-type
+  _at_                                  nth:return-type
+  _set_at_                              set-nth:return-type
   signed_width                          min-signed-width:return-type
   unsigned_width                        min-unsigned-width:return-type
   as_signed      as_signed:impl         as_signed:impl:return-type
@@ -272,19 +276,25 @@
     [(t/signed _)   (t/signed w)]
     [(t/unsigned _) (t/unsigned w)]))
 
-(define-syntax _array_ (meta/make-function #'vector))
+(define-syntax _array_ (meta/make-function #'pvector))
 
-(define (vector:return-type . ts)
+(define (pvector:return-type . ts)
   (t/array (length ts) (t/union ts)))
 
-(define-syntax _at_ (meta/make-function #'vector-ref))
+(define-syntax _at_ (meta/make-function #'nth))
 
-(define (vector-ref:return-type ta tb)
+(define (nth:return-type ta tb)
   ; TODO check the type of tb
   (define ta^ (t/normalize-type ta))
   (match ta^
     [(t/array _ te) te]
     [_              (error "Not an array type" ta)]))
+
+(define-syntax _set_at_ (meta/make-function #'set-nth))
+
+(define (set-nth:return-type ta tb tc)
+  ; TODO check the types of tb and tc
+  ta)
 
 (define-syntax as_signed (meta/make-function/cast #'as_signed:impl))
 

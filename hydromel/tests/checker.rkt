@@ -6,6 +6,7 @@
 
 (require
   rackunit
+  data/pvector
   "../lib/checker.rkt"
   "../lib/expander.rkt"
   "../lib/signal.rkt"
@@ -534,7 +535,7 @@
     (assignment (name-expr y) (indexed-array-expr (name-expr x) (name-expr i)))))
 
 (define c34-inst (C34-make))
-(slot-set! (c34-inst x) (signal (vector 10 20 30 40)))
+(slot-set! (c34-inst x) (signal (pvector 10 20 30 40)))
 (slot-set! (c34-inst i) (signal 0 1 2 3))
 
 (test-case "Can read an array"
@@ -548,7 +549,7 @@
   (define c35-inst (C35-make))
 
   (test-case "Can make a vector"
-    (check-sig-equal? (slot-ref c35-inst y) (signal (vector 10 20 30)) 1)))
+    (check-sig-equal? (slot-ref c35-inst y) (signal (pvector 10 20 30)) 1)))
 
 (begin-hydromel
   (component C36

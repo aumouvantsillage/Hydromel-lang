@@ -90,12 +90,12 @@ statement-block:
 
 ; Expressions ------------------------------------------------------------------
 
-; TODO other expressions
-@expression: maybe-cond-expr
+@expression: maybe-assign-expr
 
 @expression-list:
   expression (/"," expression)* /","?
 
+@maybe-assign-expr: assign-expr | maybe-cond-expr
 @maybe-cond-expr:   cond-expr   | maybe-or-expr
 @maybe-or-expr:     or-expr     | maybe-and-expr
 @maybe-and-expr:    and-expr    | maybe-rel-expr
@@ -107,12 +107,13 @@ statement-block:
 @maybe-prefix-expr: prefix-expr | maybe-cast-expr
 @maybe-cast-expr:   cast-expr   | simple-expr
 
+; TODO support slice-expr and field-expr
+assign-expr:
+  indexed-array-expr /":=" maybe-cond-expr
+
 @cond-expr:
   if-expr |
   case-expr
-
-@let-binding:
-  ID /"=" expression
 
 if-expr:
   /"if" expression /"then" expression else-clause
