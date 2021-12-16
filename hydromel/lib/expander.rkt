@@ -32,7 +32,7 @@
   slot-expr signal-expr lift-expr concat-expr
   or-expr and-expr rel-expr add-expr mult-expr shift-expr
   if-expr case-expr choices prefix-expr range-expr slice-expr
-  array-expr array-for-expr concat-for-expr
+  array-expr array-for-expr concat-for-expr cast-expr
   type-of)
 
 ; ------------------------------------------------------------------------------
@@ -567,5 +567,5 @@
 ; Concatenation expressions are converted to function calls in the checker.
 (disable-forms import or-expr and-expr rel-expr add-expr mult-expr shift-expr
                if-expr case-expr prefix-expr range-expr slice-expr concat-expr
-               indexed-array-expr array-expr
+               indexed-array-expr array-expr cast-expr
   "should not be used outside of begin-tiny-hdl")

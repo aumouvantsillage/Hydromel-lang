@@ -125,9 +125,9 @@
     (data-port y in (call-expr signed (literal-expr 32)))
     (data-port z out (call-expr signed (literal-expr 32)))
     (assignment (name-expr z)
-      (call-expr cast
-        (call-expr signed (literal-expr 32))
-        (add-expr (name-expr x) + (name-expr y))))))
+      (cast-expr
+        (add-expr (name-expr x) + (name-expr y))
+        (call-expr signed (literal-expr 32))))))
 
 (define c7-inst (C7-make))
 (slot-set! (c7-inst x) (signal 10 20 30))
@@ -144,10 +144,10 @@
     (data-port u in (call-expr signed (literal-expr 32)))
     (data-port v out (call-expr signed (literal-expr 32)))
     (assignment (name-expr v)
-      (call-expr cast
-        (call-expr signed (literal-expr 32))
+      (cast-expr
         (add-expr (mult-expr (name-expr x) * (name-expr y))
-                + (mult-expr (name-expr z) * (name-expr u)))))))
+                + (mult-expr (name-expr z) * (name-expr u)))
+        (call-expr signed (literal-expr 32))))))
 
 (define c8-inst (C8-make))
 (slot-set! (c8-inst x) (signal 10 20 30 40 50))
@@ -168,9 +168,9 @@
     (local-signal xy (mult-expr (name-expr x) * (name-expr y)))
     (local-signal zu (mult-expr (name-expr z) * (name-expr u)))
     (assignment (name-expr v)
-      (call-expr cast
-        (call-expr signed (literal-expr 32))
-        (add-expr (name-expr xy) + (name-expr zu))))))
+      (cast-expr
+        (add-expr (name-expr xy) + (name-expr zu))
+        (call-expr signed (literal-expr 32))))))
 
 (define c9-inst (C9-make))
 (slot-set! (c9-inst x) (signal 10 20 30 40 50))
@@ -207,9 +207,9 @@
     (data-port x in (call-expr signed (literal-expr 32)))
     (data-port y out (call-expr signed (literal-expr 32)))
     (assignment (name-expr y)
-      (call-expr cast
-        (call-expr signed (literal-expr 32))
-        (mult-expr (name-expr x) * (name-expr N)))))
+      (cast-expr
+        (mult-expr (name-expr x) * (name-expr N))
+        (call-expr signed (literal-expr 32)))))
 
   (component C12
     (data-port x in (call-expr signed (literal-expr 32)))
@@ -233,10 +233,10 @@
     (assignment (field-expr (indexed-port-expr (name-expr c) (literal-expr 0)) x) (name-expr x0))
     (assignment (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) x) (name-expr x1))
     (assignment (name-expr y)
-      (call-expr cast
-        (call-expr signed (literal-expr 32))
+      (cast-expr
         (add-expr (field-expr (indexed-port-expr (name-expr c) (literal-expr 0)) y)
-                + (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) y))))))
+                + (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) y))
+        (call-expr signed (literal-expr 32))))))
 
 (define c13-inst (C13-make))
 (slot-set! (c13-inst x0) (signal 10 20 30 40 50))

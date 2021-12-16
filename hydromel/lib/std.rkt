@@ -47,7 +47,7 @@
   unsigned_width                        min-unsigned-width:return-type
   as_signed      as_signed:impl         as_signed:impl:return-type
   as_unsigned    as_unsigned:impl       as_unsigned:impl:return-type
-  cast           cast:impl              cast:impl:return-type
+  _cast_         cast:impl              cast:impl:return-type
   (all-from-out  "numeric.rkt"))
 
 ; Convert an integer to a boolean.
@@ -312,7 +312,7 @@
     [(t/unsigned _) ta^]
     [_ (error "Cannot cast value to unsigned")]))
 
-(define-syntax cast (meta/make-function/cast #'cast:impl))
+(define-syntax _cast_ (meta/make-function/cast #'cast:impl))
 
 ; cast does not actually convert the given value because
 ; a call to the conversion function is already inserted by the expander.
