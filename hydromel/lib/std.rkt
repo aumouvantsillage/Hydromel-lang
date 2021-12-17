@@ -49,8 +49,6 @@
   _set_nth_                             set-nth:return-type
   signed_width                          min-signed-width:return-type
   unsigned_width                        min-unsigned-width:return-type
-  as_signed      as_signed:impl         as_signed:impl:return-type
-  as_unsigned    as_unsigned:impl       as_unsigned:impl:return-type
   _cast_         cast:impl              cast:impl:return-type
   (all-from-out  "numeric.rkt"))
 
@@ -296,32 +294,6 @@
   ; TODO check the types of tb and tc
   ta)
 
-(define-syntax as_signed (meta/make-function/cast #'as_signed:impl))
-
-; as_signed does not actually convert the given value because
-; a call to the conversion function is inserted by the expander.
-(define as_signed:impl identity)
-
-(define (as_signed:impl:return-type ta)
-  (define ta^ (t/normalize-type ta))
-  (match ta^
-    [(t/signed   _) ta^]
-    [(t/unsigned n) (t/signed n)]
-    [_ (error "Cannot cast value to signed")]))
-
-(define-syntax as_unsigned (meta/make-function/cast #'as_unsigned:impl))
-
-; as_unsigned does not actually convert the given value because
-; a call to the conversion function is inserted by the expander.
-(define as_unsigned:impl identity)
-
-(define (as_unsigned:impl:return-type ta)
-  (define ta^ (t/normalize-type ta))
-  (match ta^
-    [(t/signed   n) (t/unsigned n)]
-    [(t/unsigned _) ta^]
-    [_ (error "Cannot cast value to unsigned")]))
-
 (define-syntax _cast_ (meta/make-function/cast #'cast:impl))
 
 ; cast does not actually convert the given value because
@@ -330,4 +302,20 @@
   b)
 
 (define (cast:impl:return-type ta tb)
-  (t/static-data-value ta))
+  (define ta^ (t/normalize-type (t/static-data-value ta)))
+  (define tb^ (t/normalize-type tb))
+  (match ta^
+    [(t/signed #f)
+     (match tb^
+       [(t/signed   _) tb^]
+       [(t/unsigned n) (t/signed n)]
+       [_ (error "Cannot cast value to signed")])]
+
+    [(t/unsigned #f)
+     (match tb^
+       [(t/signed   n) (t/unsigned n)]
+       [(t/unsigned _) tb^]
+       [_ (error "Cannot cast value to unsigned")])]
+
+    [_
+     ta^]))
