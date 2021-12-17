@@ -109,7 +109,7 @@ statement-block:
 
 ; TODO support slice-expr and field-expr
 assign-expr:
-  indexed-array-expr /":=" maybe-cond-expr
+  indexed-array-expr /"<-" maybe-cond-expr
 
 @cond-expr:
   if-expr |
@@ -145,7 +145,7 @@ add-expr:    maybe-add-expr ("+" | "-") maybe-mult-expr
 mult-expr:   maybe-mult-expr ("*" | "/") maybe-shift-expr
 shift-expr:  maybe-shift-expr ("<<" | ">>") maybe-prefix-expr
 prefix-expr: ("-" | "not") maybe-cast-expr
-cast-expr:   simple-expr /":" type-expression
+cast-expr:   simple-expr /"as" type-expression
 
 ; TODO Add comprehensions
 @simple-expr:

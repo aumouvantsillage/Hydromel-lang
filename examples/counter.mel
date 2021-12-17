@@ -21,12 +21,12 @@ component counter(LIMIT : natural)
                     if top then
                         0
                     else
-                        (value + 1) : unsigned(WIDTH)
+                        (value + 1) as unsigned(WIDTH)
                 else if down then
                     if bottom then
                         LIMIT
                     else
-                        (value - 1) : unsigned(WIDTH)
+                        (value - 1) as unsigned(WIDTH)
                 else
                     value)
 end

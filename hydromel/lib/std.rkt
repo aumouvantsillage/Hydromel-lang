@@ -45,8 +45,8 @@
   _slice_                               unsigned-slice:return-type
   _concat_       concat:impl            concat:impl:return-type
   _array_                               pvector:return-type
-  _at_                                  nth:return-type
-  _set_at_                              set-nth:return-type
+  _nth_                                 nth:return-type
+  _set_nth_                             set-nth:return-type
   signed_width                          min-signed-width:return-type
   unsigned_width                        min-unsigned-width:return-type
   as_signed      as_signed:impl         as_signed:impl:return-type
@@ -281,7 +281,7 @@
 (define (pvector:return-type . ts)
   (t/array (length ts) (t/union ts)))
 
-(define-syntax _at_ (meta/make-function #'nth))
+(define-syntax _nth_ (meta/make-function #'nth))
 
 (define (nth:return-type ta tb)
   ; TODO check the type of tb
@@ -290,7 +290,7 @@
     [(t/array _ te) te]
     [_              (error "Not an array type" ta)]))
 
-(define-syntax _set_at_ (meta/make-function #'set-nth))
+(define-syntax _set_nth_ (meta/make-function #'set-nth))
 
 (define (set-nth:return-type ta tb tc)
   ; TODO check the types of tb and tc
