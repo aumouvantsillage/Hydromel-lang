@@ -45,6 +45,7 @@
   _slice_                               unsigned-slice:return-type
   _concat_       concat:impl            concat:impl:return-type
   _array_                               pvector:return-type
+  _record_                              hash:return-type
   _nth_                                 nth:return-type
   _set_nth_                             set-nth:return-type
   signed_width                          min-signed-width:return-type
@@ -278,6 +279,16 @@
 
 (define (pvector:return-type . ts)
   (t/array (length ts) (t/union ts)))
+
+(define-syntax _record_ (meta/make-function #'hash))
+
+(define (hash:return-type . ts)
+  (define ts^ (for/list ([it (in-list ts)]
+                         [n  (in-naturals)])
+                (if (even? n)
+                  (t/static-data-value it)
+                  it)))
+  (t/record (apply hash ts^)))
 
 (define-syntax _nth_ (meta/make-function #'nth))
 

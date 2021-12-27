@@ -21,19 +21,17 @@
     syntax/stx))
 
 (provide
-  import design-unit interface component
+  design-unit interface component
   parameter data-port composite-port alias
-  flip splice
   typedef constant local-signal instance
   if-statement for-statement statement-block
   assignment connect-statement
   literal-expr name-expr field-expr
-  indexed-port-expr indexed-array-expr
-  call-expr call-expr/cast register-expr when-clause
-  slot-expr signal-expr lift-expr concat-expr
-  or-expr and-expr rel-expr add-expr mult-expr shift-expr
-  if-expr case-expr choices prefix-expr range-expr slice-expr
-  array-expr array-for-expr concat-for-expr cast-expr assign-expr
+  indexed-port-expr
+  call-expr call-expr/cast register-expr
+  slot-expr signal-expr lift-expr
+  choices
+  array-for-expr concat-for-expr
   type-of)
 
 ; ------------------------------------------------------------------------------
@@ -553,6 +551,7 @@
 
 (define-syntax-parse-rule (disable-forms id ... msg)
   (begin
+    (provide id) ...
     (define-syntax (id stx)
       (raise-syntax-error #f msg stx))
     ...))
@@ -568,5 +567,6 @@
 ; Concatenation expressions are converted to function calls in the checker.
 (disable-forms import or-expr and-expr rel-expr add-expr mult-expr shift-expr
                if-expr case-expr prefix-expr range-expr slice-expr concat-expr
-               indexed-array-expr array-expr cast-expr assign-expr
+               indexed-array-expr array-expr cast-expr assign-expr record-type
+               record-expr
   "should not be used outside of begin-tiny-hdl")

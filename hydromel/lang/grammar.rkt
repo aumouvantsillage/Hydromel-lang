@@ -159,6 +159,7 @@ cast-expr:   simple-expr /"as" type-expression
   concat-for-expr |
   array-expr |
   array-for-expr |
+  record-expr |
   register-expr |
   call-expr |
   /"(" expression /")"
@@ -191,6 +192,12 @@ array-expr:
 array-for-expr:
   /"[" expression /"for" iterator-list /"]"
 
+record-expr:
+  /"(" @field-assoc (/"," @field-assoc )* /","? /")"
+
+field-assoc:
+  ID /"=>" expression
+
 register-expr:
   /"register" /"(" expression when-clause? /"," expression when-clause? /")"
 
@@ -209,8 +216,8 @@ call-expr:
   record-type
 
 record-type:
-  /"record" /"(" record-field (/"," record-field)* ","? /")"
+  /"record" /"(" record-field (/"," record-field)* /","? /")"
 
 ; TODO spliced fields?
-/record-field:
+@record-field:
   ID /":" type-expression

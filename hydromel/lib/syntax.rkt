@@ -7,6 +7,7 @@
 (require
   "expander.rkt"
   "std.rkt"
+  "types.rkt"
   (for-syntax
     racket/syntax
     syntax/parse))
@@ -127,7 +128,7 @@
   (define-syntax-class call-expr
     #:literals [call-expr or-expr and-expr rel-expr add-expr mult-expr shift-expr
                 if-expr case-expr prefix-expr range-expr slice-expr concat-expr array-expr
-                indexed-array-expr cast-expr assign-expr]
+                indexed-array-expr cast-expr assign-expr record-type record-expr]
     #:attributes [fn-name (arg 1)]
     (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr shift-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
@@ -161,6 +162,14 @@
       #:attr fn-name #'_concat_)
     (pattern (array-expr arg ...)
       #:attr fn-name #'_array_)
+    (pattern (record-type (~seq field-name field-type) ...)
+      #:with (field ...) #'((~@ (literal-expr 'field-name) field-type) ...)
+      #:attr fn-name #'make-record
+      #:attr (arg 1) (attribute field))
+    (pattern (record-expr (~seq field-name field-type) ...)
+      #:with (field ...) #'((~@ (literal-expr 'field-name) field-type) ...)
+      #:attr fn-name #'_record_
+      #:attr (arg 1) (attribute field))
     (pattern (call-expr fn-name arg ...))
     (pattern :call-expr/cast))
 

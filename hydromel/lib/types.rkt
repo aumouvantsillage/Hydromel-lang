@@ -5,6 +5,7 @@
 #lang racket
 
 (require
+  syntax/parse/define
   (prefix-in base/ racket/base)
   (prefix-in num/ "numeric.rkt")
   (for-syntax
@@ -58,11 +59,21 @@
 
 (struct record datatype (fields) #:transparent)
 
+(define-syntax make-record (meta/make-function #'make-record:impl))
+
+(define (make-record:impl . kv)
+  (record (apply hash kv)))
+
+; TODO make-record:impl:return-type
+
 ; The range type is used internally.
 (struct range datatype (type) #:transparent)
 
 ; The boolean type is used internally.
 (struct boolean datatype () #:transparent)
+
+; The symbol type is used internally.
+(struct symbol datatype () #:transparent)
 
 ; Subtype of a given type.
 (struct subtype datatype (supertype) #:transparent)
@@ -107,11 +118,14 @@
     [_ (error "Resize expects integer type.")]))
 
 (define (literal-type x)
-  (unless (base/integer? x)
-    (error "Cannot determine type of literal" x))
-  (if (>= x 0)
-    (unsigned (num/min-unsigned-width x))
-    (signed   (num/min-signed-width   x))))
+  (cond [(base/symbol? x)
+         (symbol)]
+        [(base/integer? x)
+         (if (>= x 0)
+           (unsigned (num/min-unsigned-width x))
+           (signed   (num/min-signed-width   x)))]
+        [else
+         (error "Cannot determine type of literal" x)]))
 
 (define (normalize-type t)
   (match t
@@ -147,5 +161,8 @@
                                                  (<: it u))]
     [(list _                    (union vs))    (for/or ([it (in-list vs)])
                                                  (<: t it))]
-    ; TODO tuple, array, record
+    [(list (record ft)          (record fu))   (for/and ([(k v) (in-dict ft)])
+                                                 (and (dict-has-key? fu k)
+                                                      (<: v (dict-ref fu k))))]
+    ; TODO tuple, array
     [_ #f]))
