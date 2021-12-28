@@ -163,11 +163,11 @@
     (pattern (array-expr arg ...)
       #:attr fn-name #'_array_)
     (pattern (record-type (~seq field-name field-type) ...)
-      #:with (field ...) #'((~@ (literal-expr 'field-name) field-type) ...)
+      #:with (field ...) #'((~@ (literal-expr field-name) field-type) ...)
       #:attr fn-name #'make-record
       #:attr (arg 1) (attribute field))
     (pattern (record-expr (~seq field-name field-type) ...)
-      #:with (field ...) #'((~@ (literal-expr 'field-name) field-type) ...)
+      #:with (field ...) #'((~@ (literal-expr field-name) field-type) ...)
       #:attr fn-name #'_record_
       #:attr (arg 1) (attribute field))
     (pattern (call-expr fn-name arg ...))

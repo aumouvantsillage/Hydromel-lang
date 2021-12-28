@@ -73,7 +73,7 @@
 (struct boolean datatype () #:transparent)
 
 ; The symbol type is used internally.
-(struct symbol datatype () #:transparent)
+(struct symbol datatype (value) #:transparent)
 
 ; Subtype of a given type.
 (struct subtype datatype (supertype) #:transparent)
@@ -119,7 +119,7 @@
 
 (define (literal-type x)
   (cond [(base/symbol? x)
-         (symbol)]
+         (symbol x)]
         [(base/integer? x)
          (if (>= x 0)
            (unsigned (num/min-unsigned-width x))

@@ -301,7 +301,7 @@
        #:with expr (check #'s.expr)
        (if (meta/design-unit? (check-field-expr #'expr #'s.field-name))
          (s/l (field-expr expr s.field-name))
-         (check (s/l (call-expr _field_ expr (literal-expr 's.field-name)))))]
+         (check (s/l (call-expr _field_ expr (literal-expr s.field-name)))))]
 
       [s:stx/indexed-port-expr
        #:with expr (check #'s.expr)

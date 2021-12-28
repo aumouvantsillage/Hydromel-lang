@@ -164,7 +164,7 @@ cast-expr:   simple-expr /"as" type-expression
   call-expr |
   /"(" expression /")"
 
-literal-expr: INT
+literal-expr: INT | SYMBOL
 
 name-expr: ID | "type"
 

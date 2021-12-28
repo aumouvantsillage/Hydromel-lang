@@ -290,8 +290,9 @@
 ; ------------------------------------------------------------------------------
 
 ; A literal expression expands to its value.
-(define-syntax-parse-rule (literal-expr value)
-  value)
+(define-syntax-parser literal-expr
+  [(_ value:integer)    #'value]
+  [(_ value:identifier) #'(quote value)])
 
 ; A name expression expands to the corresponding variable name in the current scope.
 ; If the name refers to a slot, unwrap it.
@@ -488,11 +489,11 @@
   [(_ (~and (type-of expr) this-expr))
    #'(static-data this-expr (call-expr type:impl))]
 
-  [(_ (~and (name-expr name ...) this-expr))
+  [(_ (name-expr name ...))
    #'(slot-type (concat-name name ...))]
 
-  [(_ (literal-expr n))
-   #'(static-data n (literal-type n))]
+  [(_ (~and (literal-expr _) this-expr))
+   #'(static-data this-expr (literal-type this-expr))]
 
   [(_ (choices expr ...))
    #'(tuple (list (type-of expr) ...))]

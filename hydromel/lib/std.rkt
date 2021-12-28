@@ -310,13 +310,14 @@
 
 (define (dict-ref:return-type ta tb)
   (define ta^ (t/normalize-type ta))
-  (define key (t/static-data-value tb))
+  (define tb^ (t/normalize-type tb))
   (unless (t/record? ta^)
     (error "Not a record type"))
-  (unless (t/symbol? (t/normalize-type tb))
+  (unless (t/symbol? tb^)
     (error "Field identifier is not a symbol"))
-  (dict-ref (t/record-fields ta^) key
-    (thunk (error "Unknown field" key))))
+  (define field-name (t/symbol-value tb^))
+  (dict-ref (t/record-fields ta^) field-name
+    (thunk (error "Unknown field" field-name))))
 
 (define-syntax _cast_ (meta/make-function/cast #'cast:impl))
 
