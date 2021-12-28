@@ -299,10 +299,9 @@
 
       [s:stx/field-expr
        #:with expr (check #'s.expr)
-       (define-values (type-name type) (check-field-expr #'expr #'s.field-name))
-       (if (meta/record-type? type)
-         (q/l (field-expr expr s.field-name #,type-name))
-         (s/l (field-expr expr s.field-name)))]
+       (if (meta/design-unit? (check-field-expr #'expr #'s.field-name))
+         (s/l (field-expr expr s.field-name))
+         (check (s/l (call-expr _field_ expr (literal-expr 's.field-name)))))]
 
       [s:stx/indexed-port-expr
        #:with expr (check #'s.expr)
@@ -575,15 +574,13 @@
        (define intf (lookup intf-name meta/interface?))
        (meta/design-unit-ref intf field-name)
        ; Return the interface name.
-       (values intf-name intf)]
+       intf]
 
       [(meta/instance comp-name)
        ; Check that a port with that name exists in the component.
        (define comp (lookup comp-name meta/component?))
        (meta/design-unit-ref comp field-name)
        ; Return the component name.
-       (values comp-name comp)]
+       comp]
 
-      ; TODO support field access in structured types
-
-      [_ (raise-syntax-error #f "Expression not suitable for field access" expr)])))
+      [other other])))

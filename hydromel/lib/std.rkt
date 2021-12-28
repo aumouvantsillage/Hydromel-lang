@@ -48,6 +48,7 @@
   _record_                              hash:return-type
   _nth_                                 nth:return-type
   _set_nth_                             set-nth:return-type
+  _field_                               dict-ref:return-type
   signed_width                          min-signed-width:return-type
   unsigned_width                        min-unsigned-width:return-type
   _cast_         cast:impl              cast:impl:return-type
@@ -304,6 +305,18 @@
 (define (set-nth:return-type ta tb tc)
   ; TODO check the types of tb and tc
   ta)
+
+(define-syntax _field_ (meta/make-function #'dict-ref))
+
+(define (dict-ref:return-type ta tb)
+  (define ta^ (t/normalize-type ta))
+  (define key (t/static-data-value tb))
+  (unless (t/record? ta^)
+    (error "Not a record type"))
+  (unless (t/symbol? (t/normalize-type tb))
+    (error "Field identifier is not a symbol"))
+  (dict-ref (t/record-fields ta^) key
+    (thunk (error "Unknown field" key))))
 
 (define-syntax _cast_ (meta/make-function/cast #'cast:impl))
 
