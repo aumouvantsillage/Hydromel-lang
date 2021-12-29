@@ -536,7 +536,7 @@
      (define u (slot-type* inst))
      (unless (<: u t)
        ; TODO show source code instead of generated code, or source location only.
-       (raise-result-error 'type-check (format "~a" t) u))]
+       (raise-result-error 'type-check (format-type t) (format-type u)))]
 
     [(hash-table ('* _) (_ vs) ...)
      (for-each type-check vs)]

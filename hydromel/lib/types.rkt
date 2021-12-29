@@ -109,6 +109,13 @@
 
 (define integer:impl:return-type (const (static-data (integer:impl) (type:impl))))
 
+(define-syntax enumeration (meta/make-function #'enumeration:impl))
+
+(define (enumeration:impl . syms)
+  (union (map symbol syms)))
+
+; TODO enumeration:impl:return-type
+
 ; Type helpers.
 
 (define (resize t w)
@@ -135,34 +142,72 @@
     [(union ts)                    (foldl common-supertype #f (map normalize-type ts))]
     [(subtype t)                   (subtype (normalize-type t))]
     [(array n t)                   (array n (normalize-type t))]
+    [(tuple ts)                    (tuple (map normalize-type ts))]
+    [(record fs)                   (record (for/hash ([(k v) (in-dict fs)])
+                                             (values k (normalize-type v))))]
     [_                             t]))
 
 (define (common-supertype t u)
   (match (list t u)
-    [(list _              #f)           t]
-    [(list (unsigned m)   (unsigned n)) (unsigned (max m n))]
-    [(list (signed   m)   (signed   n)) (signed   (max m n))]
-    [(list (unsigned m)   (signed   n)) (signed   (max (add1 m) n))]
-    [(list (signed   m)   (unsigned n)) (signed   (max m (add1 n)))]
+    [(list _              #f)             t]
+    [(list (unsigned m)   (unsigned n))   (unsigned (max m n))]
+    [(list (signed   m)   (signed   n))   (signed   (max m n))]
+    [(list (unsigned m)   (signed   n))   (signed   (max (add1 m) n))]
+    [(list (signed   m)   (unsigned n))   (signed   (max m (add1 n)))]
     [(list (array    n v) (array    m w))
-     #:when (= n m)                     (array n (common-supertype v w))]
-    [_                                  (error "types cannot be merged" t u)]))
+     #:when (= n m)                       (array n (common-supertype v w))]
+    [(list (symbol   q)   (symbol   r))
+     #:when (equal? q r)                  t]
+    [(list (union    ts)  (union    us))  (union (append ts us))]
+    [(list (union    ts)  _)              (union (cons u ts))]
+    [(list _              (union    us))  (union (cons t us))]
+    [_                                    (union (list t u))]))
 
 (define (<: t u)
-  (match (list (normalize-type t) (normalize-type u))
+  (define t^ (normalize-type t))
+  (define u^ (normalize-type u))
+  (match (list t^ u^)
     [(list (abstract-integer n) (signed #f))   #t]
     [(list (unsigned n)         (unsigned #f)) #t]
     [(list (signed n)           (signed m))    (<= n m)]
     [(list (unsigned n)         (unsigned m))  (<= n m)]
     [(list (signed n)           (unsigned m))  #f]
     [(list (unsigned n)         (signed m))    (<  n m)]
+    [(list (symbol ts)          (symbol us))   (equal? ts us)]
     [(list (array n v)          (array m w))   (and (= n m) (<: v w))]
-    [(list (union vs)           _)             (for/and ([it (in-list vs)])
-                                                 (<: it u))]
-    [(list _                    (union vs))    (for/or ([it (in-list vs)])
-                                                 (<: t it))]
+    [(list (union ts)           _)             (for/and ([it (in-list ts)])
+                                                 (<: it u^))]
+    [(list _                    (union us))    (for/or ([it (in-list us)])
+                                                 (<: t^ it))]
     [(list (record ft)          (record fu))   (for/and ([(k v) (in-dict ft)])
                                                  (and (dict-has-key? fu k)
                                                       (<: v (dict-ref fu k))))]
     ; TODO tuple, array
     [_ #f]))
+
+(define (format-type t)
+  (define t^ (normalize-type t))
+  (match t^
+    [(signed   n) (format "signed(~a)" n)]
+    [(unsigned n) (format "unsigned(~a)" n)]
+    [(array    n v) (format "array(~a, ~a)" n (format-type v))]
+    [(union    ts)  (format "union(~a)" (for/fold ([acc ""])
+                                                  ([it (in-list ts)])
+                                          (define s (format-type it))
+                                          (if (positive? (string-length acc))
+                                            (string-append acc ", " s)
+                                            s)))]
+    [(tuple    ts)  (format "tuple(~a)" (for/fold ([acc #f])
+                                                  ([it (in-list ts)])
+                                          (define s (format-type it))
+                                          (if (string? acc)
+                                            (string-append acc ", " s)
+                                            s)))]
+    [(record fs) (format "record(~a)" (for/fold ([acc #f])
+                                                ([(k v) (in-dict fs)])
+                                        (define s (format "~a: ~a" k (format-type v)))
+                                        (if (string? acc)
+                                          (string-append acc ", " s)
+                                          s)))]
+    [(symbol s) (symbol->string s)]
+    [_ (format "~v" t^)]))
