@@ -6,6 +6,7 @@
 
 (require
   syntax/parse/define
+  racket/hash
   (prefix-in base/ racket/base)
   (prefix-in num/ "numeric.rkt")
   (for-syntax
@@ -158,6 +159,8 @@
      #:when (= n m)                       (array n (common-supertype v w))]
     [(list (symbol   q)   (symbol   r))
      #:when (equal? q r)                  t]
+    [(list (record ft)    (record fu))    (record (hash-intersect ft fu
+                                                                  #:combine common-supertype))]
     [(list (union    ts)  (union    us))  (union (append ts us))]
     [(list (union    ts)  _)              (union (cons u ts))]
     [(list _              (union    us))  (union (cons t us))]

@@ -143,10 +143,10 @@
 (define-syntax _<=_ (meta/make-function #'le:impl))
 
 (define (eq:impl a b)
-  (if (= a b) 1 0))
+  (if (equal? a b) 1 0))
 
 (define (ne:impl a b)
-  (if (= a b) 0 1))
+  (if (equal? a b) 0 1))
 
 (define (gt:impl a b)
   (if (> a b) 1 0))
@@ -311,11 +311,11 @@
 (define (dict-ref:return-type ta tb)
   (define ta^ (t/normalize-type ta))
   (define tb^ (t/normalize-type tb))
-  (unless (t/record? ta^)
-    (error "Not a record type"))
   (unless (t/symbol? tb^)
-    (error "Field identifier is not a symbol"))
+    (error "Field identifier is not a symbol" tb^))
   (define field-name (t/symbol-value tb^))
+  (unless (t/record? ta^)
+    (error "Not a record type" ta^))
   (dict-ref (t/record-fields ta^) field-name
     (thunk (error "Unknown field" field-name))))
 
