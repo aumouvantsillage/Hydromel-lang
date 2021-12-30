@@ -177,7 +177,7 @@
 (define-syntax _/_ (meta/make-function #'quotient))
 
 (define (+:return-type ta tb)
-  (define tr (t/common-supertype (t/normalize-type ta) (t/normalize-type tb)))
+  (define tr (t/common-supertype/normalize ta tb))
   (match tr
     [(t/abstract-integer w) (t/resize tr (add1 w))]
     [_ (error "Arithmetic operation expects integer operands." ta tb)]))
@@ -231,7 +231,7 @@
     (range a (sub1 b) -1)))
 
 (define (range:impl:return-type ta tb)
-  (define tr (t/common-supertype (t/normalize-type ta) (t/normalize-type tb)))
+  (define tr (t/common-supertype/normalize ta tb))
   (unless (t/abstract-integer? tr)
     (error "Range expects integer boundaries."))
   (t/range tr))
