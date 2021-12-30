@@ -22,6 +22,8 @@
 
 (struct any datatype () #:transparent)
 
+(struct none datatype () #:transparent)
+
 ; Abstract type for signed and unsigned integers.
 (struct abstract-integer datatype (width) #:transparent)
 
@@ -140,7 +142,7 @@
     [(static-data n (unsigned #f)) (unsigned (num/min-unsigned-width n))]
     [(static-data n (signed   #f)) (signed   (num/min-unsigned-width n))]
     [(static-data _ t)             (normalize-type t)]
-    [(union ts)                    (foldl common-supertype #f (map normalize-type ts))]
+    [(union ts)                    (foldl common-supertype (none) (map normalize-type ts))]
     [(subtype t)                   (subtype (normalize-type t))]
     [(array n t)                   (array n (normalize-type t))]
     [(tuple ts)                    (tuple (map normalize-type ts))]
@@ -150,7 +152,8 @@
 
 (define (common-supertype t u)
   (match (list t u)
-    [(list _              #f)             t]
+    [(list _              (none))         t]
+    [(list (none)         _)              u]
     [(list (unsigned m)   (unsigned n))   (unsigned (max m n))]
     [(list (signed   m)   (signed   n))   (signed   (max m n))]
     [(list (unsigned m)   (signed   n))   (signed   (max (add1 m) n))]
@@ -170,11 +173,12 @@
   (define t^ (normalize-type t))
   (define u^ (normalize-type u))
   (match (list t^ u^)
+    [(list _                    (any))         #t]
+    [(list (none)               _)             #t]
     [(list (abstract-integer n) (signed #f))   #t]
     [(list (unsigned n)         (unsigned #f)) #t]
     [(list (signed n)           (signed m))    (<= n m)]
     [(list (unsigned n)         (unsigned m))  (<= n m)]
-    [(list (signed n)           (unsigned m))  #f]
     [(list (unsigned n)         (signed m))    (<  n m)]
     [(list (symbol ts)          (symbol us))   (equal? ts us)]
     [(list (array n v)          (array m w))   (and (= n m) (<: v w))]
