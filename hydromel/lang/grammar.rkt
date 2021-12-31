@@ -147,7 +147,6 @@ shift-expr:  maybe-shift-expr ("<<" | ">>") maybe-prefix-expr
 prefix-expr: ("-" | "not") maybe-cast-expr
 cast-expr:   simple-expr /"as" type-expression
 
-; TODO Add comprehensions
 @simple-expr:
   literal-expr |
   name-expr |

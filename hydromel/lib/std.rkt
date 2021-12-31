@@ -100,19 +100,20 @@
 (define-syntax unsigned_width (meta/make-function #'min-unsigned-width))
 
 (define (min-unsigned-width:return-type ta)
-  (define ta^ (t/normalize-type ta))
-  (t/unsigned (t/abstract-integer-width ta^)))
+  (~> ta
+      t/normalize-type
+      t/abstract-integer-width
+      t/unsigned))
 
 ; Returns the minimum width to encode a given number
 ; as an signed integer.
 (define-syntax signed_width (meta/make-function #'min-signed-width))
 
 (define (min-signed-width:return-type ta)
-  (define ta^ (t/normalize-type ta))
-  (t/unsigned (match ta^
-                [(t/signed   n) n]
-                [(t/unsigned n) (add1 n)]
-                [_ (error "Cannot compute data size.")])))
+  (match (t/normalize-type ta)
+    [(t/signed   n) (t/unsigned n)]
+    [(t/unsigned n) (t/unsigned (add1 n))]
+    [_ (error "Cannot compute data size.")]))
 
 ; Boolean operators are all bitwise.
 (define-syntax _not_ (meta/make-function/cast #'bitwise-not))
@@ -121,9 +122,7 @@
 (define-syntax _xor_ (meta/make-function      #'bitwise-xor))
 
 (define (bitwise:return-type ta tb)
-  (define ta^ (t/normalize-type ta))
-  (define tb^ (t/normalize-type tb))
-  (match (list ta^ tb^)
+  (match (list (t/normalize-type ta) (t/normalize-type tb))
     [(list (t/unsigned na)          (t/unsigned nb))          (t/unsigned (max na nb))]
     [(list (t/signed   na)          (t/abstract-integer  nb)) (t/signed   (max na nb))]
     [(list (t/abstract-integer  na) (t/signed   nb))          (t/signed   (max na nb))]
@@ -188,9 +187,7 @@
     (t/signed (add1 (t/abstract-integer-width (t/normalize-type ta))))))
 
 (define (*:return-type ta tb)
-  (define ta^ (t/normalize-type ta))
-  (define tb^ (t/normalize-type tb))
-  (match (list ta^ tb^)
+  (match (list (t/normalize-type ta) (t/normalize-type tb))
     [(list (t/unsigned na)         (t/unsigned nb))          (t/unsigned (+ na nb))]
     [(list (t/abstract-integer na) (t/signed   nb))          (t/signed   (+ na nb))]
     [(list (t/signed na)           (t/abstract-integer  nb)) (t/signed   (+ na nb))]
@@ -295,8 +292,7 @@
 
 (define (nth:return-type ta tb)
   ; TODO check the type of tb
-  (define ta^ (t/normalize-type ta))
-  (match ta^
+  (match (t/normalize-type ta)
     [(t/array _ te) te]
     [_              (error "Not an array type" ta)]))
 
