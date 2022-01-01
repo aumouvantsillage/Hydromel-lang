@@ -129,14 +129,13 @@
    #'(slot data type (λ (a) (if a expr-type type)))]
 
   [(_ data type)
-   #'(make-slot data type type)]
+   #'(slot data type (λ (a) type))]
 
   [(_ type)
-   #'(make-slot #f type type)])
+   #'(make-slot #f type)])
 
 (define-syntax-parse-rule (make-slot-actual-typer default-type expr)
-  #:with typer (type-label #'expr)
-  (make-slot-actual-typer* default-type typer))
+  (make-slot-actual-typer* default-type (typer-for expr)))
 
 (define (make-slot-actual-typer* default-type actual-typer)
   (let ([res      #f]
@@ -227,7 +226,7 @@
 ; A composite port expands to a variable that stores the result of a constructor
 ; call for the corresponding interface.
 ; If a multiplicity is present, a vector of channels is created.
-(define-syntax-parse-rule (composite-port name (mult ...) (~or (~literal splice) (~literal flip)) ... intf-name arg ...)
+(define-syntax-parse-rule (composite-port name (mult ...) (~or* (~literal splice) (~literal flip)) ... intf-name arg ...)
   (define name (channel (mult ...) intf-name arg ...)))
 
 ; An instance expands to a variable that stores the result of a constructor call
@@ -407,41 +406,66 @@
 ; This code is meant to be executed lazily, either in a slot type
 ; or inside a signal, so that out-of-order dependencies are correctly handled.
 ; Only constants infer their types immediately.
-(define-syntax-parse-rule (type-of expr)
-   #:with key (type-label #'expr)
-   (key))
+(define-syntax-parser type-of
+  #:literals [name-expr literal-expr slot-expr signal-expr]
+  [(_ (name-expr name ...))
+   #'(slot-type (concat-name name ...))]
+
+  [(_ ((~or* slot-expr signal-expr) (~and ((~or* name-expr literal-expr) _ ...) body)))
+   #'(type-of body)]
+
+  [(_ (~and (literal-expr _) this-expr))
+   #'(static-data this-expr (literal-type this-expr))]
+
+  [(_ this-expr)
+   #:with lbl (type-label #'this-expr)
+   #'(lbl)])
+
+(define-syntax-parser typer-for
+  #:literals [name-expr literal-expr slot-expr signal-expr]
+  [(_ (~and (~or* (name-expr _ ...)
+                  (literal-expr _)
+                  (slot-expr (name-expr _ ...))
+                  (signal-expr (name-expr _ ...))
+                  (signal-expr (literal-expr _ ...)))
+            this-expr))
+   #'(thunk (type-of this-expr))]
+
+  [(_ this-expr)
+   (type-label #'this-expr)])
 
 ; Expression types are memoized in a dictionary whose keys are:
 ; either the 'label syntax property (generated in checker.rkt)
 ; or the source location of the expression (for expander tests only).
 (define-for-syntax (type-label stx)
-  (format-id stx "type-of:~a"
-    (or
-      (syntax-property stx 'label)
-      (string->symbol (format "~a$~a:~a:~a"
-                              (syntax-source stx)
-                              (syntax-line stx)
-                              (syntax-column stx)
-                              (syntax-span stx))))))
+  (syntax-parse stx
+    #:literals [slot-expr signal-expr]
+    [((~or* slot-expr signal-expr) body)
+     (type-label #'body)]
+
+    [_
+     (format-id stx "type-of:~a"
+       (or
+         (syntax-property stx 'label)
+         (string->symbol (format "~a$~a:~a:~a"
+                                 (syntax-source stx)
+                                 (syntax-line stx)
+                                 (syntax-column stx)
+                                 (syntax-span stx)))))]))
 
 (define-syntax-parser typing-functions
-  #:literals [slot-expr signal-expr lift-expr array-for-expr concat-for-expr]
+  #:literals [slot-expr signal-expr lift-expr array-for-expr concat-for-expr name-expr literal-expr]
 
-  [(_ (~and ((~or* slot-expr signal-expr) body) this-expr))
-   #:with this-type-label (type-label #'this-expr)
-   #:with body-type-label (type-label #'body)
-   #'(begin
-       (typing-functions body)
-       (define this-type-label body-type-label))]
+  [(_ ((~or* slot-expr signal-expr) body))
+   #'(typing-functions body)]
 
   [(_ (~and (lift-expr (name val) ...+ body) this-expr))
    #:with this-type-label (type-label #'this-expr)
-   #:with body-type-label (type-label #'body)
    #'(begin
        (typing-functions val) ...
        (splicing-let ([name (make-slot (type-of val))] ...)
          (typing-functions body)
-         (define this-type-label body-type-label)))]
+         (define this-type-label (typer-for body))))]
 
   [(_ (~and (array-for-expr body (~seq iter-name iter-expr) ...) this-expr))
    #:with this-type-label (type-label #'this-expr)
@@ -470,6 +494,9 @@
        (define (this-type-label)
          (resize (type-of body) (* (add1 (abs (- left right))) ...))))]
 
+  [(_ ((~or* name-expr literal-expr) _ ...))
+   #'(begin)]
+
   [(_ (~and (_ arg ...) this-expr))
    #:with this-type-label (type-label #'this-expr)
    #'(begin
@@ -482,18 +509,12 @@
 ; Generate type inference code for an expression.
 ; TODO Warn on circular dependencies in register-expr
 (define-syntax-parser typing-function-body
-  #:literals [name-expr literal-expr choices register-expr when-clause
+  #:literals [choices register-expr when-clause
               field-expr call-expr call-expr/cast type-of]
   ; This is a special case for (type-of) forms generated in checker.rkt
   ; Maybe we should generate these forms in expander instead.
   [(_ (~and (type-of expr) this-expr))
    #'(static-data this-expr (call-expr type:impl))]
-
-  [(_ (name-expr name ...))
-   #'(slot-type (concat-name name ...))]
-
-  [(_ (~and (literal-expr _) this-expr))
-   #'(static-data this-expr (literal-type this-expr))]
 
   [(_ (choices expr ...))
    #'(tuple (list (type-of expr) ...))]
@@ -507,12 +528,11 @@
   [(_ (~and ((~or* call-expr call-expr/cast) name arg ...) expr))
    #:with rt (format-id #'name "~a:return-type" #'name)
    #:with (tv ...) (generate-temporaries (attribute arg))
-   #'(begin
-       (define tv (type-of arg)) ...
-       (define res-type (rt tv ...))
-       (if (and (static-data? tv) ...)
-         (static-data (name arg ...) res-type)
-         res-type))]
+   #'(let ([tv (type-of arg)] ...)
+       (let ([res-type (rt tv ...)])
+         (if (andmap static-data? (list tv ...))
+           (static-data (name arg ...) res-type)
+           res-type)))]
 
   [_ #'(any)])
 
