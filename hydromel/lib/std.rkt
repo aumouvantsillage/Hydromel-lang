@@ -25,53 +25,57 @@
 
 (provide
   int->bool      int->bool:impl         int->bool:impl:return-type
-  _if_           if:impl                if:impl:return-type
-  _case_         case:impl              case:impl:return-type
+  _if_           if:impl
+  _case_         case:impl
   _not_                                 bitwise-not:return-type
-  _and_                                 bitwise-and:return-type
-  _or_                                  bitwise-ior:return-type
-  _xor_                                 bitwise-xor:return-type
-  _==_           eq:impl                eq:impl:return-type
-  _/=_           ne:impl                ne:impl:return-type
-  _>_            gt:impl                gt:impl:return-type
-  _<_            lt:impl                lt:impl:return-type
-  _>=_           ge:impl                ge:impl:return-type
-  _<=_           le:impl                le:impl:return-type
-  _+_                                   +:return-type
-  _-_                                   -:return-type
-  _neg_          neg:impl               neg:impl:return-type
-  _*_                                   *:return-type
-  _/_                                   quotient:return-type
-  _<<_                                  arithmetic-shift:return-type
-  _>>_           arithmetic-shift-right arithmetic-shift-right:return-type
-  _range_        range:impl             range:impl:return-type
-  _slice_                               unsigned-slice:return-type
-  _concat_       concat:impl            concat:impl:return-type
-  _array_                               pvector:return-type
-  _record_                              hash:return-type
-  _nth_                                 nth:return-type
-  _set_nth_                             set-nth:return-type
-  _field_                               dict-ref:return-type
-  signed_width                          min-signed-width:return-type
-  unsigned_width                        min-unsigned-width:return-type
-  _cast_         cast:impl              cast:impl:return-type
+  _and_
+  _or_
+  _xor_
+  _==_           eq:impl
+  _/=_           ne:impl
+  _>_            gt:impl
+  _<_            lt:impl
+  _>=_           ge:impl
+  _<=_           le:impl
+  _+_
+  _-_
+  _neg_          neg:impl
+  _*_
+  _/_
+  _<<_
+  _>>_           arithmetic-shift-right
+  _range_        range:impl
+  _slice_
+  _concat_       concat:impl
+  _array_
+  _record_
+  _nth_
+  _set_nth_
+  _field_
+  signed_width
+  unsigned_width
+  _cast_         cast:impl              
   (all-from-out  "numeric.rkt"))
 
 (define-syntax-parser define-return-type
   [(_ (name arg:id ...) body ...)
    #:with rt-name (format-id #'name "~a:return-type" #'name)
-   #'(define (rt-name arg ...)
-       (define raw (let () body ...))
-       (if (and (t/static-data? arg) ...)
-         (t/static-data (name (t/static-data-value arg) ...) raw)
-         raw))]
+   #'(begin
+       (provide rt-name)
+       (define (rt-name arg ...)
+         (define raw (let () body ...))
+         (if (and (t/static-data? arg) ...)
+           (t/static-data (name (t/static-data-value arg) ...) raw)
+           raw)))]
   [(_ (name . args) body ...)
    #:with rt-name (format-id #'name "~a:return-type" #'name)
-   #'(define (rt-name . args)
-       (define raw (let () body ...))
-       (if (andmap t/static-data? args)
-         (t/static-data (apply name (map t/static-data-value args)) raw)
-         raw))])
+   #'(begin
+       (provide rt-name)
+       (define (rt-name . args)
+         (define raw (let () body ...))
+         (if (andmap t/static-data? args)
+           (t/static-data (apply name (map t/static-data-value args)) raw)
+           raw)))])
 
 ; Convert an integer to a boolean.
 ; This function is used in generated conditional statements.
@@ -229,7 +233,7 @@
     [(list (t/signed na)           (t/abstract-integer  nb)) (t/signed   (+ na nb))]
     [_ (error "Arithmetic operation expects integer operands.")]))
 
-(define (quotient:return-type ta tb)
+(define-return-type (quotient ta tb)
   ta)
 
 (define-syntax _<<_ (meta/make-function #'arithmetic-shift))
