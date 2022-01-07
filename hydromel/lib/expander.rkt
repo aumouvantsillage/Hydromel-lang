@@ -111,65 +111,37 @@
 ; ------------------------------------------------------------------------------
 
 (define-syntax-parse-rule (parameter-slot name type)
-  (make-slot name (static-data name type) (static-data name (literal-type name))))
+  (let ([t (static-data name type)])
+    (slot name t (make-slot-actual-typer* t (thunk (static-data/literal name))))))
 
 (define-syntax-parse-rule (iterator-slot name)
-  (make-slot name (static-data name (literal-type name))))
+  (let ([t (static-data/literal name)])
+    (slot name t (const t))))
 
 (define-syntax-parse-rule (comprehension-slot left right)
-  (make-slot (common-supertype (literal-type left) (literal-type right))))
+  (let ([t (common-supertype (literal-type left) (literal-type right))])
+    (slot #f t (const t))))
 
 ; A constant infers its type immediately before computing its value.
 ; Here, we benefit from the fact that type-of will return a
 ; static-data where the expression has already been evaluated.
 (define-syntax-parse-rule (constant-slot expr)
-  (let ([expr-type (type-of expr)])
-    (make-slot (static-data-value expr-type) expr-type)))
+  (let ([t (type-of expr)])
+    (slot (static-data-value t) t (const t))))
 
 (define-syntax-parse-rule (data-port-slot type)
-  (make-slot type))
+  (let ([t type])
+    (slot #f t (const t))))
 
 (define-syntax-parser local-signal-slot
-  [(_ expr)      #'(make-slot expr (type-of expr))]
-  [(_ type expr) #'(make-slot expr type (type-of expr))])
+  [(_ expr)
+   #'(slot expr #f (make-slot-actual-typer #f expr))]
+  [(_ type expr)
+   #'(let ([t type])
+       (slot expr t (make-slot-actual-typer t expr)))])
 
 (define-syntax-parse-rule (lift-slot expr)
-  (make-slot (type-of expr)))
-
-; Create a slot for given data and type.
-; This is implemented as a macro because we want to evaluate
-; expression types lazily.
-(define-syntax-parser make-slot
-  #:literals [type-of]
-  ; Make a slot for data that has a declared type,
-  ; and whose actual type is computed from an expression.
-  [(_ data type (type-of expr))
-   #'(let ([t type])
-       (slot data t (make-slot-actual-typer t expr)))]
-
-  ; Make a slot for data whose with no declared type
-  ; and whose actual type is computed from an expression.
-  [(_ data (type-of expr))
-   #'(make-slot data #f (type-of expr))]
-
-  ; Make a temporary slot for typing purposes.
-  ; It has no data and no declared type (used in lift-expr)
-  [(_ (type-of expr))
-   #'(make-slot #f #f (type-of expr))]
-
-  ; Make a slot for data that has a declared type,
-  ; and whose actual type is explicitly specified (e.g a parameter).
-  [(_ data type expr-type)
-   #'(slot data type (λ (a) (if a expr-type type)))]
-
-  ; Make a slot for data that has a declared type,
-  ; and whose actual type is explicitly specified (e.g a constant).
-  [(_ data type)
-   #'(slot data type (λ (a) type))]
-
-  ; Make a slot for a port or a temporary variable (e.g a loop counter).
-  [(_ type)
-   #'(make-slot #f type)])
+  (slot #f #f (make-slot-actual-typer #f expr)))
 
 (define-syntax-parse-rule (make-slot-actual-typer default-type expr)
   (make-slot-actual-typer* default-type (typer-for expr)))
@@ -440,7 +412,7 @@
    #'(type-of body)]
 
   [(_ (~and (literal-expr _) this-expr))
-   #'(static-data this-expr (literal-type this-expr))]
+   #'(static-data/literal this-expr)]
 
   [(_ this-expr)
    #:with lbl (type-label #'this-expr)
@@ -539,7 +511,7 @@
   ; This is a special case for (type-of) forms generated in checker.rkt
   ; Maybe we should generate these forms in expander instead.
   [(_ (~and (type-of expr) this-expr))
-   #'(static-data this-expr (call-expr type:impl))]
+   #'(static-data this-expr (type:impl))]
 
   [(_ (choices expr ...))
    #'(tuple (list (type-of expr) ...))]

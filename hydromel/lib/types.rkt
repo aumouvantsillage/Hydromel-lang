@@ -86,6 +86,9 @@
   #:transparent
   #:property prop:procedure (λ (t v) ((static-data-type t) v)))
 
+(define (static-data/literal value)
+  (static-data value (literal-type value)))
+  
 ; Standard derived types.
 
 (define-syntax type (meta/make-function #'type:impl))
