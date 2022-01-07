@@ -115,22 +115,33 @@
 ; expression types lazily.
 (define-syntax-parser make-slot
   #:literals [type-of]
+  ; Make a slot for data that has a declared type,
+  ; and whose actual type is computed from an expression.
   [(_ data type (type-of expr))
    #'(let ([t type])
        (slot data t (make-slot-actual-typer t expr)))]
 
+  ; Make a slot for data whose with no declared type
+  ; and whose actual type is computed from an expression.
   [(_ data (type-of expr))
    #'(make-slot data #f (type-of expr))]
 
+  ; Make a temporary slot for typing purposes.
+  ; It has no data and no declared type.
   [(_ (type-of expr))
    #'(make-slot #f #f (type-of expr))]
 
+  ; Make a slot for data that has a declared type,
+  ; and whose actual type is explicitly specified (e.g a parameter).
   [(_ data type expr-type)
    #'(slot data type (λ (a) (if a expr-type type)))]
 
+  ; Make a slot for data that has a declared type,
+  ; and whose actual type is explicitly specified (e.g a constant).
   [(_ data type)
    #'(slot data type (λ (a) type))]
 
+  ; Make a slot for
   [(_ type)
    #'(make-slot #f type)])
 
@@ -528,11 +539,7 @@
   [(_ (~and ((~or* call-expr call-expr/cast) name arg ...) expr))
    #:with rt (format-id #'name "~a:return-type" #'name)
    #:with (tv ...) (generate-temporaries (attribute arg))
-   #'(let ([tv (type-of arg)] ...)
-       (let ([res-type (rt tv ...)])
-         (if (andmap static-data? (list tv ...))
-           (static-data (name arg ...) res-type)
-           res-type)))]
+   #'(rt (type-of arg) ...)]
 
   [_ #'(any)])
 

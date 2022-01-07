@@ -5,6 +5,7 @@
 #lang racket
 
 (require
+  threading
   syntax/parse/define
   (for-syntax racket/syntax))
 
@@ -64,34 +65,26 @@
 (define (signed v w)
   (signed-slice v (sub1 w) 0))
 
-; Macros to concatenate a sequence of slices.
-; Each slice is defined as a list [val left right] or [val left]
-; When right is missing, it defaults to left.
-(begin-for-syntax
-  (define-syntax-class slice-item
-    (pattern [val left (~optional right #:defaults ([right #'left]))])))
-
-(define-syntax-parser concat-slices
-  [(_ slicer sl ...+ it:slice-item)
-   ; Concatenate `sl ...` recursively.
-   ; Shift the result left by the width of `it`.
-   ; Combine the result with `it` as an unsigned slice.
-   #'(bitwise-ior
-       (arithmetic-shift (concat-slices slicer sl ...) (add1 (- it.left it.right)))
-       (unsigned-slice it.val it.left it.right))]
-  [(_ slicer it:slice-item)
-   ; Slice the leftmost slice with the given slicing function.
-   #'(slicer it.val it.left it.right)])
+; Concatenate a sequence of slices.
+; Do not sign-extend the result.
+(define (unsigned-concat . items)
+  (for/fold ([res 0])
+            ([it (in-list items)])
+    (match-define (list v l r) it)
+    (~> res
+        (arithmetic-shift (add1 (- l r)))
+        (bitwise-ior (unsigned-slice v l r)))))
 
 ; Concatenate a sequence of slices.
 ; Sign-extend the result.
-(define-simple-macro (unsigned-concat it ...)
-  (concat-slices unsigned-slice it ...))
-
-; Concatenate a sequence of slices.
-; Sign-extend the result.
-(define-simple-macro (signed-concat it ...)
-  (concat-slices signed-slice it ...))
+(define (signed-concat . items)
+  (match-define (list v0 l0 r0) (first items))
+  (for/fold ([res (signed-slice v0 l0 r0)])
+            ([it (in-list (rest items))])
+    (match-define (list v l r) it)
+    (~> res
+        (arithmetic-shift (add1 (- l r)))
+        (bitwise-ior (unsigned-slice v l r)))))
 
 (define (integer->bit-string size v)
   (list->string (for/list ([n (in-range (sub1 size) -1 -1)])
