@@ -93,7 +93,7 @@
   (begin
     (provide ctor-name)
     (define (ctor-name arg-name ...)
-      (define param-name (make-slot arg-name (static-data arg-name param-type) (static-data arg-name (literal-type arg-name)))) ...
+      (define param-name (parameter-slot arg-name param-type)) ...
       (splicing-syntax-parameterize ([in-design-unit #t])
         body ...)
       (define res (make-hash `((* . (spliced-name ...)) (field-name . ,field-name) ...)))
@@ -109,6 +109,32 @@
 ; ------------------------------------------------------------------------------
 ; Declarations
 ; ------------------------------------------------------------------------------
+
+(define-syntax-parse-rule (parameter-slot name type)
+  (make-slot name (static-data name type) (static-data name (literal-type name))))
+
+(define-syntax-parse-rule (iterator-slot name)
+  (make-slot name (static-data name (literal-type name))))
+
+(define-syntax-parse-rule (comprehension-slot left right)
+  (make-slot (common-supertype (literal-type left) (literal-type right))))
+
+; A constant infers its type immediately before computing its value.
+; Here, we benefit from the fact that type-of will return a
+; static-data where the expression has already been evaluated.
+(define-syntax-parse-rule (constant-slot expr)
+  (let ([expr-type (type-of expr)])
+    (make-slot (static-data-value expr-type) expr-type)))
+
+(define-syntax-parse-rule (data-port-slot type)
+  (make-slot type))
+
+(define-syntax-parser local-signal-slot
+  [(_ expr)      #'(make-slot expr (type-of expr))]
+  [(_ type expr) #'(make-slot expr type (type-of expr))])
+
+(define-syntax-parse-rule (lift-slot expr)
+  (make-slot (type-of expr)))
 
 ; Create a slot for given data and type.
 ; This is implemented as a macro because we want to evaluate
@@ -127,7 +153,7 @@
    #'(make-slot data #f (type-of expr))]
 
   ; Make a temporary slot for typing purposes.
-  ; It has no data and no declared type.
+  ; It has no data and no declared type (used in lift-expr)
   [(_ (type-of expr))
    #'(make-slot #f #f (type-of expr))]
 
@@ -141,7 +167,7 @@
   [(_ data type)
    #'(slot data type (λ (a) type))]
 
-  ; Make a slot for
+  ; Make a slot for a port or a temporary variable (e.g a loop counter).
   [(_ type)
    #'(make-slot #f type)])
 
@@ -177,7 +203,7 @@
   (begin
     (provide impl-name rtype-name)
     (define (impl-name arg-name ...)
-      (define param-name (make-slot arg-name (static-data arg-name param-type) (static-data arg-name (literal-type arg-name)))) ...
+      (define param-name (parameter-slot arg-name param-type)) ...
       (type-check param-name) ...
       expr)
     (define (rtype-name arg-name ...)
@@ -190,7 +216,7 @@
   [(constant name expr) #:when (syntax-parameter-value #'in-design-unit)
    #'(begin
        (typing-functions expr)
-       (define name (constant->slot expr)))]
+       (define name (constant-slot expr)))]
 
   ; Module-level context constant.
   [(constant name expr)
@@ -198,14 +224,7 @@
    #'(begin
        (provide name^)
        (typing-functions expr)
-       (define name^ (constant->slot expr)))])
-
-; A constant infers its type immediately before computing its value.
-; Here, we benefit from the fact that type-of will return a
-; static-data where the expression has already been evaluated.
-(define-syntax-parse-rule (constant->slot expr)
-  (let ([expr-type (type-of expr)])
-    (make-slot (static-data-value expr-type) expr-type)))
+       (define name^ (constant-slot expr)))])
 
 ; An alias expands to a partial access to the target port.
 ; The alias and the corresponding port must refer to the same slot.
@@ -217,22 +236,17 @@
 ; the current component instance.
 ; We use a slot for output ports as well to keep a simple port access mechanism.
 (define-syntax-parse-rule (data-port name _ type)
-  (define name (make-slot type)))
+  (define name (data-port-slot type)))
 
 ; A local signal expands to a variable containing the result of the given
 ; expression in a slot.
 ; Like output ports, local signals do not need to be wrapped in a slot, but
 ; it helps expanding expressions without managing several special cases.
-(define-syntax-parser local-signal
-  [(_ name expr)
-   #'(begin
-       (typing-functions expr)
-       (define name (make-slot expr (type-of expr))))]
-
-  [(_ name type expr)
-   #'(begin
-       (typing-functions expr)
-       (define name (make-slot expr type (type-of expr))))])
+(define-syntax-parse-rule (local-signal name opt ...)
+  #:with ((~optional type) expr) #'(opt ...)
+  (begin
+    (typing-functions expr)
+    (define name (local-signal-slot opt ...))))
 
 ; A composite port expands to a variable that stores the result of a constructor
 ; call for the corresponding interface.
@@ -284,7 +298,7 @@
 (define-syntax-parse-rule (for-statement name iter-name iter-expr body ...)
   #:with iter-name^ (generate-temporary #'iter-name)
   (define name (for/vector ([iter-name^ (in-list iter-expr)])
-                 (define iter-name (make-slot iter-name^ (static-data iter-name^ (literal-type iter-name^))))
+                 (define iter-name (iterator-slot iter-name^))
                  body ...)))
 
 ; A statement block executes statements and returns a hash map that exposes
@@ -470,11 +484,11 @@
   [(_ ((~or* slot-expr signal-expr) body))
    #'(typing-functions body)]
 
-  [(_ (~and (lift-expr (name val) ...+ body) this-expr))
+  [(_ (~and (lift-expr (name expr) ...+ body) this-expr))
    #:with this-type-label (type-label #'this-expr)
    #'(begin
-       (typing-functions val) ...
-       (splicing-let ([name (make-slot (type-of val))] ...)
+       (typing-functions expr) ...
+       (splicing-let ([name (lift-slot expr)] ...)
          (typing-functions body)
          (define this-type-label (typer-for body))))]
 
@@ -486,7 +500,7 @@
    #'(splicing-letrec ([rng       iter-expr] ...
                        [left      (first rng)] ...
                        [right     (last rng)] ...
-                       [iter-name (make-slot (common-supertype (literal-type left) (literal-type right)))] ...)
+                       [iter-name (comprehension-slot left right)] ...)
        (typing-functions body)
        (define (this-type-label)
          (array (* (add1 (abs (- left right))) ...) (type-of body))))]
@@ -500,7 +514,7 @@
    #'(splicing-letrec ([rng       iter-expr] ...
                        [left      (first rng)] ...
                        [right     (last rng)] ...
-                       [iter-name (make-slot (common-supertype (literal-type left) (literal-type right)))] ...)
+                       [iter-name (comprehension-slot left right)] ...)
        (typing-functions body)
        (define (this-type-label)
          (resize (type-of body) (* (add1 (abs (- left right))) ...))))]
