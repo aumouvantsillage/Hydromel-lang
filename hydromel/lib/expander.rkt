@@ -110,63 +110,13 @@
 ; Declarations
 ; ------------------------------------------------------------------------------
 
-(define-syntax-parse-rule (parameter-slot name type)
-  (let ([t (static-data name type)])
-    (slot name t (make-slot-actual-typer* t (thunk (static-data/literal name))))))
-
-(define-syntax-parse-rule (iterator-slot name)
-  (let ([t (static-data/literal name)])
-    (slot name t (const t))))
-
-(define-syntax-parse-rule (comprehension-slot left right)
-  (let ([t (common-supertype (literal-type left) (literal-type right))])
-    (slot #f t (const t))))
-
-; A constant infers its type immediately before computing its value.
-; Here, we benefit from the fact that type-of will return a
-; static-data where the expression has already been evaluated.
-(define-syntax-parse-rule (constant-slot expr)
-  (let ([t (type-of expr)])
-    (slot (static-data-value t) t (const t))))
-
-(define-syntax-parse-rule (data-port-slot type)
-  (let ([t type])
-    (slot #f t (const t))))
-
-(define-syntax-parser local-signal-slot
-  [(_ expr)
-   #'(slot expr #f (make-slot-actual-typer #f expr))]
-  [(_ type expr)
-   #'(let ([t type])
-       (slot expr t (make-slot-actual-typer t expr)))])
-
-(define-syntax-parse-rule (lift-slot expr)
-  (slot #f #f (make-slot-actual-typer #f expr)))
-
-(define-syntax-parse-rule (make-slot-actual-typer default-type expr)
-  (make-slot-actual-typer* default-type (typer-for expr)))
-
-(define (make-slot-actual-typer* default-type actual-typer)
-  (let ([res      #f]
-        [visiting #f])
-    (λ (actual)
-      (cond [(and default-type (not actual)) default-type]
-            [res res]
-            ; TODO display signal names, locate error in source code
-            [visiting (or default-type (error "Could not infer type due to cross-dependencies"))]
-            [else (set! visiting #t)
-                  (set! res (actual-typer))
-                  (set! visiting #f)
-                  res]))))
-
-(define-syntax-parse-rule (update-slot! slt expr)
-  (let ([s slt])
-    (set-slot-data!         s expr)
-    (set-slot-actual-typer! s (make-slot-actual-typer (slot-declared-type s) expr))))
-
 ; Parameters are expanded in macro design-unit.
 (define-syntax-parse-rule (parameter _ ...)
   (begin))
+
+(define-syntax-parse-rule (parameter-slot name type)
+  (let ([t (static-data name type)])
+    (make-slot name t (thunk (static-data/literal name)))))
 
 (define-syntax-parse-rule (typedef name ((~literal parameter) param-name param-type) ... expr)
   #:with (arg-name   ...) (generate-temporaries (attribute param-name))
@@ -181,22 +131,27 @@
     (define (rtype-name arg-name ...)
       (static-data (impl-name (static-data-value arg-name) ...) (type:impl)))))
 
+; A constant infers its type immediately before computing its value.
+; Here, we benefit from the fact that type-of will return a
+; static-data where the expression has already been evaluated.
+(define-syntax-parse-rule (constant* name expr)
+  (begin
+    (typing-functions expr)
+    (define name (let ([t (type-of expr)])
+                   (make-slot (static-data-value t) t)))))
 
 ; A constant expands to a slot assigned to a variable.
 (define-syntax-parser constant
   ; Local constant in an interface or component.
   [(constant name expr) #:when (syntax-parameter-value #'in-design-unit)
-   #'(begin
-       (typing-functions expr)
-       (define name (constant-slot expr)))]
+   #'(constant* name expr)]
 
   ; Module-level context constant.
   [(constant name expr)
    #:with name^ (format-id #'name "~a-constant" #'name)
    #'(begin
        (provide name^)
-       (typing-functions expr)
-       (define name^ (constant-slot expr)))])
+       (constant* name^ expr))])
 
 ; An alias expands to a partial access to the target port.
 ; The alias and the corresponding port must refer to the same slot.
@@ -208,7 +163,15 @@
 ; the current component instance.
 ; We use a slot for output ports as well to keep a simple port access mechanism.
 (define-syntax-parse-rule (data-port name _ type)
-  (define name (data-port-slot type)))
+  (define name (let ([t type])
+                 (make-slot #f t))))
+
+(define-syntax-parser local-signal-slot
+  [(_ expr)
+   #'(make-slot expr #f (typer-for expr))]
+  [(_ type expr)
+   #'(let ([t type])
+       (make-slot expr t (typer-for expr)))])
 
 ; A local signal expands to a variable containing the result of the given
 ; expression in a slot.
@@ -253,7 +216,7 @@
                [_                #'target])
   (begin
     (typing-functions expr)
-    (update-slot! slt expr)))
+    (update-slot! slt expr (typer-for expr))))
 
 ; Connect two interface instances.
 ; See std.rkt for the implementation of connect.
@@ -270,7 +233,8 @@
 (define-syntax-parse-rule (for-statement name iter-name iter-expr body ...)
   #:with iter-name^ (generate-temporary #'iter-name)
   (define name (for/vector ([iter-name^ (in-list iter-expr)])
-                 (define iter-name (iterator-slot iter-name^))
+                 (define type (static-data/literal iter-name^))
+                 (define iter-name (make-slot iter-name^ type))
                  body ...)))
 
 ; A statement block executes statements and returns a hash map that exposes
@@ -450,6 +414,10 @@
                                  (syntax-column stx)
                                  (syntax-span stx)))))]))
 
+(define-syntax-parse-rule (comprehension-slot left right)
+  (let ([t (common-supertype (literal-type left) (literal-type right))])
+    (make-slot #f t)))
+
 (define-syntax-parser typing-functions
   #:literals [slot-expr signal-expr lift-expr array-for-expr concat-for-expr name-expr literal-expr]
 
@@ -460,7 +428,7 @@
    #:with this-type-label (type-label #'this-expr)
    #'(begin
        (typing-functions expr) ...
-       (splicing-let ([name (lift-slot expr)] ...)
+       (splicing-let ([name (make-slot #f #f (typer-for expr))] ...)
          (typing-functions body)
          (define this-type-label (typer-for body))))]
 

@@ -8,6 +8,8 @@
 
 (provide
   (struct-out slot)
+  make-slot
+  update-slot!
   slot-type
   slot-type*
   slot-data*
@@ -15,13 +17,35 @@
 
 ; A slot contains a value and a function that computes its type.
 ; In most cases, use make-slot to construct a slot instance.
-(struct slot (data declared-type actual-typer) #:mutable #:transparent)
+(struct slot (data declared-type typer) #:mutable #:transparent)
+
+(define (make-slot data declared-type [actual-typer #f])
+  (slot data declared-type (make-slot-typer declared-type actual-typer)))
+
+(define (make-slot-typer default-type actual-typer)
+  (if actual-typer
+    (let ([res      #f]
+          [visiting #f])
+      (λ (actual)
+        (cond [(and default-type (not actual)) default-type]
+              [res res]
+              ; TODO display signal names, locate error in source code
+              [visiting (or default-type (error "Could not infer type due to cross-dependencies"))]
+              [else (set! visiting #t)
+                    (set! res (actual-typer))
+                    (set! visiting #f)
+                    res])))
+    (const default-type)))
+
+(define (update-slot! slt data actual-typer)
+  (set-slot-data! slt data)
+  (set-slot-typer! slt (make-slot-typer (slot-declared-type slt) actual-typer)))
 
 (define (slot-type slt)
-  ((slot-actual-typer slt) #f))
+  ((slot-typer slt) #f))
 
 (define (slot-type* slt)
-  ((slot-actual-typer slt) #t))
+  ((slot-typer slt) #t))
 
 (define (slot-data* slt)
   (if (slot? slt)
