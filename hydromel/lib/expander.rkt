@@ -116,8 +116,7 @@
 
 (define-syntax-parse-rule (define-parameter-slot name actual-name type)
   (begin
-    (define name (let ([t (static-data actual-name type)])
-                   (make-slot actual-name t (thunk (static-data/literal actual-name)))))
+    (define name (make-slot actual-name (static-data actual-name type) (thunk (static-data/literal actual-name))))
     (type-check name)))
 
 (define-syntax-parse-rule (typedef name ((~literal parameter) param-name param-type) ... expr)
@@ -144,11 +143,11 @@
 ; A constant expands to a slot assigned to a variable.
 (define-syntax-parser constant
   ; Local constant in an interface or component.
-  [(constant name expr) #:when (syntax-parameter-value #'in-design-unit)
+  [(_ name expr)
+   #:when (syntax-parameter-value #'in-design-unit)
    #'(define-constant-slot name expr)]
-
-  ; Module-level context constant.
-  [(constant name expr)
+  ; Module-level constant.
+  [(_ name expr)
    #:with name^ (format-id #'name "~a-constant" #'name)
    #'(begin
        (provide name^)
@@ -164,15 +163,13 @@
 ; the current component instance.
 ; We use a slot for output ports as well to keep a simple port access mechanism.
 (define-syntax-parse-rule (data-port name _ type)
-  (define name (let ([t type])
-                 (make-slot #f t))))
+  (define name (make-slot #f type)))
 
 (define-syntax-parser local-signal-slot
   [(_ expr)
    #'(make-slot expr #f (typer-for expr))]
   [(_ type expr)
-   #'(let ([t type])
-       (make-slot expr t (typer-for expr)))])
+   #'(make-slot expr type (typer-for expr))])
 
 ; A local signal expands to a variable containing the result of the given
 ; expression in a slot.
@@ -234,8 +231,7 @@
 (define-syntax-parse-rule (for-statement name iter-name iter-expr body ...)
   #:with iter-name^ (generate-temporary #'iter-name)
   (define name (for/vector ([iter-name^ (in-list iter-expr)])
-                 (define type (static-data/literal iter-name^))
-                 (define iter-name (make-slot iter-name^ type))
+                 (define iter-name (make-slot iter-name^ (static-data/literal iter-name^)))
                  body ...)))
 
 ; A statement block executes statements and returns a hash map that exposes
@@ -270,11 +266,11 @@
 ; of a record type where the field is declared.
 (define-syntax-parser field-expr
   ; If a field expression contains a type name, generate a struct field accessor.
-  [(field-expr expr field-name type-name)
+  [(_ expr field-name type-name)
    #:with acc (format-id #'field-name "~a-~a" #'type-name #'field-name)
    #'(acc expr)]
   ; If a field expression does not contain a type name, generate a dictionary access.
-  [(field-expr expr field-name)
+  [(_ expr field-name)
    #'(dict-ref expr 'field-name)])
 
 ; An indexed port expression expands to a vector access.
@@ -353,7 +349,6 @@
                  ([it (in-list lst)])
          (bitwise-ior (arithmetic-shift res 1) it)))]
 
-
   [(_ body (~seq iter-name iter-expr) ...)
    #'(for*/fold ([res 0])
                 ([iter-name (in-list iter-expr)] ...)
@@ -416,8 +411,7 @@
                                  (syntax-span stx)))))]))
 
 (define-syntax-parse-rule (comprehension-slot left right)
-  (let ([t (common-supertype (literal-type left) (literal-type right))])
-    (make-slot #f t)))
+  (make-slot #f (common-supertype (literal-type left) (literal-type right))))
 
 (define-syntax-parser typing-functions
   #:literals [slot-expr signal-expr lift-expr array-for-expr concat-for-expr name-expr literal-expr]
