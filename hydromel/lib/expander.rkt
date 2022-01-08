@@ -93,8 +93,7 @@
   (begin
     (provide ctor-name)
     (define (ctor-name arg-name ...)
-      (define param-name (parameter-slot arg-name param-type)) ...
-      (type-check param-name) ...
+      (define-parameter-slot param-name arg-name param-type) ...
       (splicing-syntax-parameterize ([in-design-unit #t])
         body ...)
       (define res (make-hash `((* . (spliced-name ...)) (field-name . ,field-name) ...)))
@@ -115,9 +114,11 @@
 (define-syntax-parse-rule (parameter _ ...)
   (begin))
 
-(define-syntax-parse-rule (parameter-slot name type)
-  (let ([t (static-data name type)])
-    (make-slot name t (thunk (static-data/literal name)))))
+(define-syntax-parse-rule (define-parameter-slot name actual-name type)
+  (begin
+    (define name (let ([t (static-data actual-name type)])
+                   (make-slot actual-name t (thunk (static-data/literal actual-name)))))
+    (type-check name)))
 
 (define-syntax-parse-rule (typedef name ((~literal parameter) param-name param-type) ... expr)
   #:with (arg-name   ...) (generate-temporaries (attribute param-name))
@@ -126,8 +127,7 @@
   (begin
     (provide impl-name rtype-name)
     (define (impl-name arg-name ...)
-      (define param-name (parameter-slot arg-name param-type)) ...
-      (type-check param-name) ...
+      (define-parameter-slot param-name arg-name param-type) ...
       expr)
     (define (rtype-name arg-name ...)
       (static-data (impl-name (static-data-value arg-name) ...) (type:impl)))))
@@ -135,7 +135,7 @@
 ; A constant infers its type immediately before computing its value.
 ; Here, we benefit from the fact that type-of will return a
 ; static-data where the expression has already been evaluated.
-(define-syntax-parse-rule (constant* name expr)
+(define-syntax-parse-rule (define-constant-slot name expr)
   (begin
     (typing-functions expr)
     (define name (let ([t (type-of expr)])
@@ -145,14 +145,14 @@
 (define-syntax-parser constant
   ; Local constant in an interface or component.
   [(constant name expr) #:when (syntax-parameter-value #'in-design-unit)
-   #'(constant* name expr)]
+   #'(define-constant-slot name expr)]
 
   ; Module-level context constant.
   [(constant name expr)
    #:with name^ (format-id #'name "~a-constant" #'name)
    #'(begin
        (provide name^)
-       (constant* name^ expr))])
+       (define-constant-slot name^ expr))])
 
 ; An alias expands to a partial access to the target port.
 ; The alias and the corresponding port must refer to the same slot.
