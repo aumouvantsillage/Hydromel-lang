@@ -94,6 +94,7 @@
     (provide ctor-name)
     (define (ctor-name arg-name ...)
       (define param-name (parameter-slot arg-name param-type)) ...
+      (type-check param-name) ...
       (splicing-syntax-parameterize ([in-design-unit #t])
         body ...)
       (define res (make-hash `((* . (spliced-name ...)) (field-name . ,field-name) ...)))
