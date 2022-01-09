@@ -25,8 +25,8 @@
 
 (provide
   int->bool      int->bool:impl         int->bool:impl:return-type
-  _if_           if:impl
-  _case_         case:impl
+  _if_           if:impl                if:impl:return-type
+  _case_         case:impl              case:impl:return-type
   _not_                                 bitwise-not:return-type
   _and_
   _or_
@@ -54,7 +54,7 @@
   _field_
   signed_width
   unsigned_width
-  _cast_         cast:impl              
+  _cast_         cast:impl
   (all-from-out  "numeric.rkt"))
 
 (define-syntax-parser define-return-type
@@ -91,43 +91,58 @@
 ; The Hydromel if statement is expanded to a call-expr to _if_.
 (define-syntax _if_ (meta/make-function #'if:impl))
 
-(define (if:impl . clauses)
-  (for/fold ([cls clauses]
-             [res #f]
-             #:result res)
-            ([n (in-naturals)])
-            #:break (empty? cls)
-    (match cls
-      [(list cnd thn els ...) (if (int->bool:impl cnd) (values empty thn) (values els #f))]
-      [(list els)             (values empty els)])))
+(define-syntax-parse-rule (if:impl (~seq cnd thn) ... els)
+  (cond [(int->bool:impl cnd) thn]
+        ...
+        [else els]))
 
-(define-return-type (if:impl . ts)
-  (define last-n (sub1 (length ts)))
-  (t/union (for/list ([t (in-list ts)]
-                      [n (in-naturals)]
-                      #:when (or (odd? n) (= n last-n)))
-             t)))
+(define (if:impl:return-type . ts)
+  (match ts
+    [(list tc tt te ...)
+     (match tc
+       ; If the first condition is static and true, return the type of the first "then" clause.
+       [(t/static-data v _)
+        (if (int->bool:impl v)
+          tt
+          (apply if:impl:return-type te))]
+       ; If the first condition is not static, return a union of the type of the first "then" clause
+       ; and the type of the rest.
+       [_
+        (t/union (list tt (apply if:impl:return-type te)))])]
+    [(list te) te]))
 
 ; The Hydromel case statement is expanded to a call-expr to _case_.
 (define-syntax _case_ (meta/make-function #'case:impl))
 
-(define (case:impl . clauses)
-  (define expr (first clauses))
-  (for/fold ([cls (rest clauses)]
-             [res #f]
-             #:result res)
-            ([n (in-naturals)])
-            #:break (empty? cls)
-    (match cls
-      [(list chs thn els ...) (if (member expr chs) (values empty thn) (values els #f))]
-      [(list els)             (values empty els)])))
+(define-syntax-parse-rule (case:impl expr (~seq ch thn) ... (~optional els))
+  #:with els^ (or (attribute els) #'(error "Value did not not match any choice"))
+  (let ([v expr])
+    (cond [(member v ch) thn]
+          ...
+          [else els^])))
 
-(define-return-type (case:impl . ts)
-  (define last-n (- (length ts) 2))
-  (t/union (for/list ([t (in-list (rest ts))]
-                      [n (in-naturals)]
-                      #:when (or (odd? n) (= n last-n)))
-             t)))
+(define (case:impl:return-type tx . ts)
+  (match tx
+    ; If the expression is static and true, inspect the cases for static choices.
+    [(t/static-data v _)
+     (apply case:impl:return-type/static v ts)]
+    ; If the expression is not static, return a union of all target clauses.
+    [_
+     (define last-n (sub1 (length ts)))
+     (t/union (for/list ([it (in-list ts)]
+                         [n (in-naturals)]
+                         #:when (or (odd? n) (= n last-n)))
+                it))]))
+
+(define (case:impl:return-type/static v . ts)
+  (match ts
+    [(list tc tt te ...)
+     ; If the expression value matches a static choice, return the corresponding type.
+     (define tc^ (filter t/static-data? tc))
+     (if (member v (map t/static-data-value tc^))
+       tt
+       (apply case:impl:return-type/static v te))]
+    [(list te) te]))
 
 ; Returns the minimum width to encode a given number
 ; as an unsigned integer.
