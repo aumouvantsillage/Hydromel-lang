@@ -136,7 +136,9 @@
          (list ret ...)))]
   ; Lift a λ with the given list of arguments.
   [(signal-λ (sig:id ...) body ...)
-   #'(signal-lift* (λ (sig ...) body ...) sig ...)]
+   ; TODO Compare these two solutions:
+   ; #'(signal-lift* (λ (sig ...) body ...) sig ...)
+   #'(signal-lift (λ (sig ...) body ...))]
   ; Lift a λ that accepts any number of arguments.
   [(signal-λ sig-lst:id body ...)
    #'(signal-lift (λ sig-lst body ...))]
