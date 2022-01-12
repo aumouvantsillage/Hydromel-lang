@@ -13,8 +13,8 @@
   min-unsigned-width min-signed-width
   min-signed-value   max-signed-value
   min-unsigned-value max-unsigned-value
-  unsigned unsigned-slice unsigned-concat
-  signed   signed-slice   signed-concat
+  unsigned unsigned-slice unsigned-concat unsigned-concat*
+  signed   signed-slice   signed-concat   signed-concat*
   integer->bit-string)
 
 ; Returns the minimum bit width to store the integer `v`
@@ -75,6 +75,9 @@
         (arithmetic-shift (add1 (- l r)))
         (bitwise-ior (unsigned-slice v l r)))))
 
+(define-syntax-parse-rule (unsigned-concat* [v l r] ...)
+  (unsigned-concat [list v l r] ...))
+
 ; Concatenate a sequence of slices.
 ; Sign-extend the result.
 (define (signed-concat . items)
@@ -85,6 +88,9 @@
     (~> res
         (arithmetic-shift (add1 (- l r)))
         (bitwise-ior (unsigned-slice v l r)))))
+
+(define-syntax-parse-rule (signed-concat* [v l r] ...)
+  (signed-concat [list v l r] ...))
 
 (define (integer->bit-string size v)
   (list->string (for/list ([n (in-range (sub1 size) -1 -1)])
