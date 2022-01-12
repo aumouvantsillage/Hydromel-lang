@@ -7,6 +7,8 @@
 (require
   syntax/parse/define
   racket/hash
+  (only-in data/collection length)
+  data/pvector
   (prefix-in base/ racket/base)
   (prefix-in num/ "numeric.rkt")
   (for-syntax
@@ -88,7 +90,7 @@
 
 (define (static-data/literal value)
   (static-data value (literal-type value)))
-  
+
 ; Standard derived types.
 
 (define-syntax type (meta/make-function #'type:impl))
@@ -125,10 +127,10 @@
 ; Type helpers.
 
 (define (resize t w)
-  (match t
+  (match (normalize-type t)
     [(signed _)   (signed w)]
     [(unsigned _) (unsigned w)]
-    [_ (error "Resize expects integer type.")]))
+    [_ (error "Resize expects integer type. Found " (format-type t))]))
 
 (define (literal-type x)
   (cond [(base/symbol? x)
@@ -137,6 +139,8 @@
          (if (>= x 0)
            (unsigned (num/min-unsigned-width x))
            (signed   (num/min-signed-width   x)))]
+        [(pvector? x)
+         (array (length x) (union (for/list ([v x]) (literal-type v))))]
         [else
          (error "Cannot determine type of literal" x)]))
 
