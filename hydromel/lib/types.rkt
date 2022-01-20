@@ -135,6 +135,8 @@
 (define (literal-type x)
   (cond [(base/symbol? x)
          (symbol x)]
+        [(datatype? x)
+         (type:impl)]
         [(base/integer? x)
          (if (>= x 0)
            (unsigned (num/min-unsigned-width x))
@@ -142,7 +144,7 @@
         [(pvector? x)
          (array (length x) (union (for/list ([v x]) (literal-type v))))]
         [else
-         (error "Cannot determine type of literal" x)]))
+         (error "Cannot determine the type of literal" x)]))
 
 ; Normalize a type t. Here we are only interested in concrete data types,
 ; which excludes (subtype _).
@@ -245,6 +247,8 @@
     [(list (record ft)          (record fu))   (for/and ([(k v) (in-dict ft)])
                                                  (and (dict-has-key? fu k)
                                                       (<: v (dict-ref fu k))))]
+    ; Subtyping between types.
+    [(list (subtype ta)         (subtype tb))  (<: ta tb)]
     [_ #f]))
 
 (define (format-type t)
