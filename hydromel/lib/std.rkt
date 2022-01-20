@@ -58,7 +58,7 @@
   (all-from-out  "numeric.rkt"))
 
 (define-syntax-parser define-return-type
-  [(_ (name arg:id ...) body ...)
+  [(_ name (arg:id ...) body ...)
    #:with rt-name (format-id #'name "~a:return-type" #'name)
    #'(begin
        (provide rt-name)
@@ -67,7 +67,7 @@
          (if (and (t/static-data? arg) ...)
            (t/static-data (name (t/static-data-value arg) ...) raw)
            raw)))]
-  [(_ (name . args) body ...)
+  [(_ name args:id body ...)
    #:with rt-name (format-id #'name "~a:return-type" #'name)
    #'(begin
        (provide rt-name)
@@ -148,7 +148,7 @@
 ; as an unsigned integer.
 (define-syntax unsigned_width (meta/make-function #'min-unsigned-width))
 
-(define-return-type (min-unsigned-width ta)
+(define-return-type min-unsigned-width (ta)
   (~> ta
       t/normalize-type
       t/abstract-integer-width
@@ -158,7 +158,7 @@
 ; as an signed integer.
 (define-syntax signed_width (meta/make-function #'min-signed-width))
 
-(define-return-type (min-signed-width ta)
+(define-return-type min-signed-width (ta)
   (match (t/normalize-type ta)
     [(t/signed   n) (t/unsigned n)]
     [(t/unsigned n) (t/unsigned (add1 n))]
@@ -178,9 +178,9 @@
     [_ (error "Bitwise operation expects integer operands.")]))
 
 (define bitwise-not:return-type identity)
-(define-return-type (bitwise-and ta tb) (bitwise:return-type ta tb))
-(define-return-type (bitwise-ior ta tb) (bitwise:return-type ta tb))
-(define-return-type (bitwise-xor ta tb) (bitwise:return-type ta tb))
+(define-return-type bitwise-and (ta tb) (bitwise:return-type ta tb))
+(define-return-type bitwise-ior (ta tb) (bitwise:return-type ta tb))
+(define-return-type bitwise-xor (ta tb) (bitwise:return-type ta tb))
 
 ; Comparison operations return integers 0 and 1.
 (define-syntax _==_ (meta/make-function #'eq:impl))
@@ -208,12 +208,12 @@
 (define (le:impl a b)
   (if (<= a b) 1 0))
 
-(define-return-type (eq:impl ta tb) (t/unsigned 1))
-(define-return-type (ne:impl ta tb) (t/unsigned 1))
-(define-return-type (gt:impl ta tb) (t/unsigned 1))
-(define-return-type (lt:impl ta tb) (t/unsigned 1))
-(define-return-type (ge:impl ta tb) (t/unsigned 1))
-(define-return-type (le:impl ta tb) (t/unsigned 1))
+(define-return-type eq:impl (ta tb) (t/unsigned 1))
+(define-return-type ne:impl (ta tb) (t/unsigned 1))
+(define-return-type gt:impl (ta tb) (t/unsigned 1))
+(define-return-type lt:impl (ta tb) (t/unsigned 1))
+(define-return-type ge:impl (ta tb) (t/unsigned 1))
+(define-return-type le:impl (ta tb) (t/unsigned 1))
 
 ; Use the built-in arithmetic operators.
 (define-syntax _+_   (meta/make-function #'+))
@@ -228,33 +228,33 @@
     [(t/abstract-integer w) (t/resize tr (add1 w))]
     [_ (error "Arithmetic operation expects integer operands." ta tb)]))
 
-(define-return-type (+ ta tb) (+-:return-type ta tb))
-(define-return-type (- ta tb) (+-:return-type ta tb))
+(define-return-type + (ta tb) (+-:return-type ta tb))
+(define-return-type - (ta tb) (+-:return-type ta tb))
 
 (define (neg:impl a)
   (- a))
 
-(define-return-type (neg:impl ta)
+(define-return-type neg:impl (ta)
   (~> ta
       t/normalize-type
       t/abstract-integer-width
       add1
       t/signed))
 
-(define-return-type (* ta tb)
+(define-return-type * (ta tb)
   (match (list (t/normalize-type ta) (t/normalize-type tb))
     [(list (t/unsigned na)         (t/unsigned nb))          (t/unsigned (+ na nb))]
     [(list (t/abstract-integer na) (t/signed   nb))          (t/signed   (+ na nb))]
     [(list (t/signed na)           (t/abstract-integer  nb)) (t/signed   (+ na nb))]
     [_ (error "Arithmetic operation expects integer operands.")]))
 
-(define-return-type (quotient ta tb)
+(define-return-type quotient (ta tb)
   ta)
 
 (define-syntax _<<_ (meta/make-function #'arithmetic-shift))
 (define-syntax _>>_ (meta/make-function #'arithmetic-shift-right))
 
-(define-return-type (arithmetic-shift ta tb)
+(define-return-type arithmetic-shift (ta tb)
   (define ta^ (t/normalize-type ta))
   (match (list ta^ tb)
     [(list (t/abstract-integer na) (t/static-data nb _)) (t/resize ta^ (max 0 (+ na nb)))]
@@ -265,7 +265,7 @@
 (define (arithmetic-shift-right a b)
   (arithmetic-shift a (- b)))
 
-(define-return-type (arithmetic-shift-right ta tb)
+(define-return-type arithmetic-shift-right (ta tb)
   (define ta^ (t/normalize-type ta))
   (match (list ta^ tb)
     [(list (t/abstract-integer na) (t/static-data nb _)) (t/resize ta^ (max 0 (- na nb)))]
@@ -282,7 +282,7 @@
     (range a (add1 b))
     (range a (sub1 b) -1)))
 
-(define-return-type (range:impl ta tb)
+(define-return-type range:impl (ta tb)
   (define tr (t/common-supertype/normalize ta tb))
   (unless (t/abstract-integer? tr)
     (error "Range expects integer boundaries."))
@@ -293,7 +293,7 @@
 ; a conversion to the type returned by the return-type.
 (define-syntax _slice_ (meta/make-function/cast #'unsigned-slice))
 
-(define-return-type (unsigned-slice ta tb tc)
+(define-return-type unsigned-slice (ta tb tc)
   (define left (match tb
                  [(t/static-data n _) n]
                  [(t/unsigned    n)   (max-unsigned-value n)]
@@ -326,7 +326,7 @@
         (cons (list (first r) (~> r second t/normalize-type t/abstract-integer-width sub1) 0) res)
         l))))
 
-(define-return-type (concat:impl . ts)
+(define-return-type concat:impl ts
   (define ts^ (for/list ([it (in-list ts)]
                          [n (in-naturals)] #:when (odd? n))
                 (~> it t/static-data-value t/normalize-type)))
@@ -339,12 +339,12 @@
 
 (define-syntax _array_ (meta/make-function #'pvector))
 
-(define-return-type (pvector . ts)
+(define-return-type pvector ts
   (t/array (length ts) (t/union ts)))
 
 (define-syntax _record_ (meta/make-function #'hash))
 
-(define-return-type (hash . ts)
+(define-return-type hash ts
   (define ts^ (for/list ([it (in-list ts)]
                          [n  (in-naturals)])
                 (if (even? n)
@@ -354,7 +354,7 @@
 
 (define-syntax _nth_ (meta/make-function #'nth))
 
-(define-return-type (nth ta tb)
+(define-return-type nth (ta tb)
   ; TODO check the type of tb
   (match (t/normalize-type ta)
     [(t/array _ te) te]
@@ -362,13 +362,13 @@
 
 (define-syntax _set_nth_ (meta/make-function #'set-nth))
 
-(define-return-type (set-nth ta tb tc)
+(define-return-type set-nth (ta tb tc)
   ; TODO check the types of tb and tc
   ta)
 
 (define-syntax _field_ (meta/make-function #'dict-ref))
 
-(define-return-type (dict-ref ta tb)
+(define-return-type dict-ref (ta tb)
   (define ta^ (t/normalize-type ta))
   (define tb^ (t/normalize-type tb))
   (unless (t/symbol? tb^)
@@ -386,7 +386,7 @@
 (define (cast:impl a b)
   b)
 
-(define-return-type (cast:impl ta tb)
+(define-return-type cast:impl (ta tb)
   (define ta^ (t/normalize-type (t/static-data-value ta)))
   (define tb^ (t/normalize-type tb))
   (match ta^
