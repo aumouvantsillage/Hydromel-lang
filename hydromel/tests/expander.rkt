@@ -107,7 +107,7 @@
 (test-case "Can construct a channel for an interface with a vector port"
   (check-pred vector? (dict-ref i4-inst 'i))
   (check-eq? (vector-length (dict-ref i4-inst 'i)) 3)
-  (for ([n (range:impl 0 2)])
+  (for ([n (_range_:impl 0 2)])
     (check-pred dict? (vector-ref (dict-ref i4-inst 'i) n))))
 
 (interface I5
@@ -119,7 +119,7 @@
 (test-case "Can construct a channel for an interface with arguments"
   (check-pred vector? (dict-ref i5-inst 'i))
   (check-eq? (vector-length (dict-ref i5-inst 'i)) 5)
-  (for ([n (range:impl 0 4)])
+  (for ([n (_range_:impl 0 4)])
     (check-pred dict? (vector-ref (dict-ref i5-inst 'i) n))))
 
 (interface I6
@@ -131,7 +131,7 @@
 (test-case "Can construct a channel containing a composite port with arguments"
   (check-pred vector? (dict-ref (dict-ref i6-inst 'j) 'i))
   (check-eq? (vector-length (dict-ref (dict-ref i6-inst 'j) 'i)) 3)
-  (for ([n (range:impl 0 2)])
+  (for ([n (_range_:impl 0 2)])
     (check-pred dict? (vector-ref (dict-ref (dict-ref i6-inst 'j) 'i) n))))
 
 (component C2
@@ -463,7 +463,7 @@
     (lift-expr [x^ (slot-expr (name-expr x))]
       (array-for-expr
         (call-expr + (name-expr x^) (name-expr i))
-        i (call-expr range:impl (literal-expr 1) (literal-expr 3))))))
+        i (call-expr _range_:impl (literal-expr 1) (literal-expr 3))))))
 
 (define c24-inst (C24-make))
 (slot-set! (c24-inst x) (signal 10 20 30))
@@ -478,7 +478,7 @@
     (lift-expr [x^ (slot-expr (name-expr x))]
       (concat-for-expr
         (call-expr unsigned-slice (name-expr x^) (name-expr i) (name-expr i))
-        i (call-expr range:impl (literal-expr 0) (literal-expr 3))))))
+        i (call-expr _range_:impl (literal-expr 0) (literal-expr 3))))))
 
 (define c25-inst (C25-make))
 (slot-set! (c25-inst x) (signal 10 11 12))
@@ -496,7 +496,7 @@
     (concat-for-expr
       (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z))]
         (name-expr x^))
-      i (call-expr range:impl (literal-expr 3) (literal-expr 0)))))
+      i (call-expr _range_:impl (literal-expr 3) (literal-expr 0)))))
 
 (define c26-inst (C26-make))
 (slot-set! (c26-inst x 0 z) (signal 1 0 0))
@@ -514,7 +514,7 @@
     (array-for-expr
       (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z))]
         (name-expr x^))
-      i (call-expr range:impl (literal-expr 3) (literal-expr 0)))))
+      i (call-expr _range_:impl (literal-expr 3) (literal-expr 0)))))
 
 (define c27-inst (C27-make))
 (slot-set! (c27-inst x 0 z) (signal 1 0 0))
