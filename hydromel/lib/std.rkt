@@ -35,14 +35,26 @@
 ; Helpers for custom function definitions
 ; ------------------------------------------------------------------------------
 
+(begin-for-syntax
+  (define (function-impl-name name)
+    (format-id name "~a:impl" name))
+
+  (define (function-return-type-name name)
+    (format-id name "~a:return-type" name)))
+
 (define-syntax-parse-rule (declare-function name fn-name)
   (begin
     (provide name)
     (define-syntax name (meta/make-function #'fn-name))))
 
+(define-syntax-parse-rule (declare-function/cast name fn-name)
+  (begin
+    (provide name)
+    (define-syntax name (meta/make-function/cast #'fn-name))))
+
 (define-syntax-parse-rule (define-function* name)
-  #:with fn-name (format-id #'name "~a:impl" #'name)
-  #:with rt-name (format-id #'fn-name "~a:return-type" #'fn-name)
+  #:with fn-name (function-impl-name #'name)
+  #:with rt-name (function-return-type-name #'fn-name)
   (begin
     (declare-function name fn-name)
     (provide fn-name rt-name)))
@@ -61,42 +73,39 @@
    #'(define-function name fn (const (t/none)))]
 
   [(_ name fn rt-fn)
-   #:with fn-name (format-id #'name "~a:impl" #'name)
+   #:with fn-name (function-impl-name #'name)
    #'(begin
        (provide fn-name)
        (define fn-name fn)
        (define-function name fn-name rt-fn))])
 
-(define-syntax-parser define-return-type
+(define-syntax-parse-rule (define-return-type name fn)
+  #:with rt-name (function-return-type-name #'name)
+  (begin
+      (provide rt-name)
+      (define rt-name (return-type-function name fn))))
+
+(define-syntax-parser return-type-function
   #:literals [λ const]
-  [(_ name (const body ...))
-   #:with rt-name (format-id #'name "~a:return-type" #'name)
-   #'(begin
-       (provide rt-name)
-       (define rt-name (const body ...)))]
+  [(_ _ (~and fn (const body ...)))
+   #'fn]
 
   [(_ name (λ (arg:id ...) body ...))
-   #:with rt-name (format-id #'name "~a:return-type" #'name)
-   #'(begin
-       (provide rt-name)
-       (define (rt-name arg ...)
-         (define raw (let () body ...))
-         (if (and (t/static-data? arg) ...)
-           (t/static-data (name (t/static-data-value arg) ...) raw)
-           raw)))]
+   #'(λ (arg ...)
+       (define raw (let () body ...))
+       (if (and (t/static-data? arg) ...)
+         (t/static-data (name (t/static-data-value arg) ...) raw)
+         raw))]
 
   [(_ name (λ args:id body ...))
-   #:with rt-name (format-id #'name "~a:return-type" #'name)
-   #'(begin
-       (provide rt-name)
-       (define (rt-name . args)
-         (define raw (let () body ...))
-         (if (andmap t/static-data? args)
-           (t/static-data (apply name (map t/static-data-value args)) raw)
-           raw)))]
+   #'(λ args
+       (define raw (let () body ...))
+       (if (andmap t/static-data? args)
+         (t/static-data (apply name (map t/static-data-value args)) raw)
+         raw))]
 
   [(_ name (fn-name:id arg ...))
-   #'(define-return-type name (λ (arg ...) (fn-name arg ...)))])
+   #'(return-type-function name (λ (arg ...) (fn-name arg ...)))])
 
 ; ------------------------------------------------------------------------------
 ; Conditionals.
