@@ -275,5 +275,5 @@
                                         (if (string? acc)
                                           (string-append acc ", " s)
                                           s)))]
-    [(symbol s) (symbol->string s)]
+    [(symbol s) (format "~~~a" s)]
     [_ (format "~v" t^)]))

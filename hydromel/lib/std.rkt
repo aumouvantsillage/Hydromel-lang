@@ -20,16 +20,43 @@
 
 (provide (all-from-out "numeric.rkt"))
 
+; TODO make expect-* return the normalized type.
+(define (expect-type* pred? msg name pos t)
+  (unless (pred? (t/normalize-type t))
+    (raise-argument-error name msg pos (t/format-type t))))
+
+(define (expect-integers name . ts)
+  (for ([(t n) (in-indexed ts)])
+    (expect-integer name n t)))
+
+(define (expect-integer name pos t)
+  (expect-type* t/abstract-integer? "integer" name pos t))
+
+(define (expect-array name pos t)
+  (expect-type* t/array? "array" name pos t))
+
+(define (expect-record name pos t)
+  (expect-type* t/record? "record" name pos t))
+
+(define (expect-symbol name pos t)
+  (expect-type* t/symbol? "symbol" name pos t))
+
+(define (expect-type name pos t)
+  (expect-type* t/subtype? "type" name pos t))
+
 ; ------------------------------------------------------------------------------
 ; Conditionals.
 ; ------------------------------------------------------------------------------
 
-; Convert an integer to a boolean.
+; Convert an integer to a Racket boolean.
 ; This function is used in generated conditional statements.
 ; It is not available from Hydromel source code.
 (define-function int->bool
-  (λ (a) (not (zero? a)))
-  (const (t/boolean)))
+  (λ (a)
+    (not (zero? a)))
+  (λ (ta)
+    (expect-integers 'int->bool ta)
+    (t/boolean)))
 
 ; The Hydromel if statement is expanded to a call-expr to _if_.
 (define-function* _if_)
@@ -94,23 +121,25 @@
 ; ------------------------------------------------------------------------------
 
 (define-function/cast _not_ bitwise-not
-  (identity t))
+  (λ (t)
+    (expect-integers 'not t)
+    t))
 
-(define (bitwise-return-type ta tb)
+(define (bitwise-return-type name ta tb)
+  (expect-integers name ta tb)
   (match (list (t/normalize-type ta) (t/normalize-type tb))
     [(list (t/unsigned na)          (t/unsigned nb))          (t/unsigned (max na nb))]
     [(list (t/signed   na)          (t/abstract-integer  nb)) (t/signed   (max na nb))]
-    [(list (t/abstract-integer  na) (t/signed   nb))          (t/signed   (max na nb))]
-    [_ (error "Bitwise operation expects integer operands.")]))
+    [(list (t/abstract-integer  na) (t/signed   nb))          (t/signed   (max na nb))]))
 
 (define-function _and_ bitwise-and
-  (bitwise-return-type ta tb))
+  (λ (ta tb) (bitwise-return-type 'and ta tb)))
 
 (define-function _or_  bitwise-ior
-  (bitwise-return-type ta tb))
+  (λ (ta tb) (bitwise-return-type 'or ta tb)))
 
 (define-function _xor_ bitwise-xor
-  (bitwise-return-type ta tb))
+  (λ (ta tb) (bitwise-return-type 'xor ta tb)))
 
 ; ------------------------------------------------------------------------------
 ; Arithmetic operations.
@@ -120,6 +149,7 @@
 ; as an unsigned integer.
 (define-function unsigned_width min-unsigned-width
   (λ (ta)
+    (expect-integers 'unsigned_width ta)
     (~> ta
         t/normalize-type
         t/abstract-integer-width
@@ -129,6 +159,7 @@
 ; as an signed integer.
 (define-function signed_width min-signed-width
   (λ (ta)
+    (expect-integers 'signed_width ta)
     (match (t/normalize-type ta)
       [(t/signed   n) (t/unsigned n)]
       [(t/unsigned n) (t/unsigned (add1 n))]
@@ -145,47 +176,53 @@
 
 (define-function _>_
   (λ (a b) (if (> a b) 1 0))
-  (const (t/unsigned 1)))
+  (λ (ta tb) (comparison-return-type '> ta tb)))
 
 (define-function _<_
   (λ (a b) (if (< a b) 1 0))
-  (const (t/unsigned 1)))
+  (λ (ta tb) (comparison-return-type '< ta tb)))
 
 (define-function _>=_
   (λ (a b) (if (>= a b) 1 0))
-  (const (t/unsigned 1)))
+  (λ (ta tb) (comparison-return-type '>= ta tb)))
 
 (define-function _<=_
   (λ (a b) (if (<= a b) 1 0))
-  (const (t/unsigned 1)))
+  (λ (ta tb) (comparison-return-type '<= ta tb)))
 
-(define (add-sub-return-type ta tb)
-  (define tr (t/common-supertype/normalize ta tb))
-  (match tr
-    [(t/abstract-integer w) (t/resize tr (add1 w))]
-    [_ (error "Arithmetic operation expects integer operands." ta tb)]))
+(define (comparison-return-type name ta tb)
+  (expect-integers name ta tb)
+  (t/unsigned 1))
 
 ; Use the built-in arithmetic operators.
 (define-function _+_ +
-  (add-sub-return-type ta tb))
+  (λ (ta tb) (add-sub-return-type '+ ta tb)))
 
 (define-function _-_ -
-  (add-sub-return-type ta tb))
+  (λ (ta tb) (add-sub-return-type '- ta tb)))
+
+(define (add-sub-return-type name ta tb)
+  (expect-integers name ta tb)
+  (define tr (t/common-supertype/normalize ta tb))
+  (t/resize tr (add1 (t/abstract-integer-width tr))))
 
 (define-function _*_ *
   (λ (ta tb)
+    (expect-integers '* ta tb)
     (match (list (t/normalize-type ta) (t/normalize-type tb))
       [(list (t/unsigned na)         (t/unsigned nb))          (t/unsigned (+ na nb))]
       [(list (t/abstract-integer na) (t/signed   nb))          (t/signed   (+ na nb))]
-      [(list (t/signed na)           (t/abstract-integer  nb)) (t/signed   (+ na nb))]
-      [_ (error "Arithmetic operation expects integer operands.")])))
+      [(list (t/signed na)           (t/abstract-integer  nb)) (t/signed   (+ na nb))])))
 
 (define-function _/_ quotient
-  (λ (ta tb) ta))
+  (λ (ta tb)
+    (expect-integers '/ ta tb)
+    ta))
 
 (define-function _neg_
   (λ (a) (- a))
   (λ (ta)
+    (expect-integers '- ta)
     (~> ta
         t/normalize-type
         t/abstract-integer-width
@@ -194,23 +231,23 @@
 
 (define-function _<<_ arithmetic-shift
   (λ (ta tb)
+    (expect-integers '<< ta tb)
     (define ta^ (t/normalize-type ta))
     (match (list ta^ tb)
       [(list (t/abstract-integer na) (t/static-data nb _)) (t/resize ta^ (max 0 (+ na nb)))]
       [(list (t/abstract-integer na) (t/unsigned nb))      (t/resize ta^ (+ na (max-unsigned-value nb)))]
-      [(list (t/abstract-integer na) (t/signed nb))        (t/resize ta^ (+ na (max-signed-value nb)))]
-      [_ (error "Shift operation expects integer operands.")])))
+      [(list (t/abstract-integer na) (t/signed nb))        (t/resize ta^ (+ na (max-signed-value nb)))])))
 
 (define-function _>>_
   (λ (a b)
     (arithmetic-shift a (- b)))
   (λ (ta tb)
+    (expect-integers '>> ta tb)
     (define ta^ (t/normalize-type ta))
     (match (list ta^ tb)
       [(list (t/abstract-integer na) (t/static-data nb _)) (t/resize ta^ (max 0 (- na nb)))]
       [(list (t/abstract-integer na) (t/unsigned nb))      ta^]
-      [(list (t/abstract-integer na) (t/signed nb))        (t/resize ta^ (- na (min-signed-value nb)))]
-      [_ (error "Shift operation expects integer operands.")])))
+      [(list (t/abstract-integer na) (t/signed nb))        (t/resize ta^ (- na (min-signed-value nb)))])))
 
 ; TODO Empty ranges are no longer supported.
 ; TODO Do we need an explicit "descending" range specifier?
@@ -220,16 +257,15 @@
       (range a (add1 b))
       (range a (sub1 b) -1)))
   (λ (ta tb)
-    (define tr (t/common-supertype/normalize ta tb))
-    (unless (t/abstract-integer? tr)
-      (error "Range expects integer boundaries."))
-    (t/range tr)))
+    (expect-integers 'range ta tb)
+    (t/range (t/common-supertype/normalize ta tb))))
 
 ; The slicing operation defaults to the unsigned version.
 ; The signed case is handled automatically because the expander inserts
 ; a conversion to the type returned by the return-type.
 (define-function/cast _slice_ unsigned-slice
   (λ (ta tb tc)
+    (expect-integers 'slice ta tb tc)
     (define left (match tb
                    [(t/static-data n _) n]
                    [(t/unsigned    n)   (max-unsigned-value n)]
@@ -264,8 +300,8 @@
     (define ts^ (for/list ([it (in-list ts)]
                            [n (in-naturals)] #:when (odd? n))
                   (~> it t/static-data-value t/normalize-type)))
+    (apply expect-integers 'concat ts^)
     (define w (for/sum ([it (in-list ts^)])
-                ; TODO assert that it contains an integer type
                 (t/abstract-integer-width it)))
     (match (first ts^)
       [(t/signed _)   (t/signed w)]
@@ -289,24 +325,24 @@
 
 (define-function _nth_ nth
   (λ (ta tb)
-    ; TODO check the type of tb
-    (match (t/normalize-type ta)
-      [(t/array _ te) te]
-      [_              (error "Not an array type" ta)])))
+    (expect-array   'nth 0 ta)
+    (expect-integer 'nth 1 tb)
+    (t/array-elt-type (t/normalize-type ta))))
 
 (define-function _set_nth_ set-nth
-  ; TODO check the types of tb and tc
-  (λ (ta tb tc) ta))
+  (λ (ta tb tc)
+    (expect-array   'nth 0 ta)
+    (expect-integer 'nth 1 tb)
+    ; TODO check the type of tc
+    ta))
 
 (define-function _field_ dict-ref
   (λ (ta tb)
+    (expect-record 'field 0 ta)
+    (expect-symbol 'field 1 tb)
     (define ta^ (t/normalize-type ta))
     (define tb^ (t/normalize-type tb))
-    (unless (t/symbol? tb^)
-      (error "Field identifier is not a symbol" tb^))
     (define field-name (t/symbol-value tb^))
-    (unless (t/record? ta^)
-      (error "Not a record type" ta^))
     (dict-ref (t/record-fields ta^) field-name
       (thunk (error "Unknown field" field-name)))))
 
@@ -319,20 +355,21 @@
 (define-function/cast _cast_
   (λ (a b) b)
   (λ (ta tb)
+    (expect-type 'cast 0 ta)
     (define ta^ (t/normalize-type (t/static-data-value ta)))
     (define tb^ (t/normalize-type tb))
     (match ta^
       [(t/signed #f)
+       (expect-integer 'cast 1 tb)
        (match tb^
          [(t/signed   _) tb^]
-         [(t/unsigned n) (t/signed n)]
-         [_ (error "Cannot cast value to signed")])]
+         [(t/unsigned n) (t/signed n)])]
 
       [(t/unsigned #f)
+       (expect-integer 'cast 1 tb)
        (match tb^
          [(t/signed   n) (t/unsigned n)]
-         [(t/unsigned _) tb^]
-         [_ (error "Cannot cast value to unsigned")])]
+         [(t/unsigned _) tb^])]
 
       [_
        ta^])))
