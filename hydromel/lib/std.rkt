@@ -24,12 +24,7 @@
     racket/syntax
     syntax/parse/lib/function-header))
 
-(provide
-  _not_
-  _slice_
-  _concat_       concat:impl
-  _cast_         cast:impl
-  (all-from-out  "numeric.rkt"))
+(provide (all-from-out  "numeric.rkt"))
 
 ; ------------------------------------------------------------------------------
 ; Helpers for custom function definitions
@@ -59,25 +54,40 @@
     (declare-function name fn-name)
     (provide fn-name rt-name)))
 
-(define-syntax-parser define-function
-  #:literals [λ]
-  [(_ name fn-name:id)
-   #'(define-function name fn-name (const (t/none)))]
+(define-syntax-parse-rule (define-function*/cast name)
+  #:with fn-name (function-impl-name #'name)
+  #:with rt-name (function-return-type-name #'fn-name)
+  (begin
+    (declare-function/cast name fn-name)
+    (provide fn-name rt-name)))
 
-  [(_ name fn-name:id rt-fn)
+(define-syntax-parse-rule (define-function arg ...)
+  (do-define-function no-cast arg ...))
+
+(define-syntax-parse-rule (define-function/cast arg ...)
+  (do-define-function cast arg ...))
+
+(define-syntax-parser do-define-function
+  #:datum-literals [cast no-cast]
+  [(_ no-cast name fn-name:id rt-fn)
    #'(begin
        (declare-function name fn-name)
        (define-return-type fn-name rt-fn))]
 
-  [(_ name fn)
-   #'(define-function name fn (const (t/none)))]
+  [(_ cast name fn-name:id rt-fn)
+   #'(begin
+       (declare-function/cast name fn-name)
+       (define-return-type fn-name rt-fn))]
 
-  [(_ name fn rt-fn)
+  [(_ cast? name fn rt-fn)
    #:with fn-name (function-impl-name #'name)
    #'(begin
        (provide fn-name)
        (define fn-name fn)
-       (define-function name fn-name rt-fn))])
+       (do-define-function cast? name fn-name rt-fn))]
+
+  [(_ cast? name fn)
+   #'(do-define-function cast? name fn (const (t/none)))])
 
 (define-syntax-parse-rule (define-return-type name fn)
   #:with rt-name (function-return-type-name #'name)
@@ -176,12 +186,12 @@
 
 ; ------------------------------------------------------------------------------
 ; Boolean and bitwise operations.
+;
+; Boolean operators are all bitwise.
 ; ------------------------------------------------------------------------------
 
-; Boolean operators are all bitwise.
-(define-syntax _not_ (meta/make-function/cast #'bitwise-not))
-
-(define bitwise-not:return-type identity)
+(define-function/cast _not_ bitwise-not
+  (identity t))
 
 (define (bitwise-return-type ta tb)
   (match (list (t/normalize-type ta) (t/normalize-type tb))
@@ -315,9 +325,7 @@
 ; The slicing operation defaults to the unsigned version.
 ; The signed case is handled automatically because the expander inserts
 ; a conversion to the type returned by the return-type.
-(define-syntax _slice_ (meta/make-function/cast #'unsigned-slice))
-
-(define-return-type unsigned-slice
+(define-function/cast _slice_ unsigned-slice
   (λ (ta tb tc)
     (define left (match tb
                    [(t/static-data n _) n]
@@ -332,26 +340,23 @@
     (t/resize (t/normalize-type ta)
               (max 0 (add1 (- left right))))))
 
-(define-syntax _concat_ (meta/make-function/cast #'concat:impl))
-
 ; The binary concatenetion operation defaults to the unsigned version.
 ; The signed case is handled automatically because the expander inserts
 ; a conversion to the type returned by concat:impl:return-type.
 ; Since this function needs to know the width of its arguments,
 ; their types are inserted by the checker.
-(define (concat:impl . vs)
-  (apply unsigned-concat
-    (for/fold ([res empty]
-               [lst vs]
-               #:result res)
-              ([n (in-naturals)])
-              #:break (empty? lst)
-      (define-values (l r) (split-at-right lst 2))
-      (values
-        (cons (list (first r) (~> r second t/normalize-type t/abstract-integer-width sub1) 0) res)
-        l))))
-
-(define-return-type concat:impl
+(define-function/cast _concat_
+  (λ vs
+    (apply unsigned-concat
+      (for/fold ([res empty]
+                 [lst vs]
+                 #:result res)
+                ([n (in-naturals)])
+                #:break (empty? lst)
+        (define-values (l r) (split-at-right lst 2))
+        (values
+          (cons (list (first r) (~> r second t/normalize-type t/abstract-integer-width sub1) 0) res)
+          l))))
   (λ ts
     (define ts^ (for/list ([it (in-list ts)]
                            [n (in-naturals)] #:when (odd? n))
@@ -406,14 +411,10 @@
 ; Type operations.
 ; ------------------------------------------------------------------------------
 
-(define-syntax _cast_ (meta/make-function/cast #'cast:impl))
-
-; cast does not actually convert the given value because
+; _cast_ does not actually convert the given value because
 ; a call to the conversion function is already inserted by the expander.
-(define (cast:impl a b)
-  b)
-
-(define-return-type cast:impl
+(define-function/cast _cast_
+  (λ (a b) b)
   (λ (ta tb)
     (define ta^ (t/normalize-type (t/static-data-value ta)))
     (define tb^ (t/normalize-type tb))

@@ -336,7 +336,7 @@
                                       #'s.fn-name))
        ; Bitwise concatenation is a special case where we interleave
        ; argument values with their inferred types.
-       (define/syntax-parse (arg+ ...) (if (equal? (syntax->datum #'fn-name) 'concat:impl)
+       (define/syntax-parse (arg+ ...) (if (equal? (syntax->datum #'fn-name) '_concat_:impl)
                                          #'((~@ arg (type-of arg)) ...)
                                          #'(arg ...)))
        (if (and (meta/function? fn) (meta/function-cast? fn))

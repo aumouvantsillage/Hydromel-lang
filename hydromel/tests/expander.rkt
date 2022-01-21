@@ -191,7 +191,7 @@
   (assignment (name-expr z)
     (lift-expr [x^ (slot-expr (name-expr x))]
                [y^ (slot-expr (name-expr y))]
-      (call-expr cast:impl
+      (call-expr _cast_:impl
         (call-expr signed (literal-expr 32))
         (call-expr + (name-expr x^) (name-expr y^))))))
 
@@ -217,7 +217,7 @@
   (assignment (name-expr v)
     (lift-expr [xy^ (slot-expr (name-expr xy))]
                [zu^ (slot-expr (name-expr zu))]
-      (call-expr cast:impl
+      (call-expr _cast_:impl
         (call-expr signed (literal-expr 32))
         (call-expr + (name-expr xy^) (name-expr zu^))))))
 
@@ -236,7 +236,7 @@
   (data-port y out (call-expr signed (literal-expr 32)))
   (assignment (name-expr y)
               (lift-expr [x^ (slot-expr (name-expr x))]
-                (call-expr cast:impl
+                (call-expr _cast_:impl
                   (call-expr signed (literal-expr 32))
                   (call-expr * (name-expr x^) (name-expr N))))))
 
@@ -263,7 +263,7 @@
   (assignment (name-expr y)
     (lift-expr [y0 (slot-expr (field-expr (indexed-port-expr (name-expr c) (literal-expr 0)) y))]
                [y1 (slot-expr (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) y))]
-      (call-expr cast:impl
+      (call-expr _cast_:impl
         (call-expr signed (literal-expr 32))
         (call-expr + (name-expr y0) (name-expr y1))))))
 
@@ -409,8 +409,8 @@
   (assignment (name-expr z)
     (lift-expr [x^ (slot-expr (name-expr x))]
                [y^ (slot-expr (name-expr y))]
-      (call-expr/cast concat:impl (name-expr x^) (call-expr signed (literal-expr 4))
-                                  (name-expr y^) (call-expr signed (literal-expr 4))))))
+      (call-expr/cast _concat_:impl (name-expr x^) (call-expr signed (literal-expr 4))
+                                    (name-expr y^) (call-expr signed (literal-expr 4))))))
 
 (define c20-inst (C20-make))
 (slot-set! (c20-inst x) (signal 0 5 -2))
