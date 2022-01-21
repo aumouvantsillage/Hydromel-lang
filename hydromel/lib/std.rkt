@@ -5,6 +5,7 @@
 #lang racket
 
 (require
+  "function.rkt"
   (prefix-in t/ "types.rkt")
   (only-in "numeric.rkt"
     min-unsigned-width min-signed-width
@@ -15,103 +16,9 @@
   threading
   (only-in data/collection
     nth set-nth)
-  data/pvector
-  (for-syntax
-    (prefix-in meta/ "meta.rkt")
-    racket/syntax))
+  data/pvector)
 
 (provide (all-from-out "numeric.rkt"))
-
-; ------------------------------------------------------------------------------
-; Helpers for custom function definitions
-; ------------------------------------------------------------------------------
-
-(begin-for-syntax
-  (define (function-impl-name name)
-    (format-id name "~a:impl" name))
-
-  (define (function-return-type-name name)
-    (format-id name "~a:return-type" name)))
-
-(define-syntax-parse-rule (declare-function name fn-name)
-  (begin
-    (provide name)
-    (define-syntax name (meta/make-function #'fn-name))))
-
-(define-syntax-parse-rule (declare-function/cast name fn-name)
-  (begin
-    (provide name)
-    (define-syntax name (meta/make-function/cast #'fn-name))))
-
-(define-syntax-parse-rule (define-function* name)
-  #:with fn-name (function-impl-name #'name)
-  #:with rt-name (function-return-type-name #'fn-name)
-  (begin
-    (declare-function name fn-name)
-    (provide fn-name rt-name)))
-
-(define-syntax-parse-rule (define-function*/cast name)
-  #:with fn-name (function-impl-name #'name)
-  #:with rt-name (function-return-type-name #'fn-name)
-  (begin
-    (declare-function/cast name fn-name)
-    (provide fn-name rt-name)))
-
-(define-syntax-parse-rule (define-function arg ...)
-  (do-define-function no-cast arg ...))
-
-(define-syntax-parse-rule (define-function/cast arg ...)
-  (do-define-function cast arg ...))
-
-(define-syntax-parser do-define-function
-  #:datum-literals [cast no-cast]
-  [(_ no-cast name fn-name:id rt-fn)
-   #'(begin
-       (declare-function name fn-name)
-       (define-return-type fn-name rt-fn))]
-
-  [(_ cast name fn-name:id rt-fn)
-   #'(begin
-       (declare-function/cast name fn-name)
-       (define-return-type fn-name rt-fn))]
-
-  [(_ cast? name fn rt-fn)
-   #:with fn-name (function-impl-name #'name)
-   #'(begin
-       (provide fn-name)
-       (define fn-name fn)
-       (do-define-function cast? name fn-name rt-fn))]
-
-  [(_ cast? name fn)
-   #'(do-define-function cast? name fn (const (t/none)))])
-
-(define-syntax-parse-rule (define-return-type name fn)
-  #:with rt-name (function-return-type-name #'name)
-  (begin
-      (provide rt-name)
-      (define rt-name (return-type-function name fn))))
-
-(define-syntax-parser return-type-function
-  #:literals [λ const]
-  [(_ _ (~and fn (const body ...)))
-   #'fn]
-
-  [(_ name (λ (arg:id ...) body ...))
-   #'(λ (arg ...)
-       (define raw (let () body ...))
-       (if (and (t/static-data? arg) ...)
-         (t/static-data (name (t/static-data-value arg) ...) raw)
-         raw))]
-
-  [(_ name (λ args:id body ...))
-   #'(λ args
-       (define raw (let () body ...))
-       (if (andmap t/static-data? args)
-         (t/static-data (apply name (map t/static-data-value args)) raw)
-         raw))]
-
-  [(_ name (fn-name:id arg ...))
-   #'(return-type-function name (λ (arg ...) (fn-name arg ...)))])
 
 ; ------------------------------------------------------------------------------
 ; Conditionals.
