@@ -5,8 +5,6 @@
 #lang racket
 
 (require
-  "signal.rkt"
-  "slot.rkt"
   (prefix-in t/ "types.rkt")
   (only-in "numeric.rkt"
     min-unsigned-width min-signed-width
@@ -18,13 +16,11 @@
   (only-in data/collection
     nth set-nth)
   data/pvector
-  (prefix-in meta/ "meta.rkt")
   (for-syntax
     (prefix-in meta/ "meta.rkt")
-    racket/syntax
-    syntax/parse/lib/function-header))
+    racket/syntax))
 
-(provide (all-from-out  "numeric.rkt"))
+(provide (all-from-out "numeric.rkt"))
 
 ; ------------------------------------------------------------------------------
 ; Helpers for custom function definitions
