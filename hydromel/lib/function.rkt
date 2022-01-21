@@ -12,7 +12,8 @@
   (only-in "types.rkt"
     static-data
     static-data?
-    static-data-value))
+    static-data-value
+    none))
 
 (provide
   define-function
@@ -77,7 +78,7 @@
        (do-define-function cast? name fn-name rt-fn))]
 
   [(_ cast? name fn)
-   #'(do-define-function cast? name fn (const (t/none)))])
+   #'(do-define-function cast? name fn (const (none)))])
 
 (define-syntax-parse-rule (define-return-type name fn)
   #:with rt-name (function-return-type-name #'name)
