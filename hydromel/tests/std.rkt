@@ -72,14 +72,14 @@
 ; _and_
 ; ------------------------------------------------------------------------------
 
-(test-equal? "and(0, 0)"   (call _and_    0     0)    0)
-(test-equal? "and(0, 1)"   (call _and_    0     1)    0)
-(test-equal? "and(1, 0)"   (call _and_    1     0)    0)
-(test-equal? "and(1, 1)"   (call _and_    1     1)    1)
-(test-equal? "and(F0, 3C)" (call _and_ #xF0  #x3C) #x30)
-(test-equal? "and(-1, 8)"  (call _and_   -1    12)   12)
-(test-equal? "and(-1, 8)"  (call _and_  -24    12)    8)
-(test-equal? "and(-1, 8)"  (call _and_  -24    -4)  -24)
+(test-equal? "and(0, 0)"    (call _and_    0     0)    0)
+(test-equal? "and(0, 1)"    (call _and_    0     1)    0)
+(test-equal? "and(1, 0)"    (call _and_    1     0)    0)
+(test-equal? "and(1, 1)"    (call _and_    1     1)    1)
+(test-equal? "and(F0, 3C)"  (call _and_ #xF0  #x3C) #x30)
+(test-equal? "and(-1, 12)"  (call _and_   -1    12)   12)
+(test-equal? "and(-24, 12)" (call _and_  -24    12)    8)
+(test-equal? "and(-24, -4)" (call _and_  -24    -4)  -24)
 
 (test-equal? "and:return-type(unsigned(4), unsigned(8))" (return-type _and_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned 8))
 (test-equal? "and:return-type(unsigned(8), unsigned(4))" (return-type _and_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned 8))
@@ -100,14 +100,14 @@
 ; _or_
 ; ------------------------------------------------------------------------------
 
-(test-equal? "or(0, 0)"   (call _or_    0    0)    0)
-(test-equal? "or(0, 1)"   (call _or_    0    1)    1)
-(test-equal? "or(1, 0)"   (call _or_    1    0)    1)
-(test-equal? "or(1, 1)"   (call _or_    1    1)    1)
-(test-equal? "or(F0, 3C)" (call _or_ #xF0 #x3C) #xFC)
-(test-equal? "or(-1, 8)"  (call _or_   -1   12)   -1)
-(test-equal? "or(-1, 8)"  (call _or_  -24   12)  -20)
-(test-equal? "or(-1, 8)"  (call _or_  -24   -4)   -4)
+(test-equal? "or(0, 0)"    (call _or_    0    0)    0)
+(test-equal? "or(0, 1)"    (call _or_    0    1)    1)
+(test-equal? "or(1, 0)"    (call _or_    1    0)    1)
+(test-equal? "or(1, 1)"    (call _or_    1    1)    1)
+(test-equal? "or(F0, 3C)"  (call _or_ #xF0 #x3C) #xFC)
+(test-equal? "or(-1, 12)"  (call _or_   -1   12)   -1)
+(test-equal? "or(-24, 12)" (call _or_  -24   12)  -20)
+(test-equal? "or(-24, -4)" (call _or_  -24   -4)   -4)
 
 (test-equal? "or:return-type(unsigned(4), unsigned(8))" (return-type _or_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned 8))
 (test-equal? "or:return-type(unsigned(8), unsigned(4))" (return-type _or_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned 8))
@@ -125,7 +125,33 @@
 (test-exn    "or:return-type(unsigned(8), symbol)" exn:fail? (thunk (return-type _or_ (t/unsigned 8) (t/symbol 'X))))
 
 ; ------------------------------------------------------------------------------
-; TODO test _xor_
+; _xor_
+; ------------------------------------------------------------------------------
+
+(test-equal? "xor(0, 0)"    (call _xor_    0    0)    0)
+(test-equal? "xor(0, 1)"    (call _xor_    0    1)    1)
+(test-equal? "xor(1, 0)"    (call _xor_    1    0)    1)
+(test-equal? "xor(1, 1)"    (call _xor_    1    1)    0)
+(test-equal? "xor(F0, 3C)"  (call _xor_ #xF0 #x3C) #xCC)
+(test-equal? "xor(-1, 12)"  (call _xor_   -1   12)  -13)
+(test-equal? "xor(-24, 12)" (call _xor_  -24   12)  -28)
+(test-equal? "xor(-24, -5)" (call _xor_  -24   -4)   20)
+
+(test-equal? "xor:return-type(unsigned(4), unsigned(8))" (return-type _xor_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned 8))
+(test-equal? "xor:return-type(unsigned(8), unsigned(4))" (return-type _xor_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned 8))
+(test-equal? "xor:return-type(unsigned(8), unsigned(8))" (return-type _xor_ (t/unsigned 8) (t/unsigned 8)) (t/unsigned 8))
+(test-equal? "xor:return-type(signed(4), signed(8))"     (return-type _xor_ (t/signed   4) (t/signed   8)) (t/signed   8))
+(test-equal? "xor:return-type(signed(8), signed(4))"     (return-type _xor_ (t/signed   8) (t/signed   4)) (t/signed   8))
+(test-equal? "xor:return-type(signed(8), signed(8))"     (return-type _xor_ (t/signed   8) (t/signed   8)) (t/signed   8))
+(test-equal? "xor:return-type(signed(4), unsigned(8))"   (return-type _xor_ (t/signed   4) (t/unsigned 8)) (t/signed   9))
+(test-equal? "xor:return-type(unsigned(4), signed(8))"   (return-type _xor_ (t/unsigned 4) (t/signed   8)) (t/signed   8))
+(test-equal? "xor:return-type(signed(8), unsigned(4))"   (return-type _xor_ (t/signed   8) (t/unsigned 4)) (t/signed   8))
+(test-equal? "xor:return-type(unsigned(8), signed(4))"   (return-type _xor_ (t/unsigned 8) (t/signed   4)) (t/signed   9))
+(test-equal? "xor:return-type(unsigned(8), signed(8))"   (return-type _xor_ (t/unsigned 8) (t/signed   8)) (t/signed   9))
+(test-equal? "xor:return-type(signed(8), unsigned(8))"   (return-type _xor_ (t/signed   8) (t/unsigned 8)) (t/signed   9))
+(test-exn    "xor:return-type(symbol, unsigned(8))" exn:fail? (thunk (return-type _xor_ (t/symbol 'X)  (t/unsigned 8))))
+(test-exn    "xor:return-type(unsigned(8), symbol)" exn:fail? (thunk (return-type _xor_ (t/unsigned 8) (t/symbol 'X))))
+
 ; TODO test unsigned_width
 ; TODO test signed_width
 ; TODO test _==_

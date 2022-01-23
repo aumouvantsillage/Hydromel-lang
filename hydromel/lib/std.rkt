@@ -145,9 +145,10 @@
   (λ (ta tb)
     (expect-integers 'xor ta tb)
     (match (list (t/normalize-type ta) (t/normalize-type tb))
-      [(list (t/unsigned na)          (t/unsigned nb))          (t/unsigned (max na nb))]
-      [(list (t/signed   na)          (t/abstract-integer  nb)) (t/signed   (max na nb))]
-      [(list (t/abstract-integer  na) (t/signed   nb))          (t/signed   (max na nb))])))
+      [(list (t/unsigned na) (t/unsigned nb)) (t/unsigned (max na nb))]
+      [(list (t/signed   na) (t/unsigned nb)) (t/signed   (max na (add1 nb)))]
+      [(list (t/unsigned na) (t/signed   nb)) (t/signed   (max (add1 na) nb))]
+      [(list (t/signed na)   (t/signed   nb)) (t/signed   (max na nb))])))
 
 ; ------------------------------------------------------------------------------
 ; Arithmetic operations.
