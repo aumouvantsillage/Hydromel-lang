@@ -22,11 +22,13 @@
 
 ; TODO make expect-* return the normalized type.
 (define (expect-type* pred? msg name pos t)
-  (unless (pred? (t/normalize-type t))
-    (raise-argument-error name msg pos (t/format-type t))))
+  (define t^ (t/normalize-type t))
+  (unless (pred? t^)
+    (raise-argument-error name msg pos (t/format-type t^)))
+  t^)
 
 (define (expect-integers name . ts)
-  (for ([(t n) (in-indexed ts)])
+  (for/list ([(t n) (in-indexed ts)])
     (expect-integer name n t)))
 
 (define (expect-integer name pos t)
@@ -127,24 +129,21 @@
 
 (define-function _and_ bitwise-and
   (λ (ta tb)
-    (expect-integers 'and ta tb)
-    (match (list (t/normalize-type ta) (t/normalize-type tb))
+    (match (expect-integers 'and ta tb)
       [(list (t/signed na)            (t/signed nb))            (t/signed   (max na nb))]
       [(list (t/unsigned   na)        (t/abstract-integer  nb)) (t/unsigned (max na nb))]
       [(list (t/abstract-integer  na) (t/unsigned   nb))        (t/unsigned (max na nb))])))
 
 (define-function _or_  bitwise-ior
   (λ (ta tb)
-    (expect-integers 'or ta tb)
-    (match (list (t/normalize-type ta) (t/normalize-type tb))
+    (match (expect-integers 'or ta tb)
       [(list (t/unsigned na)          (t/unsigned nb))          (t/unsigned (max na nb))]
       [(list (t/signed   na)          (t/abstract-integer  nb)) (t/signed   (max na nb))]
       [(list (t/abstract-integer  na) (t/signed   nb))          (t/signed   (max na nb))])))
 
 (define-function _xor_ bitwise-xor
   (λ (ta tb)
-    (expect-integers 'xor ta tb)
-    (match (list (t/normalize-type ta) (t/normalize-type tb))
+    (match (expect-integers 'xor ta tb)
       [(list (t/unsigned na) (t/unsigned nb)) (t/unsigned (max na nb))]
       [(list (t/signed   na) (t/unsigned nb)) (t/signed   (max na (add1 nb)))]
       [(list (t/unsigned na) (t/signed   nb)) (t/signed   (max (add1 na) nb))]
@@ -158,9 +157,8 @@
 ; as an unsigned integer.
 (define-function unsigned_width min-unsigned-width
   (λ (ta)
-    (expect-integers 'unsigned_width ta)
-    (~> ta
-        t/normalize-type
+    (~>> ta
+        (expect-integer 'unsigned_width 0)
         t/abstract-integer-width
         t/unsigned)))
 
@@ -168,11 +166,9 @@
 ; as an signed integer.
 (define-function signed_width min-signed-width
   (λ (ta)
-    (expect-integers 'signed_width ta)
-    (match (t/normalize-type ta)
+    (match (expect-integer 'signed_width 0 ta)
       [(t/signed   n) (t/unsigned n)]
-      [(t/unsigned n) (t/unsigned (add1 n))]
-      [_ (error "Cannot compute data size.")])))
+      [(t/unsigned n) (t/unsigned (add1 n))])))
 
 ; Comparison operations return integers 0 and 1.
 (define-function _==_
@@ -211,14 +207,12 @@
   (λ (ta tb) (add-sub-return-type '- ta tb)))
 
 (define (add-sub-return-type name ta tb)
-  (expect-integers name ta tb)
-  (define tr (t/common-supertype/normalize ta tb))
+  (define tr (apply t/common-supertype (expect-integers name ta tb)))
   (t/resize tr (add1 (t/abstract-integer-width tr))))
 
 (define-function _*_ *
   (λ (ta tb)
-    (expect-integers '* ta tb)
-    (match (list (t/normalize-type ta) (t/normalize-type tb))
+    (match (expect-integers '* ta tb)
       [(list (t/unsigned na)         (t/unsigned nb))          (t/unsigned (+ na nb))]
       [(list (t/abstract-integer na) (t/signed   nb))          (t/signed   (+ na nb))]
       [(list (t/signed na)           (t/abstract-integer  nb)) (t/signed   (+ na nb))])))
@@ -231,17 +225,15 @@
 (define-function _neg_
   (λ (a) (- a))
   (λ (ta)
-    (expect-integers '- ta)
-    (~> ta
-        t/normalize-type
+    (~>> ta
+        (expect-integer '- 0)
         t/abstract-integer-width
         add1
         t/signed)))
 
 (define-function _<<_ arithmetic-shift
   (λ (ta tb)
-    (expect-integers '<< ta tb)
-    (define ta^ (t/normalize-type ta))
+    (define ta^ (first (expect-integers '<< ta tb)))
     (match (list ta^ tb)
       [(list (t/abstract-integer na) (t/static-data nb _)) (t/resize ta^ (max 0 (+ na nb)))]
       [(list (t/abstract-integer na) (t/unsigned nb))      (t/resize ta^ (+ na (max-unsigned-value nb)))]
@@ -251,8 +243,7 @@
   (λ (a b)
     (arithmetic-shift a (- b)))
   (λ (ta tb)
-    (expect-integers '>> ta tb)
-    (define ta^ (t/normalize-type ta))
+    (define ta^ (first (expect-integers '>> ta tb)))
     (match (list ta^ tb)
       [(list (t/abstract-integer na) (t/static-data nb _)) (t/resize ta^ (max 0 (- na nb)))]
       [(list (t/abstract-integer na) (t/unsigned nb))      ta^]
@@ -266,27 +257,23 @@
       (range a (add1 b))
       (range a (sub1 b) -1)))
   (λ (ta tb)
-    (expect-integers 'range ta tb)
-    (t/range (t/common-supertype/normalize ta tb))))
+    (t/range (apply t/common-supertype (expect-integers 'range ta tb)))))
 
 ; The slicing operation defaults to the unsigned version.
 ; The signed case is handled automatically because the expander inserts
 ; a conversion to the type returned by the return-type.
 (define-function/cast _slice_ unsigned-slice
   (λ (ta tb tc)
-    (expect-integers 'slice ta tb tc)
+    (define ta^ (first (expect-integers 'slice ta tb tc)))
     (define left (match tb
                    [(t/static-data n _) n]
                    [(t/unsigned    n)   (max-unsigned-value n)]
-                   [(t/signed      n)   (max-signed-value   n)]
-                   [_                   (error "Invalid type for left slice index.")]))
+                   [(t/signed      n)   (max-signed-value   n)]))
     (define right (match tc
                    [(t/static-data n _) n]
                    [(t/unsigned    n)   (min-unsigned-value n)]
-                   [(t/signed      n)   (min-signed-value   n)]
-                   [_                   (error "Invalid type for right slice index.")]))
-    (t/resize (t/normalize-type ta)
-              (max 0 (add1 (- left right))))))
+                   [(t/signed      n)   (min-signed-value   n)]))
+    (t/resize ta^ (max 0 (add1 (- left right))))))
 
 ; The binary concatenetion operation defaults to the unsigned version.
 ; The signed case is handled automatically because the expander inserts
@@ -306,10 +293,10 @@
           (cons (list (first r) (~> r second t/normalize-type t/abstract-integer-width sub1) 0) res)
           l))))
   (λ ts
-    (define ts^ (for/list ([it (in-list ts)]
-                           [n (in-naturals)] #:when (odd? n))
-                  (~> it t/static-data-value t/normalize-type)))
-    (apply expect-integers 'concat ts^)
+    (define ts^ (apply expect-integers 'concat
+                  (for/list ([t (in-list ts)]
+                             [n (in-naturals)] #:when (odd? n))
+                    (t/static-data-value t))))
     (define w (for/sum ([it (in-list ts^)])
                 (t/abstract-integer-width it)))
     (match (first ts^)
@@ -334,9 +321,8 @@
 
 (define-function _nth_ nth
   (λ (ta tb)
-    (expect-array   'nth 0 ta)
     (expect-integer 'nth 1 tb)
-    (t/array-elt-type (t/normalize-type ta))))
+    (t/array-elt-type (expect-array 'nth 0 ta))))
 
 (define-function _set_nth_ set-nth
   (λ (ta tb tc)
@@ -347,10 +333,8 @@
 
 (define-function _field_ dict-ref
   (λ (ta tb)
-    (expect-record 'field 0 ta)
-    (expect-symbol 'field 1 tb)
-    (define ta^ (t/normalize-type ta))
-    (define tb^ (t/normalize-type tb))
+    (define ta^ (expect-record 'field 0 ta))
+    (define tb^ (expect-symbol 'field 1 tb))
     (define field-name (t/symbol-value tb^))
     (dict-ref (t/record-fields ta^) field-name
       (thunk (error "Unknown field" field-name)))))
@@ -366,16 +350,15 @@
   (λ (ta tb)
     (expect-type 'cast 0 ta)
     (define ta^ (t/normalize-type (t/static-data-value ta)))
-    (define tb^ (t/normalize-type tb))
     (match ta^
       [(t/signed #f)
-       (expect-integer 'cast 1 tb)
+       (define tb^ (expect-integer 'cast 1 tb))
        (match tb^
          [(t/signed   _) tb^]
          [(t/unsigned n) (t/signed n)])]
 
       [(t/unsigned #f)
-       (expect-integer 'cast 1 tb)
+       (define tb^ (expect-integer 'cast 1 tb))
        (match tb^
          [(t/signed   n) (t/unsigned n)]
          [(t/unsigned _) tb^])]
