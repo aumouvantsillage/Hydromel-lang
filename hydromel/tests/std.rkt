@@ -72,12 +72,14 @@
 ; _and_
 ; ------------------------------------------------------------------------------
 
-(test-equal? "and(0, 0)"   (call _and_   0  0) 0)
-(test-equal? "and(0, 1)"   (call _and_   0  1) 0)
-(test-equal? "and(1, 0)"   (call _and_   1  0) 0)
-(test-equal? "and(1, 1)"   (call _and_   1  1) 1)
-(test-equal? "and(3, 5)"   (call _and_   3  5) 1)
-(test-equal? "and(12, 10)" (call _and_  12 10) 8)
+(test-equal? "and(0, 0)"   (call _and_    0     0)    0)
+(test-equal? "and(0, 1)"   (call _and_    0     1)    0)
+(test-equal? "and(1, 0)"   (call _and_    1     0)    0)
+(test-equal? "and(1, 1)"   (call _and_    1     1)    1)
+(test-equal? "and(F0, 3C)" (call _and_ #xF0  #x3C) #x30)
+(test-equal? "and(-1, 8)"  (call _and_   -1    12)   12)
+(test-equal? "and(-1, 8)"  (call _and_  -24    12)    8)
+(test-equal? "and(-1, 8)"  (call _and_  -24    -4)  -24)
 
 (test-equal? "and:return-type(unsigned(4), unsigned(8))" (return-type _and_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned 8))
 (test-equal? "and:return-type(unsigned(8), unsigned(4))" (return-type _and_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned 8))
@@ -85,17 +87,44 @@
 (test-equal? "and:return-type(signed(4), signed(8))"     (return-type _and_ (t/signed   4) (t/signed   8)) (t/signed   8))
 (test-equal? "and:return-type(signed(8), signed(4))"     (return-type _and_ (t/signed   8) (t/signed   4)) (t/signed   8))
 (test-equal? "and:return-type(signed(8), signed(8))"     (return-type _and_ (t/signed   8) (t/signed   8)) (t/signed   8))
-(test-equal? "and:return-type(signed(4), unsigned(8))"   (return-type _and_ (t/signed   4) (t/unsigned 8)) (t/signed   8))
-(test-equal? "and:return-type(unsigned(4), signed(8))"   (return-type _and_ (t/unsigned 4) (t/signed   8)) (t/signed   8))
-(test-equal? "and:return-type(signed(8), unsigned(4))"   (return-type _and_ (t/signed   8) (t/unsigned 4)) (t/signed   8))
-(test-equal? "and:return-type(unsigned(8), signed(4))"   (return-type _and_ (t/unsigned 8) (t/signed   4)) (t/signed   8))
-(test-equal? "and:return-type(unsigned(8), signed(8))"   (return-type _and_ (t/unsigned 8) (t/signed   8)) (t/signed   8))
-(test-equal? "and:return-type(signed(8), unsigned(8))"   (return-type _and_ (t/signed   8) (t/unsigned 8)) (t/signed   8))
+(test-equal? "and:return-type(signed(4), unsigned(8))"   (return-type _and_ (t/signed   4) (t/unsigned 8)) (t/unsigned 8))
+(test-equal? "and:return-type(unsigned(4), signed(8))"   (return-type _and_ (t/unsigned 4) (t/signed   8)) (t/unsigned 8))
+(test-equal? "and:return-type(signed(8), unsigned(4))"   (return-type _and_ (t/signed   8) (t/unsigned 4)) (t/unsigned 8))
+(test-equal? "and:return-type(unsigned(8), signed(4))"   (return-type _and_ (t/unsigned 8) (t/signed   4)) (t/unsigned 8))
+(test-equal? "and:return-type(unsigned(8), signed(8))"   (return-type _and_ (t/unsigned 8) (t/signed   8)) (t/unsigned 8))
+(test-equal? "and:return-type(signed(8), unsigned(8))"   (return-type _and_ (t/signed   8) (t/unsigned 8)) (t/unsigned 8))
 (test-exn    "and:return-type(symbol, unsigned(8))" exn:fail? (thunk (return-type _and_ (t/symbol 'X)  (t/unsigned 8))))
 (test-exn    "and:return-type(unsigned(8), symbol)" exn:fail? (thunk (return-type _and_ (t/unsigned 8) (t/symbol 'X))))
 
 ; ------------------------------------------------------------------------------
-; TODO test _or_
+; _or_
+; ------------------------------------------------------------------------------
+
+(test-equal? "or(0, 0)"   (call _or_    0    0)    0)
+(test-equal? "or(0, 1)"   (call _or_    0    1)    1)
+(test-equal? "or(1, 0)"   (call _or_    1    0)    1)
+(test-equal? "or(1, 1)"   (call _or_    1    1)    1)
+(test-equal? "or(F0, 3C)" (call _or_ #xF0 #x3C) #xFC)
+(test-equal? "or(-1, 8)"  (call _or_   -1   12)   -1)
+(test-equal? "or(-1, 8)"  (call _or_  -24   12)  -20)
+(test-equal? "or(-1, 8)"  (call _or_  -24   -4)   -4)
+
+(test-equal? "or:return-type(unsigned(4), unsigned(8))" (return-type _or_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned 8))
+(test-equal? "or:return-type(unsigned(8), unsigned(4))" (return-type _or_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned 8))
+(test-equal? "or:return-type(unsigned(8), unsigned(8))" (return-type _or_ (t/unsigned 8) (t/unsigned 8)) (t/unsigned 8))
+(test-equal? "or:return-type(signed(4), signed(8))"     (return-type _or_ (t/signed   4) (t/signed   8)) (t/signed   8))
+(test-equal? "or:return-type(signed(8), signed(4))"     (return-type _or_ (t/signed   8) (t/signed   4)) (t/signed   8))
+(test-equal? "or:return-type(signed(8), signed(8))"     (return-type _or_ (t/signed   8) (t/signed   8)) (t/signed   8))
+(test-equal? "or:return-type(signed(4), unsigned(8))"   (return-type _or_ (t/signed   4) (t/unsigned 8)) (t/signed   8))
+(test-equal? "or:return-type(unsigned(4), signed(8))"   (return-type _or_ (t/unsigned 4) (t/signed   8)) (t/signed   8))
+(test-equal? "or:return-type(signed(8), unsigned(4))"   (return-type _or_ (t/signed   8) (t/unsigned 4)) (t/signed   8))
+(test-equal? "or:return-type(unsigned(8), signed(4))"   (return-type _or_ (t/unsigned 8) (t/signed   4)) (t/signed   8))
+(test-equal? "or:return-type(unsigned(8), signed(8))"   (return-type _or_ (t/unsigned 8) (t/signed   8)) (t/signed   8))
+(test-equal? "or:return-type(signed(8), unsigned(8))"   (return-type _or_ (t/signed   8) (t/unsigned 8)) (t/signed   8))
+(test-exn    "or:return-type(symbol, unsigned(8))" exn:fail? (thunk (return-type _or_ (t/symbol 'X)  (t/unsigned 8))))
+(test-exn    "or:return-type(unsigned(8), symbol)" exn:fail? (thunk (return-type _or_ (t/unsigned 8) (t/symbol 'X))))
+
+; ------------------------------------------------------------------------------
 ; TODO test _xor_
 ; TODO test unsigned_width
 ; TODO test signed_width

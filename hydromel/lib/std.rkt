@@ -125,21 +125,29 @@
     (expect-integers 'not t)
     t))
 
-(define (bitwise-return-type name ta tb)
-  (expect-integers name ta tb)
-  (match (list (t/normalize-type ta) (t/normalize-type tb))
-    [(list (t/unsigned na)          (t/unsigned nb))          (t/unsigned (max na nb))]
-    [(list (t/signed   na)          (t/abstract-integer  nb)) (t/signed   (max na nb))]
-    [(list (t/abstract-integer  na) (t/signed   nb))          (t/signed   (max na nb))]))
-
 (define-function _and_ bitwise-and
-  (λ (ta tb) (bitwise-return-type 'and ta tb)))
+  (λ (ta tb)
+    (expect-integers 'and ta tb)
+    (match (list (t/normalize-type ta) (t/normalize-type tb))
+      [(list (t/signed na)            (t/signed nb))            (t/signed   (max na nb))]
+      [(list (t/unsigned   na)        (t/abstract-integer  nb)) (t/unsigned (max na nb))]
+      [(list (t/abstract-integer  na) (t/unsigned   nb))        (t/unsigned (max na nb))])))
 
 (define-function _or_  bitwise-ior
-  (λ (ta tb) (bitwise-return-type 'or ta tb)))
+  (λ (ta tb)
+    (expect-integers 'or ta tb)
+    (match (list (t/normalize-type ta) (t/normalize-type tb))
+      [(list (t/unsigned na)          (t/unsigned nb))          (t/unsigned (max na nb))]
+      [(list (t/signed   na)          (t/abstract-integer  nb)) (t/signed   (max na nb))]
+      [(list (t/abstract-integer  na) (t/signed   nb))          (t/signed   (max na nb))])))
 
 (define-function _xor_ bitwise-xor
-  (λ (ta tb) (bitwise-return-type 'xor ta tb)))
+  (λ (ta tb)
+    (expect-integers 'xor ta tb)
+    (match (list (t/normalize-type ta) (t/normalize-type tb))
+      [(list (t/unsigned na)          (t/unsigned nb))          (t/unsigned (max na nb))]
+      [(list (t/signed   na)          (t/abstract-integer  nb)) (t/signed   (max na nb))]
+      [(list (t/abstract-integer  na) (t/signed   nb))          (t/signed   (max na nb))])))
 
 ; ------------------------------------------------------------------------------
 ; Arithmetic operations.
