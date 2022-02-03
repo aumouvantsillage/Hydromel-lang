@@ -15,29 +15,51 @@
     racket/syntax
     (prefix-in meta/ "../lib/meta.rkt")))
 
+(define-syntax-parse-rule (test-function (name arg ...) res)
+  (test-equal? (format "~a~a" 'name '(arg ...)) (call name arg ...) res))
+
+(define-syntax-parse-rule (test-return-type (name arg ...) res)
+  (test-equal? (format "~a:return-type~a" 'name '(arg ...)) (call:return-type name arg ...) res))
+
+(define-syntax-parse-rule (test-return-type/exn (name arg ...))
+  (test-exn (format "~a:return-type~a" 'name '(arg ...)) exn:fail? (thunk (call:return-type name arg ...))))
+
 (define-syntax-parser call
   [(_ name arg ...)
    (match-define (struct meta/function (fn-name cast?)) (syntax-local-value #'name))
    (if cast?
-     #`(let ([rt (return-type name (t/literal-type arg) ...)])
+     #`(let ([rt (call:return-type name (t/literal-type arg) ...)])
          (rt (#,fn-name arg ...)))
      #`(#,fn-name arg ...))])
 
-(define-syntax-parse-rule (return-type name arg ...)
+(define-syntax-parse-rule (call:return-type name arg ...)
    #:with fn-name (meta/function-name (syntax-local-value #'name))
    #:with rt-name (format-id #'fn-name "~a:return-type" #'fn-name)
    (rt-name arg ...))
+
+; Test that literal-type(f(x ...)) <: f:return-type(literal-type(x) ...)
+; This does not test that f:return-type has the minimal width.
+(define-syntax-rule (test-return-type/accept (name arg ...))
+  (test-true (format "~a:return-type~a" 'name '(arg ...))
+             (t/<: (t/literal-type (call name arg ...))
+                   (call:return-type name (t/literal-type arg) ...))))
+
+; Test that literal-type(f(x ...)) = f:return-type(literal-type(x) ...)
+(define-syntax-rule (test-return-type/strict (name arg ...))
+  (test-equal? (format "~a:return-type~a" 'name '(arg ...))
+               (call:return-type name (t/literal-type arg) ...)
+               (t/literal-type (call name arg ...))))
 
 ; ------------------------------------------------------------------------------
 ; int->bool
 ; ------------------------------------------------------------------------------
 
-(test-equal? "int->bool(0)" (call int->bool 0) #f)
-(test-equal? "int->bool(1)" (call int->bool 1) #t)
-(test-equal? "int->bool(2)" (call int->bool 2) #t)
+(test-function (int->bool 0) #f)
+(test-function (int->bool 1) #t)
+(test-function (int->bool 2) #t)
 
-(test-equal? "int->bool:return-type(integer)" (return-type int->bool (t/abstract-integer #f)) (t/boolean))
-(test-exn    "int->bool:return-type(symbol)" exn:fail? (thunk (return-type int->bool (t/symbol 'X))))
+(test-return-type     (int->bool (t/abstract-integer #f)) (t/boolean))
+(test-return-type/exn (int->bool (t/symbol 'X)))
 
 ; ------------------------------------------------------------------------------
 ; TODO _if_
@@ -51,109 +73,162 @@
 ; _not_
 ; ------------------------------------------------------------------------------
 
-(test-equal? "not(0)"  (call _not_  0) 1)
-(test-equal? "not(1)"  (call _not_  1) 0)
-(test-equal? "not(2)"  (call _not_  2) 1)
-(test-equal? "not(3)"  (call _not_  3) 0)
-(test-equal? "not(4)"  (call _not_  4) 3)
-(test-equal? "not(5)"  (call _not_  5) 2)
-(test-equal? "not(-1)" (call _not_ -1) 0)
-(test-equal? "not(-2)" (call _not_ -2) 1)
-(test-equal? "not(-3)" (call _not_ -3) 2)
-(test-equal? "not(-4)" (call _not_ -4) 3)
+(test-function (_not_  0) 1)
+(test-function (_not_  1) 0)
+(test-function (_not_  2) 1)
+(test-function (_not_  3) 0)
+(test-function (_not_  4) 3)
+(test-function (_not_  5) 2)
+(test-function (_not_ -1) 0)
+(test-function (_not_ -2) 1)
+(test-function (_not_ -3) 2)
+(test-function (_not_ -4) 3)
 
-(test-equal? "not:return-type(unsigned(1))" (return-type _not_ (t/unsigned 1)) (t/unsigned 1))
-(test-equal? "not:return-type(unsigned(2))" (return-type _not_ (t/unsigned 2)) (t/unsigned 2))
-(test-equal? "not:return-type(signed(1))"   (return-type _not_ (t/signed 1))   (t/signed 1))
-(test-equal? "not:return-type(signed(2))"   (return-type _not_ (t/signed 2))   (t/signed 2))
-(test-exn    "not:return-type(symbol)" exn:fail? (thunk (return-type _not_ (t/symbol 'X))))
+(test-return-type     (_not_ (t/unsigned 1)) (t/unsigned 1))
+(test-return-type     (_not_ (t/unsigned 2)) (t/unsigned 2))
+(test-return-type     (_not_ (t/signed 1))   (t/signed 1))
+(test-return-type     (_not_ (t/signed 2))   (t/signed 2))
+(test-return-type/exn (_not_ (t/symbol 'X)))
 
 ; ------------------------------------------------------------------------------
 ; _and_
 ; ------------------------------------------------------------------------------
 
-(test-equal? "and(0, 0)"    (call _and_    0     0)    0)
-(test-equal? "and(0, 1)"    (call _and_    0     1)    0)
-(test-equal? "and(1, 0)"    (call _and_    1     0)    0)
-(test-equal? "and(1, 1)"    (call _and_    1     1)    1)
-(test-equal? "and(F0, 3C)"  (call _and_ #xF0  #x3C) #x30)
-(test-equal? "and(-1, 12)"  (call _and_   -1    12)   12)
-(test-equal? "and(-24, 12)" (call _and_  -24    12)    8)
-(test-equal? "and(-24, -4)" (call _and_  -24    -4)  -24)
+(test-function (_and_    0     0)    0)
+(test-function (_and_    0     1)    0)
+(test-function (_and_    1     0)    0)
+(test-function (_and_    1     1)    1)
+(test-function (_and_ #xF0  #x3C) #x30)
+(test-function (_and_   -1    12)   12)
+(test-function (_and_  -24    12)    8)
+(test-function (_and_  -24    -4)  -24)
 
-(test-equal? "and:return-type(unsigned(4), unsigned(8))" (return-type _and_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned 8))
-(test-equal? "and:return-type(unsigned(8), unsigned(4))" (return-type _and_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned 8))
-(test-equal? "and:return-type(unsigned(8), unsigned(8))" (return-type _and_ (t/unsigned 8) (t/unsigned 8)) (t/unsigned 8))
-(test-equal? "and:return-type(signed(4), signed(8))"     (return-type _and_ (t/signed   4) (t/signed   8)) (t/signed   8))
-(test-equal? "and:return-type(signed(8), signed(4))"     (return-type _and_ (t/signed   8) (t/signed   4)) (t/signed   8))
-(test-equal? "and:return-type(signed(8), signed(8))"     (return-type _and_ (t/signed   8) (t/signed   8)) (t/signed   8))
-(test-equal? "and:return-type(signed(4), unsigned(8))"   (return-type _and_ (t/signed   4) (t/unsigned 8)) (t/unsigned 8))
-(test-equal? "and:return-type(unsigned(4), signed(8))"   (return-type _and_ (t/unsigned 4) (t/signed   8)) (t/unsigned 8))
-(test-equal? "and:return-type(signed(8), unsigned(4))"   (return-type _and_ (t/signed   8) (t/unsigned 4)) (t/unsigned 8))
-(test-equal? "and:return-type(unsigned(8), signed(4))"   (return-type _and_ (t/unsigned 8) (t/signed   4)) (t/unsigned 8))
-(test-equal? "and:return-type(unsigned(8), signed(8))"   (return-type _and_ (t/unsigned 8) (t/signed   8)) (t/unsigned 8))
-(test-equal? "and:return-type(signed(8), unsigned(8))"   (return-type _and_ (t/signed   8) (t/unsigned 8)) (t/unsigned 8))
-(test-exn    "and:return-type(symbol, unsigned(8))" exn:fail? (thunk (return-type _and_ (t/symbol 'X)  (t/unsigned 8))))
-(test-exn    "and:return-type(unsigned(8), symbol)" exn:fail? (thunk (return-type _and_ (t/unsigned 8) (t/symbol 'X))))
+(test-return-type     (_and_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned 8))
+(test-return-type     (_and_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned 8))
+(test-return-type     (_and_ (t/unsigned 8) (t/unsigned 8)) (t/unsigned 8))
+(test-return-type     (_and_ (t/signed   4) (t/signed   8)) (t/signed   8))
+(test-return-type     (_and_ (t/signed   8) (t/signed   4)) (t/signed   8))
+(test-return-type     (_and_ (t/signed   8) (t/signed   8)) (t/signed   8))
+(test-return-type     (_and_ (t/signed   4) (t/unsigned 8)) (t/unsigned 8))
+(test-return-type     (_and_ (t/unsigned 4) (t/signed   8)) (t/unsigned 8))
+(test-return-type     (_and_ (t/signed   8) (t/unsigned 4)) (t/unsigned 8))
+(test-return-type     (_and_ (t/unsigned 8) (t/signed   4)) (t/unsigned 8))
+(test-return-type     (_and_ (t/unsigned 8) (t/signed   8)) (t/unsigned 8))
+(test-return-type     (_and_ (t/signed   8) (t/unsigned 8)) (t/unsigned 8))
+(test-return-type/exn (_and_ (t/symbol 'X)  (t/unsigned 8)))
+(test-return-type/exn (_and_ (t/unsigned 8) (t/symbol 'X)))
 
 ; ------------------------------------------------------------------------------
 ; _or_
 ; ------------------------------------------------------------------------------
 
-(test-equal? "or(0, 0)"    (call _or_    0    0)    0)
-(test-equal? "or(0, 1)"    (call _or_    0    1)    1)
-(test-equal? "or(1, 0)"    (call _or_    1    0)    1)
-(test-equal? "or(1, 1)"    (call _or_    1    1)    1)
-(test-equal? "or(F0, 3C)"  (call _or_ #xF0 #x3C) #xFC)
-(test-equal? "or(-1, 12)"  (call _or_   -1   12)   -1)
-(test-equal? "or(-24, 12)" (call _or_  -24   12)  -20)
-(test-equal? "or(-24, -4)" (call _or_  -24   -4)   -4)
+(test-function (_or_    0    0)    0)
+(test-function (_or_    0    1)    1)
+(test-function (_or_    1    0)    1)
+(test-function (_or_    1    1)    1)
+(test-function (_or_ #xF0 #x3C) #xFC)
+(test-function (_or_   -1   12)   -1)
+(test-function (_or_  -24   12)  -20)
+(test-function (_or_  -24   -4)   -4)
 
-(test-equal? "or:return-type(unsigned(4), unsigned(8))" (return-type _or_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned 8))
-(test-equal? "or:return-type(unsigned(8), unsigned(4))" (return-type _or_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned 8))
-(test-equal? "or:return-type(unsigned(8), unsigned(8))" (return-type _or_ (t/unsigned 8) (t/unsigned 8)) (t/unsigned 8))
-(test-equal? "or:return-type(signed(4), signed(8))"     (return-type _or_ (t/signed   4) (t/signed   8)) (t/signed   8))
-(test-equal? "or:return-type(signed(8), signed(4))"     (return-type _or_ (t/signed   8) (t/signed   4)) (t/signed   8))
-(test-equal? "or:return-type(signed(8), signed(8))"     (return-type _or_ (t/signed   8) (t/signed   8)) (t/signed   8))
-(test-equal? "or:return-type(signed(4), unsigned(8))"   (return-type _or_ (t/signed   4) (t/unsigned 8)) (t/signed   8))
-(test-equal? "or:return-type(unsigned(4), signed(8))"   (return-type _or_ (t/unsigned 4) (t/signed   8)) (t/signed   8))
-(test-equal? "or:return-type(signed(8), unsigned(4))"   (return-type _or_ (t/signed   8) (t/unsigned 4)) (t/signed   8))
-(test-equal? "or:return-type(unsigned(8), signed(4))"   (return-type _or_ (t/unsigned 8) (t/signed   4)) (t/signed   8))
-(test-equal? "or:return-type(unsigned(8), signed(8))"   (return-type _or_ (t/unsigned 8) (t/signed   8)) (t/signed   8))
-(test-equal? "or:return-type(signed(8), unsigned(8))"   (return-type _or_ (t/signed   8) (t/unsigned 8)) (t/signed   8))
-(test-exn    "or:return-type(symbol, unsigned(8))" exn:fail? (thunk (return-type _or_ (t/symbol 'X)  (t/unsigned 8))))
-(test-exn    "or:return-type(unsigned(8), symbol)" exn:fail? (thunk (return-type _or_ (t/unsigned 8) (t/symbol 'X))))
+(test-return-type     (_or_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned 8))
+(test-return-type     (_or_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned 8))
+(test-return-type     (_or_ (t/unsigned 8) (t/unsigned 8)) (t/unsigned 8))
+(test-return-type     (_or_ (t/signed   4) (t/signed   8)) (t/signed   8))
+(test-return-type     (_or_ (t/signed   8) (t/signed   4)) (t/signed   8))
+(test-return-type     (_or_ (t/signed   8) (t/signed   8)) (t/signed   8))
+(test-return-type     (_or_ (t/signed   4) (t/unsigned 8)) (t/signed   8))
+(test-return-type     (_or_ (t/unsigned 4) (t/signed   8)) (t/signed   8))
+(test-return-type     (_or_ (t/signed   8) (t/unsigned 4)) (t/signed   8))
+(test-return-type     (_or_ (t/unsigned 8) (t/signed   4)) (t/signed   8))
+(test-return-type     (_or_ (t/unsigned 8) (t/signed   8)) (t/signed   8))
+(test-return-type     (_or_ (t/signed   8) (t/unsigned 8)) (t/signed   8))
+(test-return-type/exn (_or_ (t/symbol 'X)  (t/unsigned 8)))
+(test-return-type/exn (_or_ (t/unsigned 8) (t/symbol 'X)))
 
 ; ------------------------------------------------------------------------------
 ; _xor_
 ; ------------------------------------------------------------------------------
 
-(test-equal? "xor(0, 0)"    (call _xor_    0    0)    0)
-(test-equal? "xor(0, 1)"    (call _xor_    0    1)    1)
-(test-equal? "xor(1, 0)"    (call _xor_    1    0)    1)
-(test-equal? "xor(1, 1)"    (call _xor_    1    1)    0)
-(test-equal? "xor(F0, 3C)"  (call _xor_ #xF0 #x3C) #xCC)
-(test-equal? "xor(-1, 12)"  (call _xor_   -1   12)  -13)
-(test-equal? "xor(-24, 12)" (call _xor_  -24   12)  -28)
-(test-equal? "xor(-24, -5)" (call _xor_  -24   -4)   20)
+(test-function (_xor_    0    0)    0)
+(test-function (_xor_    0    1)    1)
+(test-function (_xor_    1    0)    1)
+(test-function (_xor_    1    1)    0)
+(test-function (_xor_ #xF0 #x3C) #xCC)
+(test-function (_xor_   -1   12)  -13)
+(test-function (_xor_  -24   12)  -28)
+(test-function (_xor_  -24   -4)   20)
 
-(test-equal? "xor:return-type(unsigned(4), unsigned(8))" (return-type _xor_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned 8))
-(test-equal? "xor:return-type(unsigned(8), unsigned(4))" (return-type _xor_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned 8))
-(test-equal? "xor:return-type(unsigned(8), unsigned(8))" (return-type _xor_ (t/unsigned 8) (t/unsigned 8)) (t/unsigned 8))
-(test-equal? "xor:return-type(signed(4), signed(8))"     (return-type _xor_ (t/signed   4) (t/signed   8)) (t/signed   8))
-(test-equal? "xor:return-type(signed(8), signed(4))"     (return-type _xor_ (t/signed   8) (t/signed   4)) (t/signed   8))
-(test-equal? "xor:return-type(signed(8), signed(8))"     (return-type _xor_ (t/signed   8) (t/signed   8)) (t/signed   8))
-(test-equal? "xor:return-type(signed(4), unsigned(8))"   (return-type _xor_ (t/signed   4) (t/unsigned 8)) (t/signed   9))
-(test-equal? "xor:return-type(unsigned(4), signed(8))"   (return-type _xor_ (t/unsigned 4) (t/signed   8)) (t/signed   8))
-(test-equal? "xor:return-type(signed(8), unsigned(4))"   (return-type _xor_ (t/signed   8) (t/unsigned 4)) (t/signed   8))
-(test-equal? "xor:return-type(unsigned(8), signed(4))"   (return-type _xor_ (t/unsigned 8) (t/signed   4)) (t/signed   9))
-(test-equal? "xor:return-type(unsigned(8), signed(8))"   (return-type _xor_ (t/unsigned 8) (t/signed   8)) (t/signed   9))
-(test-equal? "xor:return-type(signed(8), unsigned(8))"   (return-type _xor_ (t/signed   8) (t/unsigned 8)) (t/signed   9))
-(test-exn    "xor:return-type(symbol, unsigned(8))" exn:fail? (thunk (return-type _xor_ (t/symbol 'X)  (t/unsigned 8))))
-(test-exn    "xor:return-type(unsigned(8), symbol)" exn:fail? (thunk (return-type _xor_ (t/unsigned 8) (t/symbol 'X))))
+(test-return-type     (_xor_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned 8))
+(test-return-type     (_xor_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned 8))
+(test-return-type     (_xor_ (t/unsigned 8) (t/unsigned 8)) (t/unsigned 8))
+(test-return-type     (_xor_ (t/signed   4) (t/signed   8)) (t/signed   8))
+(test-return-type     (_xor_ (t/signed   8) (t/signed   4)) (t/signed   8))
+(test-return-type     (_xor_ (t/signed   8) (t/signed   8)) (t/signed   8))
+(test-return-type     (_xor_ (t/signed   4) (t/unsigned 8)) (t/signed   9))
+(test-return-type     (_xor_ (t/unsigned 4) (t/signed   8)) (t/signed   8))
+(test-return-type     (_xor_ (t/signed   8) (t/unsigned 4)) (t/signed   8))
+(test-return-type     (_xor_ (t/unsigned 8) (t/signed   4)) (t/signed   9))
+(test-return-type     (_xor_ (t/unsigned 8) (t/signed   8)) (t/signed   9))
+(test-return-type     (_xor_ (t/signed   8) (t/unsigned 8)) (t/signed   9))
+(test-return-type/exn (_xor_ (t/symbol 'X)  (t/unsigned 8)))
+(test-return-type/exn (_xor_ (t/unsigned 8) (t/symbol 'X)))
 
-; TODO test unsigned_width
-; TODO test signed_width
+; ------------------------------------------------------------------------------
+; unsigned_width
+; ------------------------------------------------------------------------------
+
+(test-function (unsigned_width 0)    1)
+(test-function (unsigned_width 1)    1)
+(test-function (unsigned_width 2)    2)
+(test-function (unsigned_width 3)    2)
+(test-function (unsigned_width 4)    3)
+(test-function (unsigned_width 128)  8)
+(test-function (unsigned_width 255)  8)
+(test-function (unsigned_width 256)  9)
+(test-function (unsigned_width -1)   1)
+(test-function (unsigned_width -2)   2)
+(test-function (unsigned_width -3)   3)
+(test-function (unsigned_width -4)   3)
+(test-function (unsigned_width -5)   4)
+(test-function (unsigned_width -127) 8)
+(test-function (unsigned_width -128) 8)
+(test-function (unsigned_width -129) 9)
+
+(for ([n (in-range -129 256)])
+  (test-return-type/strict (unsigned_width n)))
+
+(test-return-type/exn (unsigned_width (t/symbol 'X)))
+
+; ------------------------------------------------------------------------------
+; signed_width
+; ------------------------------------------------------------------------------
+
+(test-function (signed_width 0)    1)
+(test-function (signed_width 1)    2)
+(test-function (signed_width 2)    3)
+(test-function (signed_width 3)    3)
+(test-function (signed_width 4)    4)
+(test-function (signed_width 128)  9)
+(test-function (signed_width 255)  9)
+(test-function (signed_width 256)  10)
+(test-function (signed_width -1)   1)
+(test-function (signed_width -2)   2)
+(test-function (signed_width -3)   3)
+(test-function (signed_width -4)   3)
+(test-function (signed_width -5)   4)
+(test-function (signed_width -127) 8)
+(test-function (signed_width -128) 8)
+(test-function (signed_width -129) 9)
+
+(for ([n (in-range -129 256)])
+  (if (< n 0)
+    (test-return-type/strict (signed_width n))
+    (test-return-type/accept (signed_width n))))
+
+(test-return-type/exn (signed_width (t/symbol 'X)))
+
+; ------------------------------------------------------------------------------
 ; TODO test _==_
 ; TODO test _/=_
 ; TODO test _>_

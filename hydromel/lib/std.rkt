@@ -158,17 +158,17 @@
 (define-function unsigned_width min-unsigned-width
   (λ (ta)
     (~>> ta
-        (expect-integer 'unsigned_width 0)
-        t/abstract-integer-width
-        t/unsigned)))
+         (expect-integer 'unsigned_width 0)
+         t/abstract-integer-width
+         t/literal-type)))
 
 ; Returns the minimum width to encode a given number
 ; as an signed integer.
 (define-function signed_width min-signed-width
   (λ (ta)
     (match (expect-integer 'signed_width 0 ta)
-      [(t/signed   n) (t/unsigned n)]
-      [(t/unsigned n) (t/unsigned (add1 n))])))
+      [(t/signed   n) (t/literal-type n)]
+      [(t/unsigned n) (t/literal-type (add1 n))])))
 
 ; Comparison operations return integers 0 and 1.
 (define-function _==_
