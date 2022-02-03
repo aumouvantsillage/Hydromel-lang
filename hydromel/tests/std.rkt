@@ -7,6 +7,7 @@
 (require
   rackunit
   syntax/parse/define
+  data/pvector
   "../lib/std.rkt"
   "../lib/expander.rkt"
   (prefix-in t/ "../lib/types.rkt")
@@ -224,13 +225,41 @@
 (for ([n (in-range -129 256)])
   (if (< n 0)
     (test-return-type/strict (signed_width n))
-    (test-return-type/accept (signed_width n))))
+    (test-return-type/accept (signed_width n)))) ; TODO Add tests in strict mode for n ≥ 0
 
 (test-return-type/exn (signed_width (t/symbol 'X)))
 
 ; ------------------------------------------------------------------------------
-; TODO test _==_
-; TODO test _/=_
+; _==_
+; ------------------------------------------------------------------------------
+
+(test-function (_==_ 10 20) 0)
+(test-function (_==_ 10 10) 1)
+(test-function (_==_ 'X 10) 0)
+(test-function (_==_ 'X 'Y) 0)
+(test-function (_==_ 'X 'X) 1)
+(test-function (_==_ (pvector 1 2) 10) 0)
+(test-function (_==_ (pvector 1 2) (pvector 3 4)) 0)
+(test-function (_==_ (pvector 1 2) (pvector 1 2)) 1)
+
+(test-return-type (_==_ (t/any) (t/any)) (t/unsigned 1))
+
+; ------------------------------------------------------------------------------
+; _/=_
+; ------------------------------------------------------------------------------
+
+(test-function (_/=_ 10 20) 1)
+(test-function (_/=_ 10 10) 0)
+(test-function (_/=_ 'X 10) 1)
+(test-function (_/=_ 'X 'Y) 1)
+(test-function (_/=_ 'X 'X) 0)
+(test-function (_/=_ (pvector 1 2) 10) 1)
+(test-function (_/=_ (pvector 1 2) (pvector 3 4)) 1)
+(test-function (_/=_ (pvector 1 2) (pvector 1 2)) 0)
+
+(test-return-type (_/=_ (t/any) (t/any)) (t/unsigned 1))
+
+; ------------------------------------------------------------------------------
 ; TODO test _>_
 ; TODO test _<_
 ; TODO test _>=_
