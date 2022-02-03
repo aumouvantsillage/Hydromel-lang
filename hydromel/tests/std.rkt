@@ -260,10 +260,54 @@
 (test-return-type (_/=_ (t/any) (t/any)) (t/unsigned 1))
 
 ; ------------------------------------------------------------------------------
-; TODO test _>_
+; _>_
+; ------------------------------------------------------------------------------
+
+(test-function (_>_ -5 -5) 0)
+(test-function (_>_ -5 10) 0)
+(test-function (_>_ 10 -5) 1)
+(test-function (_>_ 10 10) 0)
+
+(test-return-type/exn (_>_ (t/symbol 'X)  (t/unsigned 8)))
+(test-return-type/exn (_>_ (t/unsigned 8) (t/symbol 'X)))
+
+; ------------------------------------------------------------------------------
 ; TODO test _<_
+; ------------------------------------------------------------------------------
+
+(test-function (_<_ -5 -5) 0)
+(test-function (_<_ -5 10) 1)
+(test-function (_<_ 10 -5) 0)
+(test-function (_<_ 10 10) 0)
+
+(test-return-type/exn (_<_ (t/symbol 'X)  (t/unsigned 8)))
+(test-return-type/exn (_<_ (t/unsigned 8) (t/symbol 'X)))
+
+; ------------------------------------------------------------------------------
 ; TODO test _>=_
+; ------------------------------------------------------------------------------
+
+(test-function (_>=_ -5 -5) 1)
+(test-function (_>=_ -5 10) 0)
+(test-function (_>=_ 10 -5) 1)
+(test-function (_>=_ 10 10) 1)
+
+(test-return-type/exn (_>=_ (t/symbol 'X)  (t/unsigned 8)))
+(test-return-type/exn (_>=_ (t/unsigned 8) (t/symbol 'X)))
+
+; ------------------------------------------------------------------------------
 ; TODO test _<=_
+; ------------------------------------------------------------------------------
+
+(test-function (_<=_ -5 -5) 1)
+(test-function (_<=_ -5 10) 1)
+(test-function (_<=_ 10 -5) 0)
+(test-function (_<=_ 10 10) 1)
+
+(test-return-type/exn (_<=_ (t/symbol 'X)  (t/unsigned 8)))
+(test-return-type/exn (_<=_ (t/unsigned 8) (t/symbol 'X)))
+
+; ------------------------------------------------------------------------------
 ; TODO test _+_
 ; TODO test _-_
 ; TODO test _*_
