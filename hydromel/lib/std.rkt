@@ -219,8 +219,9 @@
 
 (define-function _/_ quotient
   (λ (ta tb)
-    (expect-integers '/ ta tb)
-    ta))
+    (match (expect-integers '/ ta tb)
+      [(list ta^                     (t/unsigned _)) ta^]
+      [(list (t/abstract-integer na) (t/signed   _)) (t/signed (add1 na))])))
 
 (define-function _neg_
   (λ (a) (- a))

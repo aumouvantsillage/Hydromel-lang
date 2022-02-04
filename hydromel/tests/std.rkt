@@ -316,11 +316,116 @@
 (test-return-type/exn (_<=_ (t/unsigned 8) (t/symbol 'X)))
 
 ; ------------------------------------------------------------------------------
-; TODO test _+_
-; TODO test _-_
-; TODO test _*_
-; TODO test _/_
-; TODO test _neg_
+; _+_
+; ------------------------------------------------------------------------------
+
+(test-function (_+_ 10  200)  210)
+(test-function (_+_ 10 -200) -190)
+
+(test-return-type (_+_ (t/unsigned 4) (t/unsigned 4)) (t/unsigned 5))
+(test-return-type (_+_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned 9))
+(test-return-type (_+_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned 9))
+(test-return-type (_+_ (t/signed   4) (t/signed   4)) (t/signed   5))
+(test-return-type (_+_ (t/signed   4) (t/signed   8)) (t/signed   9))
+(test-return-type (_+_ (t/signed   8) (t/signed   4)) (t/signed   9))
+(test-return-type (_+_ (t/signed   4) (t/unsigned 4)) (t/signed   6))
+(test-return-type (_+_ (t/signed   4) (t/unsigned 8)) (t/signed  10))
+(test-return-type (_+_ (t/signed   8) (t/unsigned 4)) (t/signed   9))
+(test-return-type (_+_ (t/unsigned 4) (t/signed   4)) (t/signed   6))
+(test-return-type (_+_ (t/unsigned 4) (t/signed   8)) (t/signed   9))
+(test-return-type (_+_ (t/unsigned 8) (t/signed   4)) (t/signed  10))
+
+(test-return-type/exn (_+_ (t/symbol 'X)  (t/unsigned 8)))
+(test-return-type/exn (_+_ (t/unsigned 8) (t/symbol 'X)))
+
+; ------------------------------------------------------------------------------
+; _-_
+; ------------------------------------------------------------------------------
+
+(test-function (_-_ 10  200) -190)
+(test-function (_-_ 10 -200)  210)
+
+(test-return-type (_-_ (t/unsigned 4) (t/unsigned 4)) (t/unsigned 5))
+(test-return-type (_-_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned 9))
+(test-return-type (_-_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned 9))
+(test-return-type (_-_ (t/signed   4) (t/signed   4)) (t/signed   5))
+(test-return-type (_-_ (t/signed   4) (t/signed   8)) (t/signed   9))
+(test-return-type (_-_ (t/signed   8) (t/signed   4)) (t/signed   9))
+(test-return-type (_-_ (t/signed   4) (t/unsigned 4)) (t/signed   6))
+(test-return-type (_-_ (t/signed   4) (t/unsigned 8)) (t/signed  10))
+(test-return-type (_-_ (t/signed   8) (t/unsigned 4)) (t/signed   9))
+(test-return-type (_-_ (t/unsigned 4) (t/signed   4)) (t/signed   6))
+(test-return-type (_-_ (t/unsigned 4) (t/signed   8)) (t/signed   9))
+(test-return-type (_-_ (t/unsigned 8) (t/signed   4)) (t/signed  10))
+
+(test-return-type/exn (_-_ (t/symbol 'X)  (t/unsigned 8)))
+(test-return-type/exn (_-_ (t/unsigned 8) (t/symbol 'X)))
+
+; ------------------------------------------------------------------------------
+; _*_
+; ------------------------------------------------------------------------------
+
+(test-function (_*_ 10  200)  2000)
+(test-function (_*_ 10 -200) -2000)
+
+(test-return-type (_*_ (t/unsigned 4) (t/unsigned 4)) (t/unsigned  8))
+(test-return-type (_*_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned 12))
+(test-return-type (_*_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned 12))
+(test-return-type (_*_ (t/signed   4) (t/signed   4)) (t/signed    8))
+(test-return-type (_*_ (t/signed   4) (t/signed   8)) (t/signed   12))
+(test-return-type (_*_ (t/signed   8) (t/signed   4)) (t/signed   12))
+(test-return-type (_*_ (t/signed   4) (t/unsigned 4)) (t/signed    8))
+(test-return-type (_*_ (t/signed   4) (t/unsigned 8)) (t/signed   12))
+(test-return-type (_*_ (t/signed   8) (t/unsigned 4)) (t/signed   12))
+(test-return-type (_*_ (t/unsigned 4) (t/signed   4)) (t/signed    8))
+(test-return-type (_*_ (t/unsigned 4) (t/signed   8)) (t/signed   12))
+(test-return-type (_*_ (t/unsigned 8) (t/signed   4)) (t/signed   12))
+
+(test-return-type/exn (_*_ (t/symbol 'X)  (t/unsigned 8)))
+(test-return-type/exn (_*_ (t/unsigned 8) (t/symbol 'X)))
+
+; ------------------------------------------------------------------------------
+; _/_
+; ------------------------------------------------------------------------------
+
+(test-function (_/_  200   10)  20)
+(test-function (_/_ -200   10) -20)
+(test-function (_/_  200  -10) -20)
+(test-function (_/_   10  200)   0)
+(test-function (_/_   10 -200)   0)
+(test-function (_/_  -10  200)   0)
+(test-function (_/_  -10  200)   0)
+
+(test-return-type (_/_ (t/unsigned 4) (t/unsigned 4)) (t/unsigned  4))
+(test-return-type (_/_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned  4))
+(test-return-type (_/_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned  8))
+(test-return-type (_/_ (t/signed   4) (t/signed   4)) (t/signed    5))
+(test-return-type (_/_ (t/signed   4) (t/signed   8)) (t/signed    5))
+(test-return-type (_/_ (t/signed   8) (t/signed   4)) (t/signed    9))
+(test-return-type (_/_ (t/signed   4) (t/unsigned 4)) (t/signed    4))
+(test-return-type (_/_ (t/signed   4) (t/unsigned 8)) (t/signed    4))
+(test-return-type (_/_ (t/signed   8) (t/unsigned 4)) (t/signed    8))
+(test-return-type (_/_ (t/unsigned 4) (t/signed   4)) (t/signed    5))
+(test-return-type (_/_ (t/unsigned 4) (t/signed   8)) (t/signed    5))
+(test-return-type (_/_ (t/unsigned 8) (t/signed   4)) (t/signed    9))
+
+(test-return-type/exn (_/_ (t/symbol 'X)  (t/unsigned 8)))
+(test-return-type/exn (_/_ (t/unsigned 8) (t/symbol 'X)))
+
+; ------------------------------------------------------------------------------
+; _neg_
+; ------------------------------------------------------------------------------
+
+(test-function (_neg_   0)   0)
+(test-function (_neg_  10) -10)
+(test-function (_neg_ -10)  10)
+
+(test-return-type (_neg_ (t/unsigned 4)) (t/signed  5))
+(test-return-type (_neg_ (t/signed   4)) (t/signed  5))
+
+(test-return-type/exn (_neg_ (t/symbol 'X)))
+
+; ------------------------------------------------------------------------------
 ; TODO test _<<_
 ; TODO test _>>_
 ; TODO test _range_
