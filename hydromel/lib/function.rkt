@@ -10,7 +10,7 @@
     (prefix-in meta/ "meta.rkt")
     racket/syntax)
   (only-in "types.rkt"
-    static-data
+    static-data/literal
     static-data?
     static-data-value
     none))
@@ -63,12 +63,12 @@
   [(_ no-cast name fn-name:id rt-fn)
    #'(begin
        (declare-function name fn-name)
-       (define-return-type fn-name rt-fn))]
+       (define-return-type no-cast fn-name rt-fn))]
 
   [(_ cast name fn-name:id rt-fn)
    #'(begin
        (declare-function/cast name fn-name)
-       (define-return-type fn-name rt-fn))]
+       (define-return-type cast fn-name rt-fn))]
 
   [(_ cast? name fn rt-fn)
    #:with fn-name (function-impl-name #'name)
@@ -80,30 +80,43 @@
   [(_ cast? name fn)
    #'(do-define-function cast? name fn (const (none)))])
 
-(define-syntax-parse-rule (define-return-type name fn)
+(define-syntax-parse-rule (define-return-type cast? name fn)
   #:with rt-name (function-return-type-name #'name)
   (begin
       (provide rt-name)
-      (define rt-name (return-type-function name fn))))
+      (define rt-name (return-type-function cast? name fn))))
 
 (define-syntax-parser return-type-function
   #:literals [λ const]
-  [(_ _ (~and fn (const body ...)))
+  #:datum-literals [cast no-cast]
+  [(_ _ _ (~and fn (const body ...)))
    #'fn]
 
-  [(_ name (λ (arg:id ...) body ...))
+  [(_ no-cast name (λ (arg:id ...) body ...))
    #'(λ (arg ...)
-       (define raw (let () body ...))
        (if (and (static-data? arg) ...)
-         (static-data (name (static-data-value arg) ...) raw)
-         raw))]
+         (static-data/literal (name (static-data-value arg) ...))
+         (let () body ...)))]
 
-  [(_ name (λ args:id body ...))
+  [(_ cast name (λ (arg:id ...) body ...))
+   #'(λ (arg ...)
+       (define t (let () body ...))
+       (if (and (static-data? arg) ...)
+         (static-data/literal (t (name (static-data-value arg) ...)))
+         t))]
+
+  [(_ no-cast name (λ args:id body ...))
    #'(λ args
-       (define raw (let () body ...))
        (if (andmap static-data? args)
-         (static-data (apply name (map static-data-value args)) raw)
-         raw))]
+         (static-data/literal (apply name (map static-data-value args)))
+         (let () body ...)))]
 
-  [(_ name (fn-name:id arg ...))
-   #'(return-type-function name (λ (arg ...) (fn-name arg ...)))])
+  [(_ cast name (λ args:id body ...))
+   #'(λ args
+       (define t (let () body ...))
+       (if (andmap static-data? args)
+         (static-data/literal (t (apply name (map static-data-value args))))
+         t))]
+
+  [(_ cast? name (fn-name:id arg ...))
+   #'(return-type-function cast? name (λ (arg ...) (fn-name arg ...)))])

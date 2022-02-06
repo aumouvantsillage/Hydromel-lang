@@ -29,7 +29,7 @@
   [(_ name arg ...)
    (match-define (struct meta/function (fn-name cast?)) (syntax-local-value #'name))
    (if cast?
-     #`(let ([rt (call:return-type name (t/literal-type arg) ...)])
+     #`(let ([rt (call:return-type name (t/static-data/literal arg) ...)])
          (rt (#,fn-name arg ...)))
      #`(#,fn-name arg ...))])
 
@@ -43,12 +43,12 @@
 (define-syntax-rule (test-return-type/accept (name arg ...))
   (test-true (format "~a:return-type~a" 'name '(arg ...))
              (t/<: (t/literal-type (call name arg ...))
-                   (call:return-type name (t/literal-type arg) ...))))
+                   (call:return-type name (t/static-data/literal arg) ...))))
 
 ; Test that literal-type(f(x ...)) = f:return-type(literal-type(x) ...)
 (define-syntax-rule (test-return-type/strict (name arg ...))
   (test-equal? (format "~a:return-type~a" 'name '(arg ...))
-               (call:return-type name (t/literal-type arg) ...)
+               (t/normalize-type (call:return-type name (t/static-data/literal arg) ...))
                (t/literal-type (call name arg ...))))
 
 ; ------------------------------------------------------------------------------
@@ -463,9 +463,6 @@
 (test-function (_>>_ -177  4)   -12)
 (test-function (_>>_ -177 -2)  -708)
 
-;010110001
-;101001111
-
 (test-return-type (_>>_ (t/unsigned 4) (t/unsigned 4)) (t/unsigned   4))
 (test-return-type (_>>_ (t/unsigned 4) (t/unsigned 8)) (t/unsigned   4))
 (test-return-type (_>>_ (t/unsigned 8) (t/unsigned 4)) (t/unsigned   8))
@@ -483,8 +480,18 @@
 (test-return-type/exn (_>>_ (t/unsigned 8) (t/symbol 'X)))
 
 ; ------------------------------------------------------------------------------
-; TODO test _range_
-; TODO test _slice_
+; _slice_
+; ------------------------------------------------------------------------------
+
+(test-function (_slice_  #xAB03 11 8) #xB)
+(test-function (_slice_  #xAB03 12 8) #xB)
+(test-function (_slice_ #x-AB03 11 8) #x4)
+(test-function (_slice_ #x-AB03 12 8) #x-C)
+
+(test-return-type (_slice_ (t/unsigned 16) (t/static-data/literal 11) (t/static-data/literal 8)) (t/unsigned 4))
+(test-return-type (_slice_ (t/signed 16)   (t/static-data/literal 11) (t/static-data/literal 8)) (t/signed 4))
+
+; ------------------------------------------------------------------------------
 ; TODO test _concat_
 ; TODO test _array_
 ; TODO test _record_
@@ -492,3 +499,4 @@
 ; TODO test _set_nth_
 ; TODO test _field_
 ; TODO test _cast_
+; TODO test _range_
