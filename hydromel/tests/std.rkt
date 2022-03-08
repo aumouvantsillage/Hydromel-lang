@@ -489,10 +489,38 @@
 (test-function (_slice_ #x-AB03 12 8) #x-C)
 
 (test-return-type (_slice_ (t/unsigned 16) (t/static-data/literal 11) (t/static-data/literal 8)) (t/unsigned 4))
-(test-return-type (_slice_ (t/signed 16)   (t/static-data/literal 11) (t/static-data/literal 8)) (t/signed 4))
+(test-return-type (_slice_ (t/signed   16) (t/static-data/literal 11) (t/static-data/literal 8)) (t/signed 4))
 
 ; ------------------------------------------------------------------------------
-; TODO test _concat_
+; _concat_
+; ------------------------------------------------------------------------------
+
+(test-function (_concat_ #xA (t/unsigned 4) #xB (t/unsigned 8) #xFC (t/unsigned 8)) #xA0BFC)
+(test-function (_concat_ #xA (t/signed   4) #xB (t/unsigned 8) #xFC (t/unsigned 8)) #x-5F404)
+(test-function (_concat_ #xA (t/unsigned 4) #xB (t/signed   8) #xFC (t/signed 8))   #xA0BFC)
+(test-function (_concat_ #xA (t/signed   4) #xB (t/signed   8) #xFC (t/signed 8))   #x-5F404)
+
+(test-return-type (_concat_ (t/unsigned 1) (t/static-data/literal (t/unsigned 4))
+                            (t/unsigned 2) (t/static-data/literal (t/unsigned 5))
+                            (t/unsigned 3) (t/static-data/literal (t/unsigned 6)))
+                  (t/unsigned 15))
+
+(test-return-type (_concat_ (t/unsigned 1) (t/static-data/literal (t/signed   4))
+                            (t/unsigned 2) (t/static-data/literal (t/unsigned 5))
+                            (t/unsigned 3) (t/static-data/literal (t/unsigned 6)))
+                  (t/signed 15))
+
+(test-return-type (_concat_ (t/unsigned 1) (t/static-data/literal (t/unsigned 4))
+                            (t/unsigned 2) (t/static-data/literal (t/signed   5))
+                            (t/unsigned 3) (t/static-data/literal (t/signed   6)))
+                  (t/unsigned 15))
+
+(test-return-type (_concat_ (t/unsigned 1) (t/static-data/literal (t/signed 4))
+                            (t/unsigned 2) (t/static-data/literal (t/signed 5))
+                            (t/unsigned 3) (t/static-data/literal (t/signed 6)))
+                  (t/signed 15))
+
+; ------------------------------------------------------------------------------
 ; TODO test _array_
 ; TODO test _record_
 ; TODO test _nth_
