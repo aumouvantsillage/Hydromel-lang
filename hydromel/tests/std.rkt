@@ -19,6 +19,9 @@
 (define-syntax-parse-rule (test-function (name arg ...) res)
   (test-equal? (format "~a~a" 'name '(arg ...)) (call name arg ...) res))
 
+(define-syntax-parse-rule (test-function/exn (name arg ...))
+  (test-exn (format "~a~a" 'name '(arg ...)) exn:fail? (thunk (call name arg ...))))
+
 (define-syntax-parse-rule (test-return-type (name arg ...) res)
   (test-equal? (format "~a:return-type~a" 'name '(arg ...)) (call:return-type name arg ...) res))
 
@@ -521,10 +524,74 @@
                   (t/signed 15))
 
 ; ------------------------------------------------------------------------------
-; TODO test _array_
-; TODO test _record_
-; TODO test _nth_
-; TODO test _set_nth_
-; TODO test _field_
+; _array_
+; ------------------------------------------------------------------------------
+
+(test-function (_array_ 10 20 30) (pvector 10 20 30))
+
+(test-return-type (_array_ (t/unsigned 1) (t/unsigned 4) (t/unsigned 8))
+                  (t/array 3 (t/union (list (t/unsigned 1) (t/unsigned 4) (t/unsigned 8)))))
+
+; ------------------------------------------------------------------------------
+; _record_
+; ------------------------------------------------------------------------------
+
+(test-function (_record_ 'x 12 'y 50) #hash((x . 12) (y . 50)))
+
+(test-return-type (_record_ (t/static-data/literal 'x) (t/unsigned 4) (t/static-data/literal 'y) (t/unsigned 6))
+                  (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 6))))
+
+(test-return-type/exn (_record_ (t/unsigned 4) (t/unsigned 8)))
+
+; ------------------------------------------------------------------------------
+; _nth_
+; ------------------------------------------------------------------------------
+
+(test-function (_nth_ (pvector 10 20 30) 0) 10)
+(test-function (_nth_ (pvector 10 20 30) 1) 20)
+(test-function (_nth_ (pvector 10 20 30) 2) 30)
+
+(test-function/exn (_nth_ (pvector 10 20 30) -1))
+(test-function/exn (_nth_ (pvector 10 20 30) 3))
+(test-function/exn (_nth_ (pvector 10 20 30) 'x))
+
+(test-return-type (_nth_ (t/array 3 (t/unsigned 4)) (t/unsigned 2)) (t/unsigned 4))
+(test-return-type/exn (_nth_ (t/array 3 (t/unsigned 4)) (t/symbol 'x)))
+
+(test-return-type/exn (_nth_ (t/unsigned 8) (t/unsigned 4)))
+(test-return-type/exn (_nth_ (t/unsigned 8) (t/symbol 'x)))
+
+; ------------------------------------------------------------------------------
+; _set_nth_
+; ------------------------------------------------------------------------------
+
+(test-function (_set_nth_ (pvector 10 20 30) 0 55) (pvector 55 20 30))
+(test-function (_set_nth_ (pvector 10 20 30) 1 55) (pvector 10 55 30))
+(test-function (_set_nth_ (pvector 10 20 30) 2 55) (pvector 10 20 55))
+
+(test-function/exn (_set_nth_ (pvector 10 20 30) -1 55))
+(test-function/exn (_set_nth_ (pvector 10 20 30)  3 55))
+(test-function/exn (_set_nth_ (pvector 10 20 30) 'x 55))
+
+(test-return-type (_set_nth_ (t/array 3 (t/unsigned 4)) (t/unsigned 2) (t/unsigned 3)) (t/array 3 (t/unsigned 4)))
+(test-return-type/exn (_set_nth_ (t/array 3 (t/unsigned 4)) (t/unsigned 2) (t/unsigned 5)))
+(test-return-type/exn (_set_nth_ (t/array 3 (t/unsigned 4)) (t/unsigned 2) (t/symbol 'x)))
+(test-return-type/exn (_set_nth_ (t/array 3 (t/unsigned 4)) (t/symbol 'x) (t/unsigned 3)))
+
+; ------------------------------------------------------------------------------
+; _field_
+; ------------------------------------------------------------------------------
+
+(test-function (_field_ (hash 'x 10 'y 20) 'x) 10)
+(test-function (_field_ (hash 'x 10 'y 20) 'y) 20)
+(test-function/exn (_field_ (hash 'x 10 'y 20) 'z))
+
+(test-return-type (_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8))) (t/static-data/literal 'x)) (t/unsigned 4))
+(test-return-type (_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8))) (t/static-data/literal 'y)) (t/unsigned 8))
+(test-return-type/exn (_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8))) (t/static-data/literal 'z)))
+(test-return-type/exn (_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8))) (t/unsigned 12)))
+(test-return-type/exn (_field_ (t/unsigned 8) (t/static-data/literal 'z)))
+
+; ------------------------------------------------------------------------------
 ; TODO test _cast_
 ; TODO test _range_

@@ -46,6 +46,10 @@
 (define (expect-type name pos t)
   (expect-type* t/subtype? "type" name pos t))
 
+(define (expect-subtype name pos t u)
+  (define u^ (t/normalize-type u))
+  (expect-type* (λ (v) (t/<: v u)) "subtype" name pos t))
+
 ; ------------------------------------------------------------------------------
 ; Conditionals.
 ; ------------------------------------------------------------------------------
@@ -327,9 +331,9 @@
 
 (define-function _set_nth_ set-nth
   (λ (ta tb tc)
-    (expect-array   'nth 0 ta)
-    (expect-integer 'nth 1 tb)
-    ; TODO check the type of tc
+    (expect-array   'set_nth 0 ta)
+    (expect-integer 'set_nth 1 tb)
+    (expect-subtype 'set_nth 2 tc (t/array-elt-type ta))
     ta))
 
 (define-function _field_ dict-ref
