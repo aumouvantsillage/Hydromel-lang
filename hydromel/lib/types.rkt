@@ -143,6 +143,9 @@
            (signed   (num/min-signed-width   x)))]
         [(pvector? x)
          (array (length x) (union (for/list ([v x]) (literal-type v))))]
+        [(hash? x)
+         (record (for/hash ([(k v) (in-dict x)])
+                   (values k (literal-type v))))]
         [else
          (error "Cannot determine the type of literal" x)]))
 
