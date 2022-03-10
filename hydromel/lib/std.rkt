@@ -344,6 +344,16 @@
     (dict-ref (t/record-fields ta^) field-name
       (thunk (error "Unknown field" field-name)))))
 
+(define-function _set_field_ dict-set
+  (λ (ta tb tc)
+    (define ta^ (expect-record 'set_field 0 ta))
+    (define tb^ (expect-symbol 'set_field 1 tb))
+    (define field-name (t/symbol-value tb^))
+    (define tv (dict-ref (t/record-fields ta^) field-name
+                 (thunk (error "Unknown field" field-name))))
+    (expect-subtype 'set_field 2 tc tv)
+    ta))
+
 ; ------------------------------------------------------------------------------
 ; Type operations.
 ; ------------------------------------------------------------------------------

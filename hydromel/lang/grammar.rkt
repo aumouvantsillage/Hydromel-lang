@@ -107,9 +107,9 @@ statement-block:
 @maybe-prefix-expr: prefix-expr | maybe-cast-expr
 @maybe-cast-expr:   cast-expr   | simple-expr
 
-; TODO support slice-expr and field-expr
+; TODO support slice-expr
 assign-expr:
-  indexed-array-expr /"<-" maybe-cond-expr
+  (indexed-array-expr | field-expr) /"<-" maybe-cond-expr
 
 @cond-expr:
   if-expr |

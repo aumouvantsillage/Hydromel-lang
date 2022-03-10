@@ -589,8 +589,33 @@
 (test-return-type (_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8))) (t/static-data/literal 'x)) (t/unsigned 4))
 (test-return-type (_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8))) (t/static-data/literal 'y)) (t/unsigned 8))
 (test-return-type/exn (_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8))) (t/static-data/literal 'z)))
-(test-return-type/exn (_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8))) (t/unsigned 12)))
-(test-return-type/exn (_field_ (t/unsigned 8) (t/static-data/literal 'z)))
+(test-return-type/exn (_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8))) (t/static-data/literal 12)))
+(test-return-type/exn (_field_ (t/any) (t/static-data/literal 'z)))
+
+; ------------------------------------------------------------------------------
+; _set_field_
+; ------------------------------------------------------------------------------
+
+(test-function (_set_field_ (hash 'x 10 'y 20) 'x 55) (hash 'x 55 'y 20))
+(test-function (_set_field_ (hash 'x 10 'y 20) 'y 55) (hash 'x 10 'y 55))
+; (test-function/exn (_set_field_ (hash 'x 10 'y 20) 'z 55))
+
+(test-return-type (_set_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8)))
+                               (t/static-data/literal 'x) (t/unsigned 3))
+                  (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8))))
+(test-return-type (_set_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8)))
+                               (t/static-data/literal 'y) (t/unsigned 7))
+                  (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8))))
+(test-return-type/exn (_set_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8)))
+                                   (t/static-data/literal 'z) (t/unsigned 3)))
+(test-return-type/exn (_set_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8)))
+                                   (t/static-data/literal 'x) (t/unsigned 5)))
+(test-return-type/exn (_set_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8)))
+                                   (t/static-data/literal 'y) (t/unsigned 9)))
+(test-return-type/exn (_set_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8)))
+                                   (t/static-data/literal 12) (t/unsigned 3)))
+(test-return-type/exn (_set_field_ (t/any)
+                                   (t/static-data/literal 'x) (t/unsigned 3)))
 
 ; ------------------------------------------------------------------------------
 ; TODO test _cast_
