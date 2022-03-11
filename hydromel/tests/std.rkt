@@ -618,5 +618,51 @@
                                    (t/static-data/literal 'x) (t/unsigned 3)))
 
 ; ------------------------------------------------------------------------------
-; TODO test _cast_
-; TODO test _range_
+; _cast_
+; ------------------------------------------------------------------------------
+
+(test-function (_cast_ (t/unsigned 8) 36) 36)
+(test-function (_cast_ (t/unsigned 4) 36) 4)
+(test-function (_cast_ (t/unsigned 8) -36) 220)
+(test-function (_cast_ (t/signed 8) 36) 36)
+(test-function (_cast_ (t/signed 3) 36) -4)
+(test-function (_cast_ (t/signed 8) -36) -36)
+(test-function (_cast_ (t/any) 'x) 'x)
+(test-function/exn (_cast_ (t/signed 8) 'x))
+
+(test-function (_cast_ (t/signed #f) 36) -28)
+(test-function (_cast_ (t/signed #f) -36) -36)
+(test-function (_cast_ (t/unsigned #f) 36) 36)
+(test-function (_cast_ (t/unsigned #f) -36) 92)
+
+(test-return-type (_cast_ (t/static-data/literal (t/unsigned 8)) (t/unsigned 5)) (t/unsigned 8))
+(test-return-type (_cast_ (t/static-data/literal (t/unsigned 4)) (t/unsigned 5)) (t/unsigned 4))
+(test-return-type (_cast_ (t/static-data/literal (t/unsigned 8)) (t/signed 5)) (t/unsigned 8))
+(test-return-type (_cast_ (t/static-data/literal (t/signed 8)) (t/unsigned 5)) (t/signed 8))
+(test-return-type (_cast_ (t/static-data/literal (t/signed 3)) (t/unsigned 5)) (t/signed 3))
+(test-return-type (_cast_ (t/static-data/literal (t/signed 8)) (t/signed 5)) (t/signed 8))
+(test-return-type (_cast_ (t/static-data/literal (t/unsigned #f)) (t/unsigned 5)) (t/unsigned 5))
+(test-return-type (_cast_ (t/static-data/literal (t/unsigned #f)) (t/signed 5)) (t/unsigned 5))
+(test-return-type (_cast_ (t/static-data/literal (t/signed #f)) (t/unsigned 5)) (t/signed 5))
+(test-return-type (_cast_ (t/static-data/literal (t/signed #f)) (t/signed 5)) (t/signed 5))
+
+(test-return-type/exn (_cast_ (t/static-data/literal 40) (t/unsigned 5)))
+(test-return-type/exn (_cast_ (t/static-data/literal (t/unsigned #f)) (t/any)))
+(test-return-type/exn (_cast_ (t/static-data/literal (t/signed #f)) (t/any)))
+
+; ------------------------------------------------------------------------------
+; _range_
+; ------------------------------------------------------------------------------
+
+(test-function (_range_ 0 3) (range 4))
+(test-function (_range_ -3 3) (range -3 4))
+(test-function (_range_ 3 0) (range 3 -1 -1))
+(test-function (_range_ 3 -3) (range 3 -4 -1))
+
+(test-return-type (_range_ (t/unsigned 4) (t/unsigned 8)) (t/range (t/unsigned 8)))
+(test-return-type (_range_ (t/signed   4) (t/unsigned 8)) (t/range (t/signed   9)))
+(test-return-type (_range_ (t/signed   4) (t/signed   8)) (t/range (t/signed   8)))
+
+(test-return-type/exn (_range_ (t/any)        (t/unsigned 8)))
+(test-return-type/exn (_range_ (t/unsigned 8) (t/any)))
+(test-return-type/exn (_range_ (t/any)        (t/any)))
