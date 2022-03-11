@@ -66,8 +66,37 @@
 (test-return-type/exn (int->bool (t/symbol 'X)))
 
 ; ------------------------------------------------------------------------------
-; TODO _if_
+; _if_
 ; ------------------------------------------------------------------------------
+
+(test-function (_if_ 1 10 20) 10)
+(test-function (_if_ 0 10 20) 20)
+(test-function (_if_ 8 10 20) 10)
+
+(test-function (_if_ 1 10 1 20 1 30 40) 10)
+(test-function (_if_ 0 10 1 20 1 30 40) 20)
+(test-function (_if_ 0 10 0 20 1 30 40) 30)
+(test-function (_if_ 0 10 0 20 0 30 40) 40)
+
+(test-return-type (_if_ (t/static-data/literal 1) (t/unsigned 4) (t/unsigned 8)) (t/unsigned 4))
+(test-return-type (_if_ (t/static-data/literal 0) (t/unsigned 4) (t/unsigned 8)) (t/unsigned 8))
+(test-return-type (_if_ (t/unsigned 1) (t/unsigned 4) (t/unsigned 8)) (t/union (list (t/unsigned 4) (t/unsigned 8))))
+
+(test-return-type (_if_ (t/static-data/literal 1) (t/unsigned 4)
+                        (t/static-data/literal 1) (t/unsigned 8)
+                                                  (t/unsigned 12)) (t/unsigned 4))
+(test-return-type (_if_ (t/static-data/literal 1) (t/unsigned 4)
+                        (t/unsigned 1)            (t/unsigned 8)
+                                                  (t/unsigned 12)) (t/unsigned 4))
+(test-return-type (_if_ (t/static-data/literal 0) (t/unsigned 4)
+                        (t/static-data/literal 1) (t/unsigned 8)
+                                                  (t/unsigned 12)) (t/unsigned 8))
+(test-return-type (_if_ (t/static-data/literal 0) (t/unsigned 4)
+                        (t/static-data/literal 0) (t/unsigned 8)
+                                                  (t/unsigned 12)) (t/unsigned 12))
+(test-return-type (_if_ (t/static-data/literal 0) (t/unsigned 4)
+                        (t/unsigned 1)            (t/unsigned 8)
+                                                  (t/unsigned 12)) (t/union (list (t/unsigned 8) (t/unsigned 12))))
 
 ; ------------------------------------------------------------------------------
 ; TODO _case_
