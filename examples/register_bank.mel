@@ -12,6 +12,6 @@ component register_bank(T : type, LENGTH : natural)
 
     signal r : array(LENGTH, T) =
         register([0 for n in 0..LENGTH-1],
-                 r[addr] <- d when write)
+                 r <- [addr => d] when write)
     q = r[addr]
 end

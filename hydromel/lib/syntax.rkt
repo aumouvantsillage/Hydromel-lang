@@ -127,7 +127,7 @@
 
   (define-syntax-class call-expr
     #:literals [call-expr or-expr and-expr rel-expr add-expr mult-expr shift-expr
-                if-expr case-expr prefix-expr range-expr slice-expr concat-expr array-expr
+                if-expr case-expr prefix-expr range-expr slice-expr concat-expr array-expr array-assoc-expr
                 indexed-array-expr field-expr cast-expr assign-expr record-type record-expr -]
     #:attributes [fn-name (arg 1)]
     (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr shift-expr) left op right)
@@ -158,11 +158,11 @@
     (pattern (indexed-array-expr expr index)
       #:attr (arg 1) (list #'expr #'index)
       #:attr fn-name #'_nth_)
-    (pattern (assign-expr (indexed-array-expr expr index) right)
-      #:attr (arg 1) (list #'expr #'index #'right)
+    (pattern (assign-expr left (array-assoc-expr nv ...))
+      #:attr (arg 1) (cons #'left (attribute nv))
       #:attr fn-name #'_set_nth_)
-    (pattern (assign-expr (field-expr expr field-name) right)
-      #:attr (arg 1) (list #'expr #'field-name #'right)
+    (pattern (assign-expr left (record-expr kv ...))
+      #:attr (arg 1) (cons #'left (attribute kv))
       #:attr fn-name #'_set_field_)
     (pattern (concat-expr arg ...)
       #:attr fn-name #'_concat_)

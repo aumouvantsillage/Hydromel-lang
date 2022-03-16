@@ -90,13 +90,13 @@ statement-block:
 
 ; Expressions ------------------------------------------------------------------
 
-@expression: maybe-assign-expr
+@expression: maybe-cond-expr
 
 @expression-list:
   expression (/"," expression)* /","?
 
-@maybe-assign-expr: assign-expr | maybe-cond-expr
-@maybe-cond-expr:   cond-expr   | maybe-or-expr
+@maybe-cond-expr:   cond-expr   | maybe-assign-expr
+@maybe-assign-expr: assign-expr | maybe-or-expr
 @maybe-or-expr:     or-expr     | maybe-and-expr
 @maybe-and-expr:    and-expr    | maybe-rel-expr
 @maybe-rel-expr:    rel-expr    | maybe-range-expr
@@ -106,10 +106,6 @@ statement-block:
 @maybe-shift-expr:  shift-expr  | maybe-prefix-expr
 @maybe-prefix-expr: prefix-expr | maybe-cast-expr
 @maybe-cast-expr:   cast-expr   | simple-expr
-
-; TODO support slice-expr
-assign-expr:
-  (indexed-array-expr | field-expr) /"<-" maybe-cond-expr
 
 @cond-expr:
   if-expr |
@@ -136,6 +132,10 @@ case-expr:
 
 choices:
   expression-list
+
+; TODO support slice-expr
+assign-expr:
+  simple-expr /"<-" (array-assoc-expr | record-expr)
 
 or-expr:     maybe-or-expr  ("or" | "xor") maybe-and-expr
 and-expr:    maybe-and-expr "and" maybe-rel-expr
@@ -190,6 +190,12 @@ array-expr:
 
 array-for-expr:
   /"[" expression /"for" iterator-list /"]"
+
+array-assoc-expr:
+  /"[" @array-assoc (/"," @array-assoc )* /","? /"]"
+
+array-assoc:
+  expression /"=>" expression
 
 record-expr:
   /"(" @field-assoc (/"," @field-assoc )* /","? /")"
