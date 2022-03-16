@@ -51,8 +51,7 @@
     [(vector elt ...)
      ; For each index and each element of the vector...
      (for/fold ([res parent])
-               ([v (in-list elt)]
-                [n (in-naturals)])
+               ([(v n) (in-indexed elt)])
        ; Add the index to the current path.
        (define index (format "[~a]" n))
        (define path^ (if path (string-append path index) index))

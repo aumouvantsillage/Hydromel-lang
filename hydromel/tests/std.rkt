@@ -624,6 +624,7 @@
 (test-function (_set_nth_ (pvector 10 20 30) 0 55) (pvector 55 20 30))
 (test-function (_set_nth_ (pvector 10 20 30) 1 55) (pvector 10 55 30))
 (test-function (_set_nth_ (pvector 10 20 30) 2 55) (pvector 10 20 55))
+(test-function (_set_nth_ (pvector 10 20 30) 0 55 2 66) (pvector 55 20 66))
 
 (test-function/exn (_set_nth_ (pvector 10 20 30) -1 55))
 (test-function/exn (_set_nth_ (pvector 10 20 30)  3 55))
@@ -654,7 +655,7 @@
 
 (test-function (_set_field_ (hash 'x 10 'y 20) 'x 55) (hash 'x 55 'y 20))
 (test-function (_set_field_ (hash 'x 10 'y 20) 'y 55) (hash 'x 10 'y 55))
-; (test-function/exn (_set_field_ (hash 'x 10 'y 20) 'z 55))
+(test-function (_set_field_ (hash 'x 10 'y 20 'z 30) 'x 55 'z 66) (hash 'x 55 'y 20 'z 66))
 
 (test-return-type (_set_field_ (t/record (hash 'x (t/unsigned 4) 'y (t/unsigned 8)))
                                (t/static-data/literal 'x) (t/unsigned 3))

@@ -349,14 +349,23 @@
     (dict-ref (t/record-fields ta^) field-name
       (thunk (error "Unknown field" field-name)))))
 
-(define-function _set_field_ dict-set
-  (λ (ta tb tc)
-    (define ta^ (expect-record 'set_field 0 ta))
-    (define tb^ (expect-symbol 'set_field 1 tb))
-    (define field-name (t/symbol-value tb^))
-    (define tv (dict-ref (t/record-fields ta^) field-name
-                 (thunk (error "Unknown field" field-name))))
-    (expect-subtype 'set_field 2 tc tv)
+(define-function _set_field_
+  (λ args
+    (let loop ([res (first args)] [kvs (rest args)])
+      (if (empty? kvs)
+        res
+        (loop (dict-set res (first kvs) (second kvs)) (rest (rest kvs))))))
+  (λ ts
+    (define ta (expect-record 'set_field 0 (first ts)))
+    (let loop ([n 1] [lst (rest ts)])
+      (unless (empty? lst)
+        (match-define (list tb tc ts^ ...) lst)
+        (define tb^ (expect-symbol 'set_field n tb))
+        (define field-name (t/symbol-value tb^))
+        (define tv (dict-ref (t/record-fields ta) field-name
+                     (thunk (error "Unknown field" field-name))))
+        (expect-subtype 'set_field (add1 n) tc tv)
+        (loop (+ 2 n) ts^)))
     ta))
 
 ; ------------------------------------------------------------------------------
