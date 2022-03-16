@@ -288,14 +288,14 @@
   (λ vs
     (apply unsigned-concat
       (let loop ([res empty] [lst vs])
-        (if (empty? lst)
-          res
-          (match-let ([(list h ... v t) lst])
-            (define l (~>> t
-                        (expect-integer 'concat (length res))
-                        t/abstract-integer-width
-                        sub1))
-            (loop (cons (list v l 0) res) h))))))
+        (match lst
+          [(list h ... v t)
+           (define l (~>> t
+                          (expect-integer 'concat (length res))
+                          t/abstract-integer-width
+                          sub1))
+           (loop (cons (list v l 0) res) h)]
+          [_ res]))))
   (λ ts
     (define ts^ (apply expect-integers 'concat
                   (for/list ([(t n) (in-indexed ts)] #:when (odd? n))
@@ -352,21 +352,21 @@
 (define-function _set_field_
   (λ args
     (let loop ([res (first args)] [kvs (rest args)])
-      (if (empty? kvs)
-        res
-        (loop (dict-set res (first kvs) (second kvs)) (rest (rest kvs))))))
+      (match kvs
+        [(list k v r ...) (loop (dict-set res k v) r)]
+        [_                res])))
   (λ ts
     (define ta (expect-record 'set_field 0 (first ts)))
-    (let loop ([n 1] [lst (rest ts)])
-      (unless (empty? lst)
-        (match-define (list tb tc ts^ ...) lst)
-        (define tb^ (expect-symbol 'set_field n tb))
-        (define field-name (t/symbol-value tb^))
-        (define tv (dict-ref (t/record-fields ta) field-name
-                     (thunk (error "Unknown field" field-name))))
-        (expect-subtype 'set_field (add1 n) tc tv)
-        (loop (+ 2 n) ts^)))
-    ta))
+    (let loop ([n 1] [kvs (rest ts)])
+      (match kvs
+        [(list tk tv tr ...)
+         (define tk^ (expect-symbol 'set_field n tk))
+         (define field-name (t/symbol-value tk^))
+         (define tf (dict-ref (t/record-fields ta) field-name
+                      (thunk (error "Unknown field" field-name))))
+         (expect-subtype 'set_field (add1 n) tv tf)
+         (loop (+ 2 n) tr)]
+        [_ ta]))))
 
 ; ------------------------------------------------------------------------------
 ; Type operations.
