@@ -99,8 +99,35 @@
                                                   (t/unsigned 12)) (t/union (list (t/unsigned 8) (t/unsigned 12))))
 
 ; ------------------------------------------------------------------------------
-; TODO _case_
+; _case_
 ; ------------------------------------------------------------------------------
+
+(test-function (_case_ 10 '(10) 1 '(20) 2 '(30) 3) 1)
+(test-function (_case_ 20 '(10) 1 '(20) 2 '(30) 3) 2)
+(test-function (_case_ 30 '(10) 1 '(20) 2 '(30) 3) 3)
+(test-function (_case_ 40 '(10) 1 '(20) 2 '(30) 3 4) 4)
+(test-function/exn (_case_ 40 '(10) 1 '(20) 2 '(30) 3))
+
+(test-function (_case_ 15 '(10 15) 1 '(20 25) 2 '(30 35) 3) 1)
+(test-function (_case_ 25 '(10 15) 1 '(20 25) 2 '(30 35) 3) 2)
+(test-function (_case_ 35 '(10 15) 1 '(20 25) 2 '(30 35) 3) 3)
+(test-function (_case_ 40 '(10 15) 1 '(20 25) 2 '(30 35) 3 4) 4)
+(test-function/exn (_case_ 40 '(10 15) 1 '(20 25) 2 '(30 35) 3))
+
+(test-return-type (_case_ (t/static-data/literal 10) (t/static-data/literal '(10)) (t/unsigned 4) (t/tuple (list (t/static-data/literal 20))) (t/unsigned 8) (t/tuple (list (t/static-data/literal 30))) (t/unsigned 12))
+                  (t/unsigned 4))
+(test-return-type (_case_ (t/static-data/literal 20) (t/tuple (list (t/static-data/literal 10))) (t/unsigned 4) (t/tuple (list (t/static-data/literal 20))) (t/unsigned 8) (t/tuple (list (t/static-data/literal 30))) (t/unsigned 12))
+                  (t/unsigned 8))
+(test-return-type (_case_ (t/static-data/literal 30) (t/tuple (list (t/static-data/literal 10))) (t/unsigned 4) (t/tuple (list (t/static-data/literal 20))) (t/unsigned 8) (t/tuple (list (t/static-data/literal 30))) (t/unsigned 12))
+                  (t/unsigned 12))
+(test-return-type (_case_ (t/static-data/literal 40) (t/tuple (list (t/static-data/literal 10))) (t/unsigned 4) (t/tuple (list (t/static-data/literal 20))) (t/unsigned 8) (t/tuple (list (t/static-data/literal 30))) (t/unsigned 12) (t/unsigned 16))
+                  (t/unsigned 16))
+(test-return-type/exn (_case_ (t/static-data/literal 40) (t/tuple (list (t/static-data/literal 10))) (t/unsigned 4) (t/tuple (list (t/static-data/literal 20))) (t/unsigned 8) (t/tuple (list (t/static-data/literal 30))) (t/unsigned 12)))
+
+(test-return-type (_case_ (t/any) (t/any) (t/unsigned 4) (t/any) (t/unsigned 8) (t/any) (t/unsigned 12))
+                  (t/union (list (t/unsigned 4) (t/unsigned 8) (t/unsigned 12))))
+(test-return-type (_case_ (t/any) (t/any) (t/unsigned 4) (t/any) (t/unsigned 8) (t/any) (t/unsigned 12) (t/unsigned 16))
+                  (t/union (list (t/unsigned 4) (t/unsigned 8) (t/unsigned 12) (t/unsigned 16))))
 
 ; ------------------------------------------------------------------------------
 ; _not_

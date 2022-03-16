@@ -114,7 +114,7 @@
   (match ts
     [(list tc tt te ...)
      ; If the expression value matches a static choice, return the corresponding type.
-     (define tc^ (filter t/static-data? tc))
+     (define tc^ (filter t/static-data? (t/tuple-elt-types tc)))
      (if (member v (map t/static-data-value tc^))
        tt
        (apply _case_:impl:return-type/static v te))]

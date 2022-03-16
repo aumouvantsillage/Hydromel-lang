@@ -146,6 +146,8 @@
         [(hash? x)
          (record (for/hash ([(k v) (in-dict x)])
                    (values k (literal-type v))))]
+        [(list? x)
+         (tuple (map literal-type x))]
         [else
          (error "Cannot determine the type of literal" x)]))
 
