@@ -114,7 +114,7 @@
 (test-function (_case_ 40 '(10 15) 1 '(20 25) 2 '(30 35) 3 4) 4)
 (test-function/exn (_case_ 40 '(10 15) 1 '(20 25) 2 '(30 35) 3))
 
-(test-return-type (_case_ (t/static-data/literal 10) (t/static-data/literal '(10)) (t/unsigned 4) (t/tuple (list (t/static-data/literal 20))) (t/unsigned 8) (t/tuple (list (t/static-data/literal 30))) (t/unsigned 12))
+(test-return-type (_case_ (t/static-data/literal 10) (t/tuple (list (t/static-data/literal 10))) (t/unsigned 4) (t/tuple (list (t/static-data/literal 20))) (t/unsigned 8) (t/tuple (list (t/static-data/literal 30))) (t/unsigned 12))
                   (t/unsigned 4))
 (test-return-type (_case_ (t/static-data/literal 20) (t/tuple (list (t/static-data/literal 10))) (t/unsigned 4) (t/tuple (list (t/static-data/literal 20))) (t/unsigned 8) (t/tuple (list (t/static-data/literal 30))) (t/unsigned 12))
                   (t/unsigned 8))

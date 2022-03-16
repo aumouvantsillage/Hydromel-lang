@@ -105,8 +105,7 @@
     ; If the expression is not static, return a union of all target clauses.
     [_
      (define last-n (sub1 (length ts)))
-     (t/union (for/list ([it (in-list ts)]
-                         [n (in-naturals)]
+     (t/union (for/list ([(it n) (in-indexed ts)]
                          #:when (or (odd? n) (= n last-n)))
                 it))]))
 
@@ -288,19 +287,18 @@
 (define-function/cast _concat_
   (λ vs
     (apply unsigned-concat
-      (for/fold ([res empty]
-                 [lst vs]
-                 #:result res)
-                ([n (in-naturals)])
-                #:break (empty? lst)
-        (define-values (l r) (split-at-right lst 2))
-        (values
-          (cons (list (first r) (~> r second t/normalize-type t/abstract-integer-width sub1) 0) res)
-          l))))
+      (let loop ([res empty] [lst vs])
+        (if (empty? lst)
+          res
+          (match-let ([(list h ... v t) lst])
+            (define l (~>> t
+                        (expect-integer 'concat (length res))
+                        t/abstract-integer-width
+                        sub1))
+            (loop (cons (list v l 0) res) h))))))
   (λ ts
     (define ts^ (apply expect-integers 'concat
-                  (for/list ([t (in-list ts)]
-                             [n (in-naturals)] #:when (odd? n))
+                  (for/list ([(t n) (in-indexed ts)] #:when (odd? n))
                     (t/static-data-value t))))
     (define w (for/sum ([it (in-list ts^)])
                 (t/abstract-integer-width it)))
@@ -317,8 +315,7 @@
 
 (define-function _record_ hash
   (λ ts
-    (define ts^ (for/list ([it (in-list ts)]
-                           [n  (in-naturals)])
+    (define ts^ (for/list ([(it n) (in-indexed ts)])
                   (if (even? n)
                     (t/static-data-value it)
                     it)))
@@ -329,11 +326,19 @@
     (expect-integer 'nth 1 tb)
     (t/array-elt-type (expect-array 'nth 0 ta))))
 
-(define-function _set_nth_ set-nth
-  (λ (ta tb tc)
-    (expect-array   'set_nth 0 ta)
-    (expect-integer 'set_nth 1 tb)
-    (expect-subtype 'set_nth 2 tc (t/array-elt-type ta))
+(define-function _set_nth_
+  (λ args
+    (let loop ([res (first args)] [nvs (rest args)])
+      (if (empty? nvs)
+        res
+        (loop (set-nth res (first nvs) (second nvs)) (rest (rest nvs))))))
+  (λ ts
+    (define ta (expect-array 'set_nth 0 (first ts)))
+    (define te (t/array-elt-type ta))
+    (for ([(t n) (in-indexed (rest ts))])
+      (if (even? n)
+        (expect-integer 'set_nth (add1 n) t)
+        (expect-subtype 'set_nth (add1 n) t te)))
     ta))
 
 (define-function _field_ dict-ref
