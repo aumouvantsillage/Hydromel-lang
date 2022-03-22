@@ -13,7 +13,8 @@
   min-unsigned-width min-signed-width
   min-signed-value   max-signed-value
   min-unsigned-value max-unsigned-value
-  unsigned unsigned-slice unsigned-concat unsigned-concat*
+  unsigned unsigned-slice set-slice
+  unsigned-concat unsigned-concat*
   signed   signed-slice   signed-concat   signed-concat*
   integer->bit-string)
 
@@ -64,6 +65,12 @@
 ; Returns a signed integer value with the given width.
 (define (signed v w)
   (signed-slice v (sub1 w) 0))
+
+(define (set-slice v left right subst)
+  (define mask (bitwise-ior (arithmetic-shift -1 (add1 left))
+                            (sub1 (arithmetic-shift 1 right))))
+  (bitwise-ior (bitwise-and v mask)
+               (bitwise-and (arithmetic-shift subst right) (bitwise-not mask))))
 
 ; Concatenate a sequence of slices.
 ; Do not sign-extend the result.

@@ -11,7 +11,8 @@
     min-unsigned-width min-signed-width
     min-signed-value   max-signed-value
     min-unsigned-value max-unsigned-value
-    unsigned-slice     unsigned-concat)
+    unsigned-slice     set-slice
+    unsigned-concat)
   syntax/parse/define
   threading
   (only-in data/collection
@@ -279,6 +280,16 @@
                    [(t/signed      n)   (min-signed-value   n)]))
     (t/resize ta^ (max 0 (add1 (- left right))))))
 
+(define-function _set_slice_
+  (λ args
+    (let loop ([res (first args)] [lrvs (rest args)])
+      (match lrvs
+        [(list l r v xs ...) (loop (set-slice res l r v) xs)]
+        [_                   res])))
+  (λ ts
+    (first (for/list ([(t n) (in-indexed ts)])
+             (expect-integer 'set_slice n t)))))
+
 ; The binary concatenetion operation defaults to the unsigned version.
 ; The signed case is handled automatically because the expander inserts
 ; a conversion to the type returned by concat:impl:return-type.
@@ -329,9 +340,9 @@
 (define-function _set_nth_
   (λ args
     (let loop ([res (first args)] [nvs (rest args)])
-      (if (empty? nvs)
-        res
-        (loop (set-nth res (first nvs) (second nvs)) (rest (rest nvs))))))
+      (match nvs
+        [(list n v xs ...) (loop (set-nth res n v) xs)]
+        [_                 res])))
   (λ ts
     (define ta (expect-array 'set_nth 0 (first ts)))
     (define te (t/array-elt-type ta))

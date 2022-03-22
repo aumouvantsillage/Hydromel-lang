@@ -59,6 +59,9 @@
 (test-equal? "u'#x50[7..4] =  5" (unsigned-slice #x50 7 4)  5)
 (test-equal? "s'#x50[7..4] =  5" (signed-slice   #x50 7 4)  5)
 
+(test-equal? "u'#xA7[5..2]<-6 = #x9B" (set-slice #xA7 5 2 6) #x9B)
+(test-equal? "s'#xA7[5..2]<-6 = #x9B" (set-slice #x-59 5 2 6) #x-65)
+
 (check-equal? (unsigned-concat* [#xA0 7 5] [#x04 2 2] [#x05 3 0]) #xB5)
 (check-equal? (unsigned-concat* [#x60 7 5] [#x04 2 2] [#x05 3 0]) #x75)
 (check-equal? (signed-concat*   [#xA0 7 5] [#x04 2 2] [#x05 3 0]) (- #xB5 #x100))

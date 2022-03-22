@@ -551,6 +551,26 @@
 (test-return-type (_slice_ (t/signed   16) (t/static-data/literal 11) (t/static-data/literal 8)) (t/signed 4))
 
 ; ------------------------------------------------------------------------------
+; _set_slice_
+; ------------------------------------------------------------------------------
+
+(test-function (_set_slice_  #xAB03 11 8 4)       #xA403)
+(test-function (_set_slice_  #xAB03 11 8 #xFFF4)  #xA403)
+(test-function (_set_slice_  #xAB03 11 8 #x-C)    #xA403)
+(test-function (_set_slice_  #xAB03 11 8 4 3 0 6) #xA406)
+(test-function (_set_slice_ #x-AB03 11 8 3)       #x-AC03)
+(test-function (_set_slice_ #x-AB03 11 8 #xFFF3)  #x-AC03)
+(test-function (_set_slice_ #x-AB03 11 8 #x-D)    #x-AC03)
+
+(test-return-type (_set_slice_ (t/unsigned 16) (t/static-data/literal 11) (t/static-data/literal 8) (t/static-data/literal 4)) (t/unsigned 16))
+(test-return-type (_set_slice_ (t/signed 16) (t/static-data/literal 11) (t/static-data/literal 8) (t/static-data/literal 4)) (t/signed 16))
+
+(test-return-type/exn (_set_slice_ (t/any) (t/static-data/literal 11) (t/static-data/literal 8) (t/static-data/literal 4)))
+(test-return-type/exn (_set_slice_ (t/signed 16) (t/any) (t/static-data/literal 8) (t/static-data/literal 4)))
+(test-return-type/exn (_set_slice_ (t/signed 16) (t/static-data/literal 11) (t/any) (t/static-data/literal 4)))
+(test-return-type/exn (_set_slice_ (t/signed 16) (t/static-data/literal 11) (t/static-data/literal 8) (t/any)))
+
+; ------------------------------------------------------------------------------
 ; _concat_
 ; ------------------------------------------------------------------------------
 
