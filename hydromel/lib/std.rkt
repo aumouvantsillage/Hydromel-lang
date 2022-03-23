@@ -385,24 +385,30 @@
 
 ; _cast_ does not actually convert the given value because
 ; a call to the conversion function is already inserted by the expander.
-(define-function/cast _cast_
-  (λ (a b) b)
-  (λ (ta tb)
-    (expect-type 'cast 0 ta)
-    (define ta^ (t/normalize-type (t/static-data-value ta)))
-    (match ta^
-      [(t/signed #f)
-       (define tb^ (expect-integer 'cast 1 tb))
-       (match tb^
-         [(t/signed   _) tb^]
-         [(t/unsigned n) (t/signed n)])]
+(define-function*/cast _cast_)
 
-      [(t/unsigned #f)
-       (define tb^ (expect-integer 'cast 1 tb))
-       (match tb^
-         [(t/signed   n) (t/unsigned n)]
-         [(t/unsigned _) tb^])]
+(define-syntax-parse-rule (_cast_:impl a b) b)
 
-      [_
-       ; TODO Add checks here.
-       ta^])))
+(define (_cast_:impl:return-type ta tb)
+  (expect-type 'cast 0 ta)
+  (define ta^ (t/normalize-type (t/static-data-value ta)))
+  (define tr (match ta^
+               [(t/signed #f)
+                (define tb^ (expect-integer 'cast 1 tb))
+                (match tb^
+                  [(t/signed   _) tb^]
+                  [(t/unsigned n) (t/signed n)])]
+
+               [(t/unsigned #f)
+                (define tb^ (expect-integer 'cast 1 tb))
+                (match tb^
+                  [(t/signed   n) (t/unsigned n)]
+                  [(t/unsigned _) tb^])]
+
+               [_
+                ; TODO Add checks here.
+                ta^]))
+  ; Enforce the type of the result, even if it is a static value.
+  (match tb
+    [(t/static-data v _) (t/static-data v tr)]
+    [_                   tr]))

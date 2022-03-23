@@ -1,0 +1,330 @@
+#lang hydromel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+# ------------------------------------------------------------------------------
+# if
+# ------------------------------------------------------------------------------
+
+constant if1 = if 1 then 10 else 20
+constant if2 = if 0 then 10 else 20
+constant if3 = if 8 then 10 else 20
+
+constant if4 = if 1 then 10
+           elseif 1 then 20
+           elseif 1 then 30
+           else          40
+
+constant if5 = if 0 then 10
+           elseif 1 then 20
+           elseif 1 then 30
+           else          40
+
+constant if6 = if 0 then 10
+           elseif 0 then 20
+           elseif 1 then 30
+           else          40
+
+constant if7 = if 0 then 10
+           elseif 0 then 20
+           elseif 0 then 30
+           else          40
+
+# ------------------------------------------------------------------------------
+# case
+# ------------------------------------------------------------------------------
+
+constant case1 = case 10 of
+    10 => 1
+    20 => 2
+    30 => 3
+
+constant case2 = case 20 of
+    10 => 1
+    20 => 2
+    30 => 3
+
+constant case3 = case 30 of
+    10 => 1
+    20 => 2
+    30 => 3
+
+constant case4 = case 40 of
+    10 => 1
+    20 => 2
+    30 => 3
+    _  => 4
+
+constant case5 = case 15 of
+    10, 15 => 1
+    20, 25 => 2
+    30, 35 => 3
+
+constant case6 = case 25 of
+    10, 15 => 1
+    20, 25 => 2
+    30, 35 => 3
+
+constant case7 = case 35 of
+    10, 15 => 1
+    20, 25 => 2
+    30, 35 => 3
+
+constant case8 = case 40 of
+    10, 15 => 1
+    20, 25 => 2
+    30, 35 => 3
+    _      => 4
+
+# ------------------------------------------------------------------------------
+# not
+# ------------------------------------------------------------------------------
+
+constant not1  =  not  0
+constant not2  =  not  1
+constant not3  =  not  2
+constant not4  =  not  3
+constant not5  =  not  4
+constant not6  =  not  5
+constant not7  =  not -1
+constant not8  =  not -2
+constant not9  =  not -3
+constant not10 =  not -4
+
+# ------------------------------------------------------------------------------
+# and
+# ------------------------------------------------------------------------------
+
+constant and1 =    0  and    0
+constant and2 =    0  and    1
+constant and3 =    1  and    0
+constant and4 =    1  and    1
+constant and5 = x'F0  and x'3C
+constant and6 =   -1  and   12
+constant and7 =  -24  and   12
+constant and8 =  -24  and   -4
+
+# ------------------------------------------------------------------------------
+# or
+# ------------------------------------------------------------------------------
+
+constant or1 =    0 or    0
+constant or2 =    0 or    1
+constant or3 =    1 or    0
+constant or4 =    1 or    1
+constant or5 = x'F0 or x'3C
+constant or6 =   -1 or   12
+constant or7 =  -24 or   12
+constant or8 =  -24 or   -4
+
+# ------------------------------------------------------------------------------
+# xor
+# ------------------------------------------------------------------------------
+
+constant xor1 =    0 xor    0
+constant xor2 =    0 xor    1
+constant xor3 =    1 xor    0
+constant xor4 =    1 xor    1
+constant xor5 = x'F0 xor x'3C
+constant xor6 =   -1 xor   12
+constant xor7 =  -24 xor   12
+constant xor8 =  -24 xor   -4
+
+# ------------------------------------------------------------------------------
+# unsigned_width
+# ------------------------------------------------------------------------------
+
+constant uw1  = unsigned_width(0)
+constant uw2  = unsigned_width(1)
+constant uw3  = unsigned_width(2)
+constant uw4  = unsigned_width(3)
+constant uw5  = unsigned_width(4)
+constant uw6  = unsigned_width(128)
+constant uw7  = unsigned_width(255)
+constant uw8  = unsigned_width(256)
+constant uw9  = unsigned_width(-1)
+constant uw10 = unsigned_width(-2)
+constant uw11 = unsigned_width(-3)
+constant uw12 = unsigned_width(-4)
+constant uw13 = unsigned_width(-5)
+constant uw14 = unsigned_width(-127)
+constant uw15 = unsigned_width(-128)
+constant uw16 = unsigned_width(-129)
+
+# ------------------------------------------------------------------------------
+# signed_width
+# ------------------------------------------------------------------------------
+
+constant sw1  = signed_width(0)
+constant sw2  = signed_width(1)
+constant sw3  = signed_width(2)
+constant sw4  = signed_width(3)
+constant sw5  = signed_width(4)
+constant sw6  = signed_width(128)
+constant sw7  = signed_width(255)
+constant sw8  = signed_width(256)
+constant sw9  = signed_width(-1)
+constant sw10 = signed_width(-2)
+constant sw11 = signed_width(-3)
+constant sw12 = signed_width(-4)
+constant sw13 = signed_width(-5)
+constant sw14 = signed_width(-127)
+constant sw15 = signed_width(-128)
+constant sw16 = signed_width(-129)
+
+# ------------------------------------------------------------------------------
+# ==
+# ------------------------------------------------------------------------------
+
+constant eq1 = 10 == 20
+constant eq2 = 10 == 10
+constant eq3 = ~X == 10
+constant eq4 = ~X == ~Y
+constant eq5 = ~X == ~X
+constant eq6 = [1, 2] == 10
+constant eq7 = [1, 2] == [3, 4]
+constant eq8 = [1, 2] == [1, 2]
+
+# ------------------------------------------------------------------------------
+# /=
+# ------------------------------------------------------------------------------
+
+constant ne1 = 10 /= 20
+constant ne2 = 10 /= 10
+constant ne3 = ~X /= 10
+constant ne4 = ~X /= ~Y
+constant ne5 = ~X /= ~X
+constant ne6 = [1, 2] /= 10
+constant ne7 = [1, 2] /= [3, 4]
+constant ne8 = [1, 2] /= [1, 2]
+
+# ------------------------------------------------------------------------------
+# >
+# ------------------------------------------------------------------------------
+
+constant gt1 = -5 > -5
+constant gt2 = -5 > 10
+constant gt3 = 10 > -5
+constant gt4 = 10 > 10
+
+# ------------------------------------------------------------------------------
+# <
+# ------------------------------------------------------------------------------
+
+constant lt1 = -5 < -5
+constant lt2 = -5 < 10
+constant lt3 = 10 < -5
+constant lt4 = 10 < 10
+
+# ------------------------------------------------------------------------------
+# >=
+# ------------------------------------------------------------------------------
+
+constant ge1 = -5 >= -5
+constant ge2 = -5 >= 10
+constant ge3 = 10 >= -5
+constant ge4 = 10 >= 10
+
+# ------------------------------------------------------------------------------
+# <=
+# ------------------------------------------------------------------------------
+
+constant le1 = -5 <= -5
+constant le2 = -5 <= 10
+constant le3 = 10 <= -5
+constant le4 = 10 <= 10
+
+# ------------------------------------------------------------------------------
+# +
+# ------------------------------------------------------------------------------
+
+constant add1 = 10 +  200
+constant add2 = 10 + -200
+
+# ------------------------------------------------------------------------------
+# -
+# ------------------------------------------------------------------------------
+
+constant sub1 = 10 -  200
+constant sub2 = 10 - -200
+
+# ------------------------------------------------------------------------------
+# *
+# ------------------------------------------------------------------------------
+
+constant mul1 = 10 *  200
+constant mul2 = 10 * -200
+
+# ------------------------------------------------------------------------------
+# /
+# ------------------------------------------------------------------------------
+
+constant div1 =  200 /  10
+constant div2 = -200 /  10
+constant div3 =  200 / -10
+constant div4 =   10 / 200
+constant div5 =   10 /-200
+constant div6 =  -10 / 200
+constant div7 =  -10 / 200
+
+# ------------------------------------------------------------------------------
+# -x
+# ------------------------------------------------------------------------------
+
+constant neg1 = -   0
+constant neg2 = -  10
+constant neg3 = - -10
+
+# ------------------------------------------------------------------------------
+# <<
+# ------------------------------------------------------------------------------
+
+constant shl1 =  11 <<  0
+constant shl2 =  11 <<  4
+constant shl3 =  11 << -2
+constant shl4 = -11 <<  0
+constant shl5 = -11 <<  4
+constant shl6 = -11 << -2
+
+# ------------------------------------------------------------------------------
+# >>
+# ------------------------------------------------------------------------------
+
+constant shr1 =  177 >>  0
+constant shr2 =  177 >>  4
+constant shr3 =  177 >> -2
+constant shr4 = -177 >>  0
+constant shr5 = -177 >>  4
+constant shr6 = -177 >> -2
+
+# ------------------------------------------------------------------------------
+# x{}
+# ------------------------------------------------------------------------------
+
+constant slice1 =   x'AB03 {11 .. 8}
+constant slice2 =   x'AB03 {12 .. 8}
+constant slice3 = (-x'AB03){11 .. 8}
+constant slice4 = (-x'AB03){12 .. 8}
+
+# ------------------------------------------------------------------------------
+# <- {}
+# ------------------------------------------------------------------------------
+
+constant sslice1 =   x'AB03  <- {11 .. 8 => 4}
+constant sslice2 =   x'AB03  <- {11 .. 8 => x'FFF4}
+constant sslice3 =   x'AB03  <- {11 .. 8 => -x'C}
+constant sslice4 =   x'AB03  <- {11 .. 8 => 4, 3 .. 0 => 6}
+constant sslice5 = (-x'AB03) <- {11 .. 8 => 3}
+constant sslice6 = (-x'AB03) <- {11 .. 8 => x'FFF3}
+constant sslice7 = (-x'AB03) <- {11 .. 8 => -x'D}
+
+# ------------------------------------------------------------------------------
+# {,}
+# ------------------------------------------------------------------------------
+
+constant cat1 = {x'A, x'B as unsigned(8), x'FC}
+constant cat2 = {x'A as signed(4), x'B as unsigned(8), x'FC}
+constant cat3 = {x'A, x'B as signed(8), x'FC as signed(8)}
+constant cat4 = {x'A as signed(4), x'B as signed(8),   x'FC as signed(8)}

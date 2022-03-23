@@ -136,12 +136,12 @@
     #:literals [call-expr or-expr and-expr rel-expr add-expr mult-expr shift-expr
                 if-expr case-expr prefix-expr range-expr slice-expr concat-expr
                 array-expr array-assoc-expr slice-assoc-expr indexed-array-expr
-                field-expr cast-expr assign-expr record-type record-expr -]
+                field-expr cast-expr assign-expr record-type record-expr]
     #:attributes [fn-name (arg 1)]
     (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr shift-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
       #:attr fn-name (format-id #'op "_~a_" #'op))
-    (pattern (prefix-expr - right)
+    (pattern (prefix-expr (~datum -) right)
       #:attr (arg 1) (list #'right)
       #:attr fn-name #'_neg_)
     (pattern (prefix-expr op right)

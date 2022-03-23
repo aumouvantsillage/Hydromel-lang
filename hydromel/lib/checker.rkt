@@ -418,6 +418,8 @@
   ; - a call whose arguments have static values.
   (define (static? stx)
     (syntax-parse stx
+      #:literals [type-of]
+      [(type-of _)             #t]
       [s:stx/literal-expr      #t]
       [s:stx/name-expr         (define c (lookup #'s.name)) (or (meta/constant? c) (meta/parameter? c))]
       [s:stx/field-expr        (or  (static? #'s.expr) (meta/constant? (resolve stx)))]
