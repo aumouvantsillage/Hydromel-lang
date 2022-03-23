@@ -26,7 +26,7 @@
        (token 'ID (string->symbol lexeme))]
       [(:seq "~" (:+ (:or alphabetic numeric (char-set "_"))))
        (token 'SYMBOL (string->symbol lexeme))]
-      [(:+ numeric)
+      [(:seq (:? (char-set "-+")) (:+ numeric))
        (token 'INT (string->number lexeme))]
       [(:seq "b'" (:+ (char-set "01")))
        (token 'INT (string->number (string-replace lexeme "b'" "#b")))]
