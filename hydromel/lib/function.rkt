@@ -89,9 +89,6 @@
 (define-syntax-parser return-type-function
   #:literals [λ const]
   #:datum-literals [cast no-cast]
-  [(_ _ _ (~and fn (const body ...)))
-   #'fn]
-
   [(_ no-cast name (λ (arg:id ...) body ...))
    #'(λ (arg ...)
        (if (and (static-data? arg) ...)
@@ -117,6 +114,9 @@
        (if (andmap static-data? args)
          (static-data/literal (t (apply name (map static-data-value args))))
          t))]
+
+  [(_ cast? name (const body ...))
+   #'(return-type-function cast? name (λ args body ...))]
 
   [(_ cast? name (fn-name:id arg ...))
    #'(return-type-function cast? name (λ (arg ...) (fn-name arg ...)))])
