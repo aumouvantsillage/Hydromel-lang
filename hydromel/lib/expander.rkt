@@ -545,5 +545,5 @@
 (disable-forms import or-expr and-expr rel-expr add-expr mult-expr shift-expr
                if-expr case-expr prefix-expr range-expr slice-expr concat-expr
                indexed-array-expr array-expr cast-expr assign-expr record-type
-               array-assoc-expr record-expr
+               array-assoc-expr slice-assoc-expr record-expr
   "should not be used outside of begin-tiny-hdl")

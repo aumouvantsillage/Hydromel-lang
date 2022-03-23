@@ -135,7 +135,7 @@ choices:
 
 ; TODO support slice-expr
 assign-expr:
-  simple-expr /"<-" (array-assoc-expr | record-expr)
+  simple-expr /"<-" (array-assoc-expr  | slice-assoc-expr | record-expr)
 
 or-expr:     maybe-or-expr  ("or" | "xor") maybe-and-expr
 and-expr:    maybe-and-expr "and" maybe-rel-expr
@@ -192,9 +192,12 @@ array-for-expr:
   /"[" expression /"for" iterator-list /"]"
 
 array-assoc-expr:
-  /"[" @array-assoc (/"," @array-assoc )* /","? /"]"
+  /"[" @index-assoc (/"," @index-assoc )* /","? /"]"
 
-array-assoc:
+slice-assoc-expr:
+  /"{" @index-assoc (/"," @index-assoc)* /","? /"}"
+
+index-assoc:
   expression /"=>" expression
 
 record-expr:

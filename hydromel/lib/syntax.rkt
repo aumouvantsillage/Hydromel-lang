@@ -125,10 +125,18 @@
     #:literals [call-expr/cast]
     (pattern (call-expr/cast fn-name arg ...)))
 
+  (define-splicing-syntax-class slice-assoc
+    #:literals [range-expr]
+    (pattern (~seq (range-expr left op right) expr)
+      #:attr (arg 1) (list #'left #'right #'expr))
+    (pattern (~seq index expr)
+      #:attr (arg 1) (list #'index #'index #'expr)))
+
   (define-syntax-class call-expr
     #:literals [call-expr or-expr and-expr rel-expr add-expr mult-expr shift-expr
-                if-expr case-expr prefix-expr range-expr slice-expr concat-expr array-expr array-assoc-expr
-                indexed-array-expr field-expr cast-expr assign-expr record-type record-expr -]
+                if-expr case-expr prefix-expr range-expr slice-expr concat-expr
+                array-expr array-assoc-expr slice-assoc-expr indexed-array-expr
+                field-expr cast-expr assign-expr record-type record-expr -]
     #:attributes [fn-name (arg 1)]
     (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr shift-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
@@ -161,6 +169,9 @@
     (pattern (assign-expr left (array-assoc-expr nv ...))
       #:attr (arg 1) (cons #'left (attribute nv))
       #:attr fn-name #'_set_nth_)
+    (pattern (assign-expr left (slice-assoc-expr lrv:slice-assoc ...))
+      #:attr (arg 1) (cons #'left (apply append (attribute lrv.arg)))
+      #:attr fn-name #'_set_slice_)
     (pattern (assign-expr left (record-expr kv ...))
       #:attr (arg 1) (cons #'left (attribute kv))
       #:attr fn-name #'_set_field_)
