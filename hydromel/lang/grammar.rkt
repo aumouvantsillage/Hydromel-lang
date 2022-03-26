@@ -180,13 +180,13 @@ slice-expr:
   simple-expr /"{" expression /"}"
 
 concat-expr:
-  /"{" expression-list /"}"
+  /"{" expression-list? /"}"
 
 concat-for-expr:
   /"{" expression /"for" iterator-list /"}"
 
 array-expr:
-  /"[" expression-list /"]"
+  /"[" expression-list? /"]"
 
 array-for-expr:
   /"[" expression /"for" iterator-list /"]"
@@ -213,7 +213,7 @@ when-clause:
   /"when" expression
 
 call-expr:
-  ID /"(" (expression /",")* expression? /")"
+  ID /"(" expression-list? /")"
 
 ; Type expressions -------------------------------------------------------------
 

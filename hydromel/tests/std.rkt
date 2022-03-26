@@ -574,10 +574,13 @@
 ; _concat_
 ; ------------------------------------------------------------------------------
 
+(test-function (_concat_) 0)
 (test-function (_concat_ #xA (t/unsigned 4) #xB (t/unsigned 8) #xFC (t/unsigned 8)) #xA0BFC)
 (test-function (_concat_ #xA (t/signed   4) #xB (t/unsigned 8) #xFC (t/unsigned 8)) #x-5F404)
 (test-function (_concat_ #xA (t/unsigned 4) #xB (t/signed   8) #xFC (t/signed 8))   #xA0BFC)
 (test-function (_concat_ #xA (t/signed   4) #xB (t/signed   8) #xFC (t/signed 8))   #x-5F404)
+
+(test-return-type (_concat_) (t/static-data 0 (t/unsigned 1)))
 
 (test-return-type (_concat_ (t/unsigned 1) (t/static-data/literal (t/unsigned 4))
                             (t/unsigned 2) (t/static-data/literal (t/unsigned 5))
@@ -603,6 +606,8 @@
 ; _array_
 ; ------------------------------------------------------------------------------
 
+(test-function (_array_) (pvector))
+(test-function (_array_ 10) (pvector 10))
 (test-function (_array_ 10 20 30) (pvector 10 20 30))
 
 (test-return-type (_array_ (t/unsigned 1) (t/unsigned 4) (t/unsigned 8))

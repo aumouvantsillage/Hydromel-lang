@@ -313,9 +313,10 @@
                     (t/static-data-value t))))
     (define w (for/sum ([it (in-list ts^)])
                 (t/abstract-integer-width it)))
-    (match (first ts^)
-      [(t/signed _)   (t/signed w)]
-      [(t/unsigned _) (t/unsigned w)])))
+    (match ts^
+      [(list (t/signed   _) _ ...) (t/signed   w)]
+      [(list (t/unsigned _) _ ...) (t/unsigned w)]
+      [_                           (t/unsigned 1)])))
 
 ; ------------------------------------------------------------------------------
 ; Array and record operations.

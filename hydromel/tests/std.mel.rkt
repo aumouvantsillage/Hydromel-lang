@@ -8,6 +8,7 @@
   rackunit
   syntax/parse/define
   (for-syntax racket/syntax)
+  data/pvector
   hydromel/lib/slot
   "std.mel")
 
@@ -286,7 +287,25 @@
 ; {,}
 ; ------------------------------------------------------------------------------
 
-(test-constant cat1 #xA0BFC)
-(test-constant cat2 #x-5F404)
-(test-constant cat3 #xA0BFC)
-(test-constant cat4 #x-5F404)
+(test-constant cat1 0)
+(test-constant cat2 #xA)
+(test-constant cat3 #xABFC)
+(test-constant cat4 #xA0BFC)
+(test-constant cat5 #x-5F404)
+(test-constant cat6 #xA0BFC)
+(test-constant cat7 #x-5F404)
+
+; ------------------------------------------------------------------------------
+; [,]
+; ------------------------------------------------------------------------------
+
+(test-constant arr1 (pvector))
+(test-constant arr2 (pvector 10))
+(test-constant arr3 (pvector 10 20 30))
+
+; ------------------------------------------------------------------------------
+; (=>)
+; ------------------------------------------------------------------------------
+
+(test-constant rec1 #hash((x . 12)))
+(test-constant rec2 #hash((x . 12) (y . 50)))

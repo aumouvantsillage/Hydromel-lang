@@ -324,7 +324,26 @@ constant sslice7 = (-x'AB03) <- {11 .. 8 => -x'D}
 # {,}
 # ------------------------------------------------------------------------------
 
-constant cat1 = {x'A, x'B as unsigned(8), x'FC}
-constant cat2 = {x'A as signed(4), x'B as unsigned(8), x'FC}
-constant cat3 = {x'A, x'B as signed(8), x'FC as signed(8)}
-constant cat4 = {x'A as signed(4), x'B as signed(8),   x'FC as signed(8)}
+constant cat1 = {}
+constant cat2 = {x'A}
+constant cat3 = {x'A, x'B, x'FC}
+constant cat4 = {x'A, x'B as unsigned(8), x'FC}
+constant cat5 = {x'A as signed(4), x'B as unsigned(8), x'FC}
+constant cat6 = {x'A, x'B as signed(8), x'FC as signed(8)}
+constant cat7 = {x'A as signed(4), x'B as signed(8),   x'FC as signed(8)}
+
+# ------------------------------------------------------------------------------
+# [,]
+# ------------------------------------------------------------------------------
+
+constant arr1 = []
+constant arr2 = [10]
+constant arr3 = [10, 20, 30]
+
+# ------------------------------------------------------------------------------
+# (=>)
+# ------------------------------------------------------------------------------
+
+# TODO Empty record?
+constant rec1 = (x => 12)
+constant rec2 = (x => 12, y => 50)
