@@ -333,3 +333,11 @@
 
 (test-constant field1 10)
 (test-constant field2 20)
+
+; ------------------------------------------------------------------------------
+; Record field assignment: <- (=>)
+; ------------------------------------------------------------------------------
+
+(test-constant sfield1 #hash((x . 55) (y . 20)))
+(test-constant sfield2 #hash((x . 10) (y . 55)))
+(test-constant sfield3 #hash((x . 55) (y . 20) (z . 66)))

@@ -172,8 +172,9 @@
     (pattern (assign-expr left (slice-assoc-expr lrv:slice-assoc ...))
       #:attr (arg 1) (cons #'left (apply append (attribute lrv.arg)))
       #:attr fn-name #'_set_slice_)
-    (pattern (assign-expr left (record-expr kv ...))
-      #:attr (arg 1) (cons #'left (attribute kv))
+    (pattern (assign-expr left (record-expr (~seq field-name field-value) ...))
+      #:with (field ...) #'((~@ (literal-expr field-name) field-value) ...)
+      #:attr (arg 1) (cons #'left (attribute field))
       #:attr fn-name #'_set_field_)
     (pattern (concat-expr arg ...)
       #:attr fn-name #'_concat_)
@@ -183,8 +184,8 @@
       #:with (field ...) #'((~@ (literal-expr field-name) field-type) ...)
       #:attr fn-name #'make-record
       #:attr (arg 1) (attribute field))
-    (pattern (record-expr (~seq field-name field-type) ...)
-      #:with (field ...) #'((~@ (literal-expr field-name) field-type) ...)
+    (pattern (record-expr (~seq field-name field-value) ...)
+      #:with (field ...) #'((~@ (literal-expr field-name) field-value) ...)
       #:attr fn-name #'_record_
       #:attr (arg 1) (attribute field))
     (pattern (call-expr fn-name arg ...))
