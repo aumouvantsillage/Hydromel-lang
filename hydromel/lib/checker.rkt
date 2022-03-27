@@ -301,7 +301,9 @@
        #:with expr (check #'s.expr)
        (if (meta/design-unit? (check-field-expr #'expr #'s.field-name))
          (s/l (field-expr expr s.field-name))
-         (check (s/l (call-expr _field_ expr (literal-expr s.field-name)))))]
+         ; We use s.expr here because check fails if we
+         ; pass it an already checked call-expr.
+         (check (s/l (call-expr _field_ s.expr (literal-expr s.field-name)))))]
 
       [s:stx/indexed-port-expr
        #:with expr (check #'s.expr)
@@ -571,18 +573,18 @@
 
   (define (check-field-expr expr field-name)
     (match (resolve expr)
-      [(meta/composite-port intf-name _ _)
-       ; Check that a port with that name exists in the interface.
-       (define intf (lookup intf-name meta/interface?))
-       (meta/design-unit-ref intf field-name)
-       ; Return the interface name.
-       intf]
+        [(meta/composite-port intf-name _ _)
+         ; Check that a port with that name exists in the interface.
+         (define intf (lookup intf-name meta/interface?))
+         (meta/design-unit-ref intf field-name)
+         ; Return the interface name.
+         intf]
 
-      [(meta/instance comp-name)
-       ; Check that a port with that name exists in the component.
-       (define comp (lookup comp-name meta/component?))
-       (meta/design-unit-ref comp field-name)
-       ; Return the component name.
-       comp]
+        [(meta/instance comp-name)
+         ; Check that a port with that name exists in the component.
+         (define comp (lookup comp-name meta/component?))
+         (meta/design-unit-ref comp field-name)
+         ; Return the component name.
+         comp]
 
-      [other other])))
+        [other other])))
