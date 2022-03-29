@@ -104,8 +104,7 @@ statement-block:
 @maybe-add-expr:    add-expr    | maybe-mult-expr
 @maybe-mult-expr:   mult-expr   | maybe-shift-expr
 @maybe-shift-expr:  shift-expr  | maybe-prefix-expr
-@maybe-prefix-expr: prefix-expr | maybe-cast-expr
-@maybe-cast-expr:   cast-expr   | simple-expr
+@maybe-prefix-expr: prefix-expr | simple-expr
 
 @cond-expr:
   if-expr |
@@ -145,7 +144,6 @@ add-expr:    maybe-add-expr ("+" | "-") maybe-mult-expr
 mult-expr:   maybe-mult-expr ("*" | "/") maybe-shift-expr
 shift-expr:  maybe-shift-expr ("<<" | ">>") maybe-prefix-expr
 prefix-expr: ("-" | "not") maybe-prefix-expr
-cast-expr:   simple-expr /"as" type-expression
 
 @simple-expr:
   literal-expr |
@@ -161,6 +159,7 @@ cast-expr:   simple-expr /"as" type-expression
   record-expr |
   register-expr |
   call-expr |
+  cast-expr |
   /"(" expression /")"
 
 literal-expr: INT | SYMBOL
@@ -214,6 +213,9 @@ when-clause:
 
 call-expr:
   ID /"(" expression-list? /")"
+
+cast-expr:
+  type-expression /"|" expression /"|"
 
 ; Type expressions -------------------------------------------------------------
 

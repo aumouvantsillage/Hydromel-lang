@@ -327,10 +327,10 @@ constant sslice7 = (-x'AB03) <- {11 .. 8 => -x'D}
 constant cat1 = {}
 constant cat2 = {x'A}
 constant cat3 = {x'A, x'B, x'FC}
-constant cat4 = {x'A, x'B as unsigned(8), x'FC}
-constant cat5 = {x'A as signed(4), x'B as unsigned(8), x'FC}
-constant cat6 = {x'A, x'B as signed(8), x'FC as signed(8)}
-constant cat7 = {x'A as signed(4), x'B as signed(8),   x'FC as signed(8)}
+constant cat4 = {x'A, unsigned(8)|x'B|, x'FC}
+constant cat5 = {signed(4)|x'A|, unsigned(8)|x'B|, x'FC}
+constant cat6 = {x'A, signed(8)|x'B|, signed(8)|x'FC|}
+constant cat7 = {signed(4)|x'A|, signed(8)|x'B|, signed(8)|x'FC|}
 
 # ------------------------------------------------------------------------------
 # Array: [,]
@@ -381,20 +381,20 @@ constant sfield2 = (x => 10, y => 20)          <- (y => 55)
 constant sfield3 = (x => 10, y => 20, z => 30) <- (x => 55, z => 66)
 
 # ------------------------------------------------------------------------------
-# Cast: as
+# Cast: ||
 # ------------------------------------------------------------------------------
 
-constant cast1  = 36  as unsigned(8)
-constant cast2  = 36  as unsigned(4)
-constant cast3  = (-36) as unsigned(8)
-constant cast4  = 36  as signed(8)
-constant cast5  = 36  as signed(3)
-constant cast6  = (-36) as signed(8)
-constant cast7  = 36  as integer
-constant cast8  = (-36) as integer
-constant cast9  = 36  as natural
-constant cast10 = (-36) as natural
-constant cast11 = ~x  as any
+constant cast1  = unsigned(8)|36|
+constant cast2  = unsigned(4)|36|
+constant cast3  = unsigned(8)|-36|
+constant cast4  = signed(8)|36|
+constant cast5  = signed(3)|36|
+constant cast6  = signed(8)|-36|
+constant cast7  = integer|36|
+constant cast8  = integer|-36|
+constant cast9  = natural|36|
+constant cast10 = natural|-36|
+constant cast11 = any|~x|
 
 # ------------------------------------------------------------------------------
 # Range: ..

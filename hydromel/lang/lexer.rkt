@@ -20,7 +20,7 @@
             "or" "and" "not" "xor" "as" ">=" "<=" "==" "/=" ".." "<<" ">>" "=>" "<-"
             "if" "then" "else" "elseif" "case" "of" "for" "loop"
             "register" "when" "record"
-            (char-set ".:,()[]{}=+-*/<>_"))
+            (char-set ".:,()[]{}=+-*/<>_|"))
        (token lexeme (string->symbol lexeme))]
       [(:seq alphabetic (:* (:or alphabetic numeric (char-set "_") "::")))
        (token 'ID (string->symbol lexeme))]
