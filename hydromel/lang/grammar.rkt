@@ -144,7 +144,7 @@ range-expr:  maybe-add-expr ".." maybe-add-expr
 add-expr:    maybe-add-expr ("+" | "-") maybe-mult-expr
 mult-expr:   maybe-mult-expr ("*" | "/") maybe-shift-expr
 shift-expr:  maybe-shift-expr ("<<" | ">>") maybe-prefix-expr
-prefix-expr: ("-" | "not") maybe-cast-expr
+prefix-expr: ("-" | "not") maybe-prefix-expr
 cast-expr:   simple-expr /"as" type-expression
 
 @simple-expr:
