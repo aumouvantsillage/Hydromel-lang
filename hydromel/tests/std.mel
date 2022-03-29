@@ -395,3 +395,12 @@ constant cast8  = -36 as integer
 constant cast9  = 36  as natural
 constant cast10 = -36 as natural
 constant cast11 = ~x  as any
+
+# ------------------------------------------------------------------------------
+# Range: ..
+# ------------------------------------------------------------------------------
+
+constant rng1 = 0 .. 3
+constant rng2 = -3 .. 3
+constant rng3 = 3 .. 0
+constant rng4 = 3 .. -3

@@ -356,4 +356,13 @@
 (test-constant cast8  -36)
 (test-constant cast9  36)
 (test-constant cast10 92)
-;(test-constant cast11 'x)
+(test-constant cast11 '~x)
+
+; ------------------------------------------------------------------------------
+; Range: ..
+; ------------------------------------------------------------------------------
+
+(test-constant rng1 (range 4))
+(test-constant rng2 (range -3 4))
+(test-constant rng3 (range 3 -1 -1))
+(test-constant rng4 (range 3 -4 -1))
