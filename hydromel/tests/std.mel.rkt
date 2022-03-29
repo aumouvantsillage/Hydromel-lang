@@ -341,3 +341,19 @@
 (test-constant sfield1 #hash((x . 55) (y . 20)))
 (test-constant sfield2 #hash((x . 10) (y . 55)))
 (test-constant sfield3 #hash((x . 55) (y . 20) (z . 66)))
+
+; ------------------------------------------------------------------------------
+; Cast: as
+; ------------------------------------------------------------------------------
+
+(test-constant cast1  36)
+(test-constant cast2  4)
+(test-constant cast3  220)
+(test-constant cast4  36)
+(test-constant cast5  -4)
+(test-constant cast6  -36)
+(test-constant cast7  -28)
+(test-constant cast8  -36)
+(test-constant cast9  36)
+(test-constant cast10 92)
+;(test-constant cast11 'x)

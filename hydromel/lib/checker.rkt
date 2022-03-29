@@ -348,6 +348,10 @@
       [s:stx/name-expr
        (match (lookup #'s.name)
          ; A function name is converted to a function call with no argument.
+         [(? procedure?)
+          (q/l (call-expr s.name))]
+
+         ; A function name is converted to a function call with no argument.
          [(meta/function fn-name _)
           (q/l (call-expr #,fn-name))]
 

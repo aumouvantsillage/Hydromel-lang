@@ -411,5 +411,5 @@
                 ta^]))
   ; Enforce the type of the result, even if it is a static value.
   (match tb
-    [(t/static-data v _) (t/static-data v tr)]
+    [(t/static-data v _) (t/static-data (tr v) tr)]
     [_                   tr]))

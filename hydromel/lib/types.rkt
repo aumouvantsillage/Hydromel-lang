@@ -99,6 +99,8 @@
 
 (define type:impl:return-type (const (static-data (type:impl) (type:impl))))
 
+(define any:return-type (const (static-data (any) (type:impl))))
+
 (define-syntax bit (meta/make-function #'bit:impl))
 
 (define bit:impl (const (unsigned 1)))

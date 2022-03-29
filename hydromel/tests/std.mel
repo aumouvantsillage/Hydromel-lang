@@ -379,3 +379,19 @@ constant field2 = (x => 10, y => 20).y
 constant sfield1 = (x => 10, y => 20)          <- (x => 55)
 constant sfield2 = (x => 10, y => 20)          <- (y => 55)
 constant sfield3 = (x => 10, y => 20, z => 30) <- (x => 55, z => 66)
+
+# ------------------------------------------------------------------------------
+# Cast: as
+# ------------------------------------------------------------------------------
+
+constant cast1  = 36  as unsigned(8)
+constant cast2  = 36  as unsigned(4)
+constant cast3  = -36 as unsigned(8)
+constant cast4  = 36  as signed(8)
+constant cast5  = 36  as signed(3)
+constant cast6  = -36 as signed(8)
+constant cast7  = 36  as integer
+constant cast8  = -36 as integer
+constant cast9  = 36  as natural
+constant cast10 = -36 as natural
+constant cast11 = ~x  as any
