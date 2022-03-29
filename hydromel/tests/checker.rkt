@@ -127,8 +127,8 @@
     (data-port z out (call-expr signed (literal-expr 32)))
     (assignment (name-expr z)
       (cast-expr
-        (add-expr (name-expr x) + (name-expr y))
-        (call-expr signed (literal-expr 32))))))
+        (call-expr signed (literal-expr 32))
+        (add-expr (name-expr x) + (name-expr y))))))
 
 (define c7-inst (C7-make))
 (slot-set! (c7-inst x) (signal 10 20 30))
@@ -146,9 +146,9 @@
     (data-port v out (call-expr signed (literal-expr 32)))
     (assignment (name-expr v)
       (cast-expr
+        (call-expr signed (literal-expr 32))
         (add-expr (mult-expr (name-expr x) * (name-expr y))
-                + (mult-expr (name-expr z) * (name-expr u)))
-        (call-expr signed (literal-expr 32))))))
+                + (mult-expr (name-expr z) * (name-expr u)))))))
 
 (define c8-inst (C8-make))
 (slot-set! (c8-inst x) (signal 10 20 30 40 50))
@@ -170,8 +170,8 @@
     (local-signal zu (mult-expr (name-expr z) * (name-expr u)))
     (assignment (name-expr v)
       (cast-expr
-        (add-expr (name-expr xy) + (name-expr zu))
-        (call-expr signed (literal-expr 32))))))
+        (call-expr signed (literal-expr 32))
+        (add-expr (name-expr xy) + (name-expr zu))))))
 
 (define c9-inst (C9-make))
 (slot-set! (c9-inst x) (signal 10 20 30 40 50))
@@ -209,8 +209,8 @@
     (data-port y out (call-expr signed (literal-expr 32)))
     (assignment (name-expr y)
       (cast-expr
-        (mult-expr (name-expr x) * (name-expr N))
-        (call-expr signed (literal-expr 32)))))
+        (call-expr signed (literal-expr 32))
+        (mult-expr (name-expr x) * (name-expr N)))))
 
   (component C12
     (data-port x in (call-expr signed (literal-expr 32)))
@@ -235,9 +235,9 @@
     (assignment (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) x) (name-expr x1))
     (assignment (name-expr y)
       (cast-expr
+        (call-expr signed (literal-expr 32))
         (add-expr (field-expr (indexed-port-expr (name-expr c) (literal-expr 0)) y)
-                + (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) y))
-        (call-expr signed (literal-expr 32))))))
+                + (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) y))))))
 
 (define c13-inst (C13-make))
 (slot-set! (c13-inst x0) (signal 10 20 30 40 50))
@@ -617,19 +617,39 @@
   (check-sig-equal? (slot-ref c39-inst y) (signal #(0 0 1 1) #(0 1 1 0) #(1 1 0 0)) 3))
 
 (begin-hydromel
+  (component C40
+    (composite-port x ((literal-expr 4)) I6)
+    (data-port y out (call-expr array (literal-expr 12) (call-expr unsigned (literal-expr 3))))
+    (assignment (name-expr y)
+      (array-for-expr (add-expr
+                        (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z) +
+                        (name-expr j))
+                      i (range-expr (literal-expr 3) .. (literal-expr 0))
+                      j (range-expr (literal-expr 2) .. (literal-expr 0))))))
+
+(define c40-inst (C40-make))
+(slot-set! (c40-inst x 0 z) (signal 1 0 0))
+(slot-set! (c40-inst x 1 z) (signal 1 1 0))
+(slot-set! (c40-inst x 2 z) (signal 0 1 1))
+(slot-set! (c40-inst x 3 z) (signal 0 0 1))
+
+(test-case "Can make an array comprehension using an array composite port"
+  (check-sig-equal? (slot-ref c40-inst y) (signal #(2 1 0 2 1 0 3 2 1 3 2 1) #(2 1 0 3 2 1 3 2 1 2 1 0) #(3 2 1 3 2 1 2 1 0 2 1 0)) 3))
+
+(begin-hydromel
   (typedef word (call-expr unsigned (literal-expr 32)))
   (typedef utwice (parameter n (call-expr natural)) (call-expr unsigned (mult-expr (name-expr n) * (literal-expr 2))))
 
-  (component C40
+  (component C42
     (data-port x in (call-expr word))
     (data-port y out (call-expr utwice (literal-expr 16)))
     (assignment (name-expr y) (name-expr x))))
 
-(define c40-inst (C40-make))
+(define c42-inst (C42-make))
 
 (test-case "Can declare module-level types"
-  (check-equal? (slot-type (slot-ref* c40-inst x)) (unsigned 32))
-  (check-equal? (slot-type (slot-ref* c40-inst y)) (unsigned 32)))
+  (check-equal? (slot-type (slot-ref* c42-inst x)) (unsigned 32))
+  (check-equal? (slot-type (slot-ref* c42-inst y)) (unsigned 32)))
 
 (begin-hydromel
   (component C41

@@ -132,7 +132,6 @@ case-expr:
 choices:
   expression-list
 
-; TODO support slice-expr
 assign-expr:
   simple-expr /"<-" (array-assoc-expr  | slice-assoc-expr | record-expr)
 

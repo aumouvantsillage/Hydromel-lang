@@ -429,16 +429,15 @@
 
   [(_ (~and (array-for-expr body (~seq iter-name iter-expr) ...) this-expr))
    #:with this-type-label (type-label #'this-expr)
-   #:with (rng ...)   (generate-temporaries (attribute iter-name))
-   #:with (left ...)  (generate-temporaries (attribute iter-name))
-   #:with (right ...) (generate-temporaries (attribute iter-name))
-   #'(splicing-letrec ([rng       iter-expr] ...
-                       [left      (first rng)] ...
-                       [right     (last rng)] ...
-                       [iter-name (comprehension-slot left right)] ...)
+   #:with (rng ...) (generate-temporaries (attribute iter-name))
+   #'(splicing-letrec-values ([(rng ...) (for*/lists (rng ...)
+                                                     ([iter-name (in-list iter-expr)] ...)
+                                           (values iter-name ...))]
+                              [(iter-name) (comprehension-slot (apply min rng) (apply max rng))] ...
+                              [(len) (length (first (list rng ...)))])
        (typing-functions body)
        (define (this-type-label)
-         (array (* (add1 (abs (- left right))) ...) (type-of body))))]
+         (array len (union (for/list ([iter-name (in-list rng)] ...) (type-of body))))))]
 
   [(_ (~and (concat-for-expr body (~seq iter-name iter-expr) ...) this-expr))
    #:with this-type-label (type-label #'this-expr)
@@ -446,6 +445,7 @@
    #:with (left ...)  (generate-temporaries (attribute iter-name))
    #:with (right ...) (generate-temporaries (attribute iter-name))
    ; TODO Check that (type-of body) is (abstract-integer 1) for all iterator values
+   ; TODO Allow index dependencies like in array-for-expr
    #'(splicing-letrec ([rng       iter-expr] ...
                        [left      (first rng)] ...
                        [right     (last rng)] ...

@@ -525,19 +525,57 @@
 (test-case "Can make an array comprehension using an array composite port"
   (check-sig-equal? (slot-ref c27-inst y) (signal #(0 0 1 1) #(0 1 1 0) #(1 1 0 0)) 3))
 
+(component C28
+  (composite-port x ((literal-expr 4)) I9)
+  (data-port y out (call-expr array (literal-expr 12) (call-expr unsigned (literal-expr 3))))
+  (assignment (name-expr y)
+    (array-for-expr
+      (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z))]
+        (call-expr + (name-expr x^) (name-expr j)))
+      i (call-expr _range_:impl (literal-expr 3) (literal-expr 0))
+      j (call-expr _range_:impl (literal-expr 2) (literal-expr 0)))))
+
+(define c28-inst (C28-make))
+(slot-set! (c28-inst x 0 z) (signal 1 0 0))
+(slot-set! (c28-inst x 1 z) (signal 1 1 0))
+(slot-set! (c28-inst x 2 z) (signal 0 1 1))
+(slot-set! (c28-inst x 3 z) (signal 0 0 1))
+
+(test-case "Can make an 2D array comprehension using an array composite port"
+  (check-sig-equal? (slot-ref c28-inst y) (signal #(2 1 0 2 1 0 3 2 1 3 2 1) #(2 1 0 3 2 1 3 2 1 2 1 0) #(3 2 1 3 2 1 2 1 0 2 1 0)) 3))
+
+(component C29
+  (composite-port x ((literal-expr 4)) I9)
+  (data-port y out (call-expr array (literal-expr 10) (call-expr unsigned (literal-expr 3))))
+  (assignment (name-expr y)
+    (array-for-expr
+      (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z))]
+        (call-expr + (name-expr x^) (name-expr j)))
+      i (call-expr _range_:impl (literal-expr 3) (literal-expr 0))
+      j (call-expr _range_:impl (name-expr i) (literal-expr 0)))))
+
+(define c29-inst (C29-make))
+(slot-set! (c29-inst x 0 z) (signal 1 0 0))
+(slot-set! (c29-inst x 1 z) (signal 1 1 0))
+(slot-set! (c29-inst x 2 z) (signal 0 1 1))
+(slot-set! (c29-inst x 3 z) (signal 0 0 1))
+
+(test-case "Can make an 2D array comprehension with index dependencies using an array composite port"
+  (check-sig-equal? (slot-ref c29-inst y) (signal #(3 2 1 0 2 1 0 2 1 1) #(3 2 1 0 3 2 1 2 1 0) #(4 3 2 1 3 2 1 1 0 0)) 3))
+
 (typedef word (call-expr unsigned (literal-expr 32)))
 (typedef utwice (parameter n (call-expr natural:impl)) (call-expr unsigned (call-expr * (name-expr n) (literal-expr 2))))
 
-(component C28
+(component C30
   (data-port x in (call-expr word:impl))
   (data-port y out (call-expr utwice:impl (literal-expr 16)))
   (assignment (name-expr y) (slot-expr (name-expr x))))
 
-(define c28-inst (C28-make))
+(define c30-inst (C30-make))
 
 (test-case "Can declare module-level types"
-  (check-equal? (slot-type (slot-ref* c28-inst x)) (unsigned 32))
-  (check-equal? (slot-type (slot-ref* c28-inst y)) (unsigned 32)))
+  (check-equal? (slot-type (slot-ref* c30-inst x)) (unsigned 32))
+  (check-equal? (slot-type (slot-ref* c30-inst y)) (unsigned 32)))
 
 ; TODO test multidimensional ports
 ; TODO test multidimensional arrays
