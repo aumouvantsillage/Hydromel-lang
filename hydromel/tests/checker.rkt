@@ -633,8 +633,28 @@
 (slot-set! (c40-inst x 2 z) (signal 0 1 1))
 (slot-set! (c40-inst x 3 z) (signal 0 0 1))
 
-(test-case "Can make an array comprehension using an array composite port"
+(test-case "Can make a 2D array comprehension using an array composite port"
   (check-sig-equal? (slot-ref c40-inst y) (signal #(2 1 0 2 1 0 3 2 1 3 2 1) #(2 1 0 3 2 1 3 2 1 2 1 0) #(3 2 1 3 2 1 2 1 0 2 1 0)) 3))
+
+(begin-hydromel
+  (component C43
+    (composite-port x ((literal-expr 4)) I6)
+    (data-port y out (call-expr array (literal-expr 10) (call-expr unsigned (literal-expr 3))))
+    (assignment (name-expr y)
+      (array-for-expr (add-expr
+                        (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z) +
+                        (name-expr j))
+                      i (range-expr (literal-expr 3) .. (literal-expr 0))
+                      j (range-expr (name-expr i)    .. (literal-expr 0))))))
+
+(define c43-inst (C43-make))
+(slot-set! (c43-inst x 0 z) (signal 1 0 0))
+(slot-set! (c43-inst x 1 z) (signal 1 1 0))
+(slot-set! (c43-inst x 2 z) (signal 0 1 1))
+(slot-set! (c43-inst x 3 z) (signal 0 0 1))
+
+(test-case "Can make a 2D array comprehension with index dependencies using an array composite port"
+  (check-sig-equal? (slot-ref c43-inst y) (signal #(3 2 1 0 2 1 0 2 1 1) #(3 2 1 0 3 2 1 2 1 0) #(4 3 2 1 3 2 1 1 0 0)) 3))
 
 (begin-hydromel
   (typedef word (call-expr unsigned (literal-expr 32)))

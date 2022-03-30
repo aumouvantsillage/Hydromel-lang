@@ -161,15 +161,13 @@
        (s/l (statement-block body ...))]
 
       [s:stx/comprehension
-       #:with (iter-expr ...) (map add-scopes (attribute s.iter-expr))
-       ; The loop counters are bound as constants inside a new scope
-       ; so that only the comprehension body can use it.
-       ; TODO make a new scope for each counter:
-       ;      iter-expr[n] should be able to use iter-name[m<n]
-       #:with body (with-scope
-                     (for ([name (in-list (attribute s.iter-name))])
-                       (bind! name (meta/constant #f)))
-                     (add-scopes #'s.body))
+       ; Loop counters are bound as constants inside a new scope.
+       ; The actual values of these constants do not matter.
+       ; Range expressions are allowed to depend on other loop counters.
+       #:with (body iter-expr ...) (with-scope
+                                     (for ([name (in-list (attribute s.iter-name))])
+                                       (bind! name (meta/constant #f)))
+                                     (map add-scopes (cons #'s.body (attribute s.iter-expr))))
        (s/l (s.mode body (~@ s.iter-name iter-expr) ...))]
 
       ; Attach the current scope as a syntax property to the current name,

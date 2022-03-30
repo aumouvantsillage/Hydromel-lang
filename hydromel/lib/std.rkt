@@ -21,7 +21,6 @@
 
 (provide (all-from-out "numeric.rkt"))
 
-; TODO make expect-* return the normalized type.
 (define (expect-type* pred? msg name pos t)
   (define t^ (t/normalize-type t))
   (unless (pred? t^)
