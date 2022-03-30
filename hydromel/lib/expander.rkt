@@ -274,8 +274,9 @@
    #'(dict-ref expr 'field-name)])
 
 ; An indexed port expression expands to a vector access.
-(define-syntax-parse-rule (indexed-port-expr expr index)
-  (vector-ref expr index))
+(define-syntax-parser indexed-port-expr
+  [(_ expr)                   #'expr]
+  [(_ expr index indices ...) #'(indexed-port-expr (vector-ref expr index) indices ...)])
 
 ; A call expression expands to a Racket function call.
 (define-syntax-parse-rule (call-expr fn-name arg ...)

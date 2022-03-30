@@ -615,5 +615,32 @@
   (check-equal? (slot-type (slot-ref* c30-inst x)) (unsigned 32))
   (check-equal? (slot-type (slot-ref* c30-inst y)) (unsigned 32)))
 
-; TODO test multidimensional ports
+(component C33
+  (composite-port x ((literal-expr 2) (literal-expr 3)) I9)
+  (composite-port y ((literal-expr 2) (literal-expr 3)) flip I9)
+  (for-statement for-i i (call-expr _range_:impl (literal-expr 0) (literal-expr 1))
+    (statement-block
+      (for-statement for-j j (call-expr _range_:impl (literal-expr 0) (literal-expr 2))
+        (statement-block
+          (assignment (field-expr (indexed-port-expr (name-expr y) (name-expr i) (name-expr j)) z)
+                      (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i) (name-expr j)) z))]
+                        (call-expr/cast bitwise-not (name-expr x^)))))))))
+
+(define c33-inst (C33-make))
+
+(slot-set! (c33-inst x 0 0 z) (signal 1 0 0))
+(slot-set! (c33-inst x 0 1 z) (signal 1 1 0))
+(slot-set! (c33-inst x 0 2 z) (signal 0 1 1))
+(slot-set! (c33-inst x 1 0 z) (signal 0 0 1))
+(slot-set! (c33-inst x 1 1 z) (signal 1 0 1))
+(slot-set! (c33-inst x 1 2 z) (signal 1 1 1))
+
+(test-case "Can use multidimensional composite ports"
+  (check-sig-equal? (slot-ref c33-inst y 0 0 z) (signal 0 1 1) 3)
+  (check-sig-equal? (slot-ref c33-inst y 0 1 z) (signal 0 0 1) 3)
+  (check-sig-equal? (slot-ref c33-inst y 0 2 z) (signal 1 0 0) 3)
+  (check-sig-equal? (slot-ref c33-inst y 1 0 z) (signal 1 1 0) 3)
+  (check-sig-equal? (slot-ref c33-inst y 1 1 z) (signal 0 1 0) 3)
+  (check-sig-equal? (slot-ref c33-inst y 1 2 z) (signal 0 0 0) 3))
+
 ; TODO test multidimensional arrays

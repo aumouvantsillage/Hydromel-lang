@@ -692,3 +692,31 @@
 
 (test-case "Can use case expression"
   (check-sig-equal? (slot-ref c41-inst y) (signal 10 20 10 20 30) 5))
+
+(begin-hydromel
+  (component C44
+    (composite-port x ((literal-expr 2) (literal-expr 3)) I6)
+    (composite-port y ((literal-expr 2) (literal-expr 3)) flip I6)
+    (for-statement i (range-expr (literal-expr 0) .. (literal-expr 1))
+      (statement-block
+        (for-statement j (range-expr (literal-expr 0) .. (literal-expr 2))
+          (statement-block
+            (assignment (field-expr (indexed-port-expr (name-expr y) (name-expr i) (name-expr j)) z)
+                        (prefix-expr not (field-expr (indexed-port-expr (name-expr x) (name-expr i) (name-expr j)) z)))))))))
+
+(define c44-inst (C44-make))
+
+(slot-set! (c44-inst x 0 0 z) (signal 1 0 0))
+(slot-set! (c44-inst x 0 1 z) (signal 1 1 0))
+(slot-set! (c44-inst x 0 2 z) (signal 0 1 1))
+(slot-set! (c44-inst x 1 0 z) (signal 0 0 1))
+(slot-set! (c44-inst x 1 1 z) (signal 1 0 1))
+(slot-set! (c44-inst x 1 2 z) (signal 1 1 1))
+
+(test-case "Can use multidimensional composite ports"
+  (check-sig-equal? (slot-ref c44-inst y 0 0 z) (signal 0 1 1) 3)
+  (check-sig-equal? (slot-ref c44-inst y 0 1 z) (signal 0 0 1) 3)
+  (check-sig-equal? (slot-ref c44-inst y 0 2 z) (signal 1 0 0) 3)
+  (check-sig-equal? (slot-ref c44-inst y 1 0 z) (signal 1 1 0) 3)
+  (check-sig-equal? (slot-ref c44-inst y 1 1 z) (signal 0 1 0) 3)
+  (check-sig-equal? (slot-ref c44-inst y 1 2 z) (signal 0 0 0) 3))

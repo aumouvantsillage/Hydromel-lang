@@ -147,7 +147,7 @@
        (add-scopes* this-syntax)]
 
       [s:stx/for-statement
-       #:with name (or (attribute s.name) (generate-temporary #'if))
+       #:with name (or (attribute s.name) (generate-temporary #'for))
        #:with iter-expr (add-scopes #'s.iter-expr)
        ; The loop counter is bound as a constant inside a new scope
        ; so that only the loop body can use it.
@@ -289,7 +289,7 @@
        #:with body (check #'s.body)
        (unless (static? #'iter-expr)
          (raise-syntax-error #f "Non-static expression cannot be used as loop range" #'iter-expr))
-       (q/l (for-statement name s.iter-name iter-expr body))]
+       (q/l (for-statement s.name s.iter-name iter-expr body))]
 
       [s:stx/statement-block
        #:with (body ...) (map check (attribute s.body))
