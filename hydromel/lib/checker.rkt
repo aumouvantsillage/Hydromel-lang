@@ -300,7 +300,7 @@
        (if (meta/design-unit? (check-field-expr #'expr #'s.field-name))
          (s/l (field-expr expr s.field-name))
          ; We use s.expr here because check fails if we
-         ; pass it an already checked call-expr.
+         ; check an already checked call-expr.
          (check (s/l (call-expr _field_ s.expr (literal-expr s.field-name)))))]
 
       [s:stx/indexed-port-expr
@@ -441,7 +441,10 @@
        (lookup #'s.name)]
 
       [s:stx/field-expr
-       ; For a field expression, resolve the left-hand side first.
+       ; Resolve a field expression that refers to a port in a composite port
+       ; or an instance. Access to record fields are converted to call expressions
+       ; and will not reach this point.
+       ; Resolve the left-hand side first.
        (match (resolve #'s.expr)
          [(meta/composite-port intf-name _ _)
           ; If the lhs maps to a composite port, look up the given field name
@@ -452,8 +455,6 @@
           ; If the lhs maps to an instance, look up the given field name
           ; in the target component.
           (meta/design-unit-ref (lookup comp-name meta/component?) #'s.field-name)]
-
-         ; TODO resolve field access for structured data types
 
          [_ (raise-syntax-error #f "Expression not suitable for field access" stx)])]
 

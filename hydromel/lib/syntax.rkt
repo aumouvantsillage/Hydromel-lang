@@ -195,4 +195,4 @@
     #:literals [lift-expr]
     (pattern (lift-expr binding ...+ expr))))
 
-; TODO Add types, type expressions, functions
+; TODO Add functions
