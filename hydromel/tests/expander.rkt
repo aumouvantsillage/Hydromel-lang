@@ -507,6 +507,44 @@
 (test-case "Can make a slice comprehension using an array composite port"
   (check-sig-equal? (slot-ref c26-inst y) (signal 3 6 12) 3))
 
+(component C31
+  (composite-port x ((literal-expr 4)) I9)
+  (data-port y out (call-expr unsigned (literal-expr 8)))
+  (assignment (name-expr y)
+    (concat-for-expr
+      (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z))]
+        (call-expr bitwise-xor (name-expr x^) (name-expr j)))
+      j (call-expr _range_:impl (literal-expr 1) (literal-expr 0))
+      i (call-expr _range_:impl (literal-expr 3) (literal-expr 0)))))
+
+(define c31-inst (C31-make))
+(slot-set! (c31-inst x 0 z) (signal 1 0 0))
+(slot-set! (c31-inst x 1 z) (signal 1 1 0))
+(slot-set! (c31-inst x 2 z) (signal 0 1 1))
+(slot-set! (c31-inst x 3 z) (signal 0 0 1))
+
+(test-case "Can make a 2D slice comprehension using an array composite port"
+  (check-sig-equal? (slot-ref c31-inst y) (signal #xC3 #x96 #x3C) 3))
+
+(component C32
+  (composite-port x ((literal-expr 4)) I9)
+  (data-port y out (call-expr unsigned (literal-expr 10)))
+  (assignment (name-expr y)
+    (concat-for-expr
+      (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z))]
+        (call-expr bitwise-xor (name-expr x^) (call-expr bitwise-and (name-expr j) (literal-expr 1))))
+      j (call-expr _range_:impl (literal-expr 3) (literal-expr 0))
+      i (call-expr _range_:impl (name-expr j) (literal-expr 0)))))
+
+(define c32-inst (C32-make))
+(slot-set! (c32-inst x 0 z) (signal 1 0 0))
+(slot-set! (c32-inst x 1 z) (signal 1 1 0))
+(slot-set! (c32-inst x 2 z) (signal 0 1 1))
+(slot-set! (c32-inst x 3 z) (signal 0 0 1))
+
+(test-case "Can make a 2D slice comprehension with index dependencies using an array composite port"
+  (check-sig-equal? (slot-ref c32-inst y) (signal #x319 #x272 #x0E6) 3))
+
 (component C27
   (composite-port x ((literal-expr 4)) I9)
   (data-port y out (call-expr array (literal-expr 4) (call-expr unsigned (literal-expr 1))))
@@ -579,5 +617,3 @@
 
 ; TODO test multidimensional ports
 ; TODO test multidimensional arrays
-; TODO test multidimensional concat comprehensions
-; TODO test multidimensional array comprehensions

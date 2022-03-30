@@ -429,30 +429,28 @@
 
   [(_ (~and (array-for-expr body (~seq iter-name iter-expr) ...) this-expr))
    #:with this-type-label (type-label #'this-expr)
-   #:with (rng ...) (generate-temporaries (attribute iter-name))
+   #:with (~and (first-rng _ ...) (rng ...)) (generate-temporaries (attribute iter-name))
    #'(splicing-letrec-values ([(rng ...) (for*/lists (rng ...)
                                                      ([iter-name (in-list iter-expr)] ...)
                                            (values iter-name ...))]
-                              [(iter-name) (comprehension-slot (apply min rng) (apply max rng))] ...
-                              [(len) (length (first (list rng ...)))])
+                              [(len) (length first-rng)]
+                              [(iter-name) (comprehension-slot (apply min rng) (apply max rng))] ...)
        (typing-functions body)
        (define (this-type-label)
-         (array len (union (for/list ([iter-name (in-list rng)] ...) (type-of body))))))]
+         (array len (type-of body))))]
 
   [(_ (~and (concat-for-expr body (~seq iter-name iter-expr) ...) this-expr))
    #:with this-type-label (type-label #'this-expr)
-   #:with (rng ...)   (generate-temporaries (attribute iter-name))
-   #:with (left ...)  (generate-temporaries (attribute iter-name))
-   #:with (right ...) (generate-temporaries (attribute iter-name))
+   #:with (~and (first-rng _ ...) (rng ...)) (generate-temporaries (attribute iter-name))
    ; TODO Check that (type-of body) is (abstract-integer 1) for all iterator values
-   ; TODO Allow index dependencies like in array-for-expr
-   #'(splicing-letrec ([rng       iter-expr] ...
-                       [left      (first rng)] ...
-                       [right     (last rng)] ...
-                       [iter-name (comprehension-slot left right)] ...)
+   #'(splicing-letrec-values ([(rng ...) (for*/lists (rng ...)
+                                                     ([iter-name (in-list iter-expr)] ...)
+                                           (values iter-name ...))]
+                              [(len) (length first-rng)]
+                              [(iter-name) (comprehension-slot (apply min rng) (apply max rng))] ...)
        (typing-functions body)
        (define (this-type-label)
-         (resize (type-of body) (* (add1 (abs (- left right))) ...))))]
+         (resize (type-of body) len)))]
 
   [(_ ((~or* name-expr literal-expr) _ ...))
    #'(begin)]
