@@ -310,6 +310,8 @@
 (test-constant nth1 10)
 (test-constant nth2 20)
 (test-constant nth3 30)
+(test-constant nth4 (pvector 40 50 60))
+(test-constant nth5 60)
 
 ; ------------------------------------------------------------------------------
 ; Array assignment: x <- [=>]

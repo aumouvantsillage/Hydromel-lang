@@ -162,8 +162,7 @@
     (pattern (slice-expr expr index)
       #:attr (arg 1) (list #'expr #'index #'index)
       #:attr fn-name #'_slice_)
-    (pattern (indexed-array-expr expr index)
-      #:attr (arg 1) (list #'expr #'index)
+    (pattern (indexed-array-expr arg ...)
       #:attr fn-name #'_nth_)
     (pattern (assign-expr left (array-assoc-expr nv ...))
       #:attr (arg 1) (cons #'left (attribute nv))
@@ -187,6 +186,8 @@
       #:with (field ...) #'((~@ (literal-expr field-name) field-value) ...)
       #:attr fn-name #'_record_
       #:attr (arg 1) (attribute field))
+    (pattern (call-expr (~datum array) arg ...)
+      #:attr fn-name #'make-array)
     (pattern (call-expr fn-name arg ...))
     (pattern :call-expr/cast))
     ; field-expr is handled in checker.rkt

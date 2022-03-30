@@ -632,12 +632,25 @@
 (test-function (_nth_ (pvector 10 20 30) 1) 20)
 (test-function (_nth_ (pvector 10 20 30) 2) 30)
 
+(test-function (_nth_ (pvector
+                        (pvector 10 20 30)
+                        (pvector 40 50 60)
+                        (pvector 70 80 90)) 1 2) 60)
+
+(test-function (_nth_ (pvector
+                        (pvector 10 20 30)
+                        (pvector 40 50 60)
+                        (pvector 70 80 90)) 1) (pvector 40 50 60))
+
 (test-function/exn (_nth_ (pvector 10 20 30) -1))
 (test-function/exn (_nth_ (pvector 10 20 30) 3))
 (test-function/exn (_nth_ (pvector 10 20 30) 'x))
 
 (test-return-type (_nth_ (t/array 3 (t/unsigned 4)) (t/unsigned 2)) (t/unsigned 4))
 (test-return-type/exn (_nth_ (t/array 3 (t/unsigned 4)) (t/symbol 'x)))
+
+(test-return-type (_nth_ (t/make-array:impl 2 3 (t/unsigned 4)) (t/unsigned 2)) (t/array 3 (t/unsigned 4)))
+(test-return-type (_nth_ (t/make-array:impl 2 3 (t/unsigned 4)) (t/unsigned 2) (t/unsigned 2)) (t/unsigned 4))
 
 (test-return-type/exn (_nth_ (t/unsigned 8) (t/unsigned 4)))
 (test-return-type/exn (_nth_ (t/unsigned 8) (t/symbol 'x)))
@@ -659,6 +672,8 @@
 (test-return-type/exn (_set_nth_ (t/array 3 (t/unsigned 4)) (t/unsigned 2) (t/unsigned 5)))
 (test-return-type/exn (_set_nth_ (t/array 3 (t/unsigned 4)) (t/unsigned 2) (t/symbol 'x)))
 (test-return-type/exn (_set_nth_ (t/array 3 (t/unsigned 4)) (t/symbol 'x) (t/unsigned 3)))
+
+; TODO multidimensional arrays
 
 ; ------------------------------------------------------------------------------
 ; _field_

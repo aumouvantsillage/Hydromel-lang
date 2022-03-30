@@ -57,10 +57,17 @@
 
 (struct array datatype (size elt-type) #:transparent)
 
-(define (array:return-type tn te)
-  (match (list tn te)
-    [(list (static-data n _) (static-data t _)) (static-data (array n t) (type:impl))]
-    [_                                          (error "Cannot determine array type" tn te)]))
+(define-syntax make-array (meta/make-function #'make-array:impl))
+
+(define (make-array:impl . args)
+  (match args
+    [(list t) t]
+    [(list n nts ...) (array n (apply make-array:impl nts))]))
+
+(define (make-array:impl:return-type . ts)
+  (unless (andmap static-data? ts)
+    (error "Cannot determine array type"))
+  (static-data (apply make-array:impl (map static-data-value ts) (type:impl))))
 
 (struct record datatype (fields) #:transparent)
 

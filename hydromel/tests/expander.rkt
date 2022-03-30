@@ -6,8 +6,6 @@
 
 (require
   rackunit
-  (only-in data/collection
-    nth)
   data/pvector
   "../lib/expander.rkt"
   "../lib/signal.rkt"
@@ -438,7 +436,7 @@
   (data-port y out (call-expr unsigned (literal-expr 8)))
   (assignment (name-expr y) (lift-expr [x^ (slot-expr (name-expr x))]
                                        [i^ (slot-expr (name-expr i))]
-                              (call-expr nth (name-expr x^) (name-expr i^)))))
+                              (call-expr _nth_:impl (name-expr x^) (name-expr i^)))))
 
 (define c22-inst (C22-make))
 (slot-set! (c22-inst x) (signal (pvector 10 20 30 40)))
@@ -642,5 +640,3 @@
   (check-sig-equal? (slot-ref c33-inst y 1 0 z) (signal 1 1 0) 3)
   (check-sig-equal? (slot-ref c33-inst y 1 1 z) (signal 0 1 0) 3)
   (check-sig-equal? (slot-ref c33-inst y 1 2 z) (signal 0 0 0) 3))
-
-; TODO test multidimensional arrays

@@ -332,10 +332,16 @@
                     it)))
     (t/record (apply hash ts^))))
 
-(define-function _nth_ nth
-  (λ (ta tb)
-    (expect-integer 'nth 1 tb)
-    (t/array-elt-type (expect-array 'nth 0 ta))))
+(define-function _nth_
+  (λ args
+    (for/fold ([res (first args)])
+              ([n (in-list (rest args))])
+      (nth res n)))
+  (λ ts
+    (for/fold ([res (first ts)])
+              ([(t n) (in-indexed (rest ts))])
+      (expect-integer 'nth (add1 n) t)
+      (t/array-elt-type (expect-array 'nth n res)))))
 
 (define-function _set_nth_
   (λ args
