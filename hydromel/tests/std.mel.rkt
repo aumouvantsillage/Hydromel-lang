@@ -321,6 +321,14 @@
 (test-constant snth2 (pvector 10 55 30))
 (test-constant snth3 (pvector 10 20 55))
 (test-constant snth4 (pvector 55 20 66))
+(test-constant snth5 (pvector
+                       (pvector 10 20 30)
+                       (pvector 14 15 16)
+                       (pvector 70 80 90)))
+(test-constant snth6 (pvector
+                       (pvector 10 20 30)
+                       (pvector 40 50 16)
+                       (pvector 70 18 90)))
 
 ; ------------------------------------------------------------------------------
 ; Record: (=>)

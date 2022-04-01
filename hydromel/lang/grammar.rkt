@@ -190,12 +190,15 @@ array-for-expr:
   /"[" expression /"for" iterator-list /"]"
 
 array-assoc-expr:
-  /"[" @index-assoc (/"," @index-assoc )* /","? /"]"
+  /"[" array-assoc (/"," array-assoc )* /","? /"]"
+
+array-assoc:
+  expression-list /"=>" expression
 
 slice-assoc-expr:
-  /"{" @index-assoc (/"," @index-assoc)* /","? /"}"
+  /"{" slice-assoc (/"," slice-assoc)* /","? /"}"
 
-index-assoc:
+slice-assoc:
   expression /"=>" expression
 
 record-expr:

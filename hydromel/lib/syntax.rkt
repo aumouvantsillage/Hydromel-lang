@@ -125,18 +125,23 @@
     #:literals [call-expr/cast]
     (pattern (call-expr/cast fn-name arg ...)))
 
-  (define-splicing-syntax-class slice-assoc
-    #:literals [range-expr]
-    (pattern (~seq (range-expr left op right) expr)
+  (define-syntax-class array-assoc
+    #:literals [array-assoc]
+    (pattern (array-assoc index ... expr)
+      #:attr (arg 1) (list #'(tuple-expr index ...) #'expr)))
+
+  (define-syntax-class slice-assoc
+    #:literals [slice-assoc range-expr]
+    (pattern (slice-assoc (range-expr left op right) expr)
       #:attr (arg 1) (list #'left #'right #'expr))
-    (pattern (~seq index expr)
+    (pattern (slice-assoc index expr)
       #:attr (arg 1) (list #'index #'index #'expr)))
 
   (define-syntax-class call-expr
     #:literals [call-expr or-expr and-expr rel-expr add-expr mult-expr shift-expr
                 if-expr case-expr prefix-expr range-expr slice-expr concat-expr
                 array-expr array-assoc-expr slice-assoc-expr indexed-array-expr
-                field-expr cast-expr assign-expr record-type record-expr]
+                field-expr cast-expr assign-expr record-type record-expr tuple-expr]
     #:attributes [fn-name (arg 1)]
     (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr shift-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
@@ -164,8 +169,8 @@
       #:attr fn-name #'_slice_)
     (pattern (indexed-array-expr arg ...)
       #:attr fn-name #'_nth_)
-    (pattern (assign-expr left (array-assoc-expr nv ...))
-      #:attr (arg 1) (cons #'left (attribute nv))
+    (pattern (assign-expr left (array-assoc-expr nv:array-assoc ...))
+      #:attr (arg 1) (cons #'left (apply append (attribute nv.arg)))
       #:attr fn-name #'_set_nth_)
     (pattern (assign-expr left (slice-assoc-expr lrv:slice-assoc ...))
       #:attr (arg 1) (cons #'left (apply append (attribute lrv.arg)))
@@ -186,6 +191,8 @@
       #:with (field ...) #'((~@ (literal-expr field-name) field-value) ...)
       #:attr fn-name #'_record_
       #:attr (arg 1) (attribute field))
+    (pattern (tuple-expr arg ...)
+      #:attr fn-name #'_tuple_)
     (pattern (call-expr (~datum array) arg ...)
       #:attr fn-name #'make-array)
     (pattern (call-expr fn-name arg ...))

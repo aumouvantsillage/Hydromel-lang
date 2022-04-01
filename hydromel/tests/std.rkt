@@ -664,11 +664,31 @@
 (test-function (_set_nth_ (pvector 10 20 30) 2 55) (pvector 10 20 55))
 (test-function (_set_nth_ (pvector 10 20 30) 0 55 2 66) (pvector 55 20 66))
 
+(test-function (_set_nth_ (pvector
+                            (pvector 10 20 30)
+                            (pvector 40 50 60)
+                            (pvector 70 80 90)) (list 1) (pvector 14 15 16))
+               (pvector
+                 (pvector 10 20 30)
+                 (pvector 14 15 16)
+                 (pvector 70 80 90)))
+
+(test-function (_set_nth_ (pvector
+                            (pvector 10 20 30)
+                            (pvector 40 50 60)
+                            (pvector 70 80 90)) (list 1 2) 16 (list 2 1) 18)
+               (pvector
+                 (pvector 10 20 30)
+                 (pvector 40 50 16)
+                 (pvector 70 18 90)))
+
+
 (test-function/exn (_set_nth_ (pvector 10 20 30) -1 55))
 (test-function/exn (_set_nth_ (pvector 10 20 30)  3 55))
 (test-function/exn (_set_nth_ (pvector 10 20 30) 'x 55))
 
 (test-return-type (_set_nth_ (t/array 3 (t/unsigned 4)) (t/unsigned 2) (t/unsigned 3)) (t/array 3 (t/unsigned 4)))
+(test-return-type (_set_nth_ (t/make-array:impl 2 3 (t/unsigned 4)) (t/tuple (list (t/unsigned 2) (t/unsigned 2))) (t/unsigned 3)) (t/make-array:impl 2 3 (t/unsigned 4)))
 (test-return-type/exn (_set_nth_ (t/array 3 (t/unsigned 4)) (t/unsigned 2) (t/unsigned 5)))
 (test-return-type/exn (_set_nth_ (t/array 3 (t/unsigned 4)) (t/unsigned 2) (t/symbol 'x)))
 (test-return-type/exn (_set_nth_ (t/array 3 (t/unsigned 4)) (t/symbol 'x) (t/unsigned 3)))

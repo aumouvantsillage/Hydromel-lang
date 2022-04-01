@@ -343,19 +343,33 @@
       (expect-integer 'nth (add1 n) t)
       (t/array-elt-type (expect-array 'nth n res)))))
 
+(define (set-nth/multi arr ns v)
+  (match ns
+    [(or (? number? n) (list n)) (set-nth arr n v)]
+    [(list n m ...)              (set-nth arr n (set-nth/multi (nth arr n) m v))]))
+
 (define-function _set_nth_
   (λ args
     (let loop ([res (first args)] [nvs (rest args)])
       (match nvs
-        [(list n v xs ...) (loop (set-nth res n v) xs)]
+        [(list n v xs ...) (loop (set-nth/multi res n v) xs)]
         [_                 res])))
   (λ ts
     (define ta (expect-array 'set_nth 0 (first ts)))
-    (define te (t/array-elt-type ta))
-    (for ([(t n) (in-indexed (rest ts))])
-      (if (even? n)
-        (expect-integer 'set_nth (add1 n) t)
-        (expect-subtype 'set_nth (add1 n) t te)))
+    (let loop ([ts (rest ts)] [n 1])
+      (unless (empty? ts)
+        (match-define (list tn tv txs ...) ts)
+        (define te (match tn
+                     [(t/tuple (list tns ...))
+                      (for/fold ([te ta])
+                                ([t (in-list tns)])
+                        (expect-integer 'set_nth n t)
+                        (t/array-elt-type te))]
+                     [t
+                      (expect-integer 'set_nth n t)
+                      (t/array-elt-type ta)]))
+        (expect-subtype 'set_nth n tv te)
+        (loop txs (add1 n))))
     ta))
 
 (define-function _field_ dict-ref
@@ -384,6 +398,10 @@
          (expect-subtype 'set_field (add1 n) tv tf)
          (loop (+ 2 n) tr)]
         [_ ta]))))
+
+(define-function _tuple_ list
+  (λ args
+    (t/tuple args)))
 
 ; ------------------------------------------------------------------------------
 ; Type operations.
