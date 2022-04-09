@@ -1,0 +1,23 @@
+#lang hydromel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+component fifo1(T : type, I : T)
+    port c_valid : in  bit
+    port c_ready : out bit
+    port c_data  : in  T
+
+    port p_valid : out bit
+    port p_ready : in  bit
+    port p_data  : out T
+
+    p_valid = c_valid or full
+    c_ready = p_ready or not full
+
+    signal write : bit = c_valid and not (full xor p_ready)
+    signal full        = register(0, write or not c_ready)
+    signal data_reg    = register(I, c_data when write)
+    p_data             = if full then data_reg else c_data
+end

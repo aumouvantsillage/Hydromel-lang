@@ -9,14 +9,15 @@
   (only-in "numeric.rkt" integer->bit-string)
   (only-in "types.rkt" normalize-type abstract-integer-width)
   "signal.rkt"
-  "slot.rkt")
+  "slot.rkt"
+  "helpers.rkt")
 
 (provide vcd)
 
 (struct waveform (short-name width values))
 
-(define (vcd table duration ts [out (current-output-port)])
-  (define wavs (for/hash ([(name slt) (in-dict table)]
+(define (vcd inst duration ts [out (current-output-port)])
+  (define wavs (for/hash ([(name slt) (in-dict (slot-table inst))]
                           [index      (in-naturals)])
                  (define samples (~> slt slot-data (signal-take duration)))
                  (values name (waveform (format "s~a" index)

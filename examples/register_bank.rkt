@@ -5,6 +5,7 @@
 #lang racket
 
 (require
+  racket/runtime-path
   hydromel
   hydromel/lib/signal
   hydromel/lib/helpers
@@ -19,9 +20,9 @@
 
 (define duration 16)
 
-(define tbl (slot-table inst))
+(print-slot-table (slot-table inst) duration)
 
-(print-slot-table tbl duration)
-
-; (vcd tbl duration "10 ns"
-;   (open-output-file "register_bank.vcd" #:exists 'replace))
+; (define-runtime-path vcd-file "register_bank.vcd")
+;
+; (vcd inst duration "10 ns"
+;   (open-output-file vcd-file #:exists 'replace))

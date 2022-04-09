@@ -5,13 +5,14 @@
 #lang racket
 
 (require
+  racket/runtime-path
   hydromel
   hydromel/lib/signal
   hydromel/lib/helpers
   hydromel/lib/vcd
-  "fifo.mel")
+  "fifoN-1.mel")
 
-(define inst (fifo_rec_b-make (unsigned 8) 0 3))
+(define inst (fifo-make (unsigned 8) 0 3))
 
 (slot-set! (inst c valid) (signal 0  1  1  1  1  1 1 0))
 (slot-set! (inst c data)  (signal 10 10 20 30 40))
@@ -19,9 +20,7 @@
 
 (define duration 15)
 
-(define tbl (slot-table inst))
+(define-runtime-path vcd-file "fifoN-1.vcd")
 
-(print-slot-table tbl duration)
-
-(vcd tbl duration "10 ns"
-  (open-output-file "fifo3.vcd" #:exists 'replace))
+(vcd inst duration "10 ns"
+  (open-output-file vcd-file #:exists 'replace))

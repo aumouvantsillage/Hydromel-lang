@@ -1,0 +1,24 @@
+#lang hydromel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+interface producer(T : type)
+    port valid : out bit
+    port ready : in  bit
+    port data  : out T
+end
+
+component fifo1(T : type, I : T)
+    port c : flip producer(T)
+    port p : producer(T)
+
+    p.valid = c.valid or full
+    c.ready = p.ready or not full
+
+    signal write : bit = c.valid and not (full xor p.ready)
+    signal full        = register(0, write or not c.ready)
+    signal data_reg    = register(I, c.data when write)
+    p.data             = if full then data_reg else c.data
+end

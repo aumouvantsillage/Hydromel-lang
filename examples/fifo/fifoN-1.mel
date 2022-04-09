@@ -1,0 +1,23 @@
+#lang hydromel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+import "fifo1-3.mel"
+
+component fifo(T : type, I : T, N : natural)
+    port cp : splice consumer_producer(T)
+
+    instance f = fifo1(T, I)
+    f.c = c
+
+    if N == 1 then
+        p = f.p
+    else
+        instance g = fifo(T, I, N-1)
+        g.c = f.p
+        #p   = g.p
+        g.p = p
+    end
+end
