@@ -12,7 +12,7 @@
   hydromel/lib/vcd
   "fifo1-3.mel")
 
-(define inst (fifo1-make (unsigned 8) 0))
+(define inst (fifo1-make (unsigned 8)))
 
 (slot-set! (inst c valid) (signal 0  1  0  1  1  1  0  0  0))
 (slot-set! (inst c data)  (signal 10 10 10 20 30 30 30 30 30))

@@ -6,10 +6,10 @@
 
 import "fifo1-3.mel"
 
-component fifo(T : type, I : T, N : natural)
+component fifo(T : type, N : natural)
     port cp : splice consumer_producer(T)
 
-    instance f<N> = fifo1(T, I)
+    instance f<N> = fifo1(T)
     f<0>.c = c
 
     for n in 1 .. N-1 loop

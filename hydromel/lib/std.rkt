@@ -436,3 +436,17 @@
   (match tb
     [(t/static-data v _) (t/static-data (tr v) tr)]
     [_                   tr]))
+
+; TODO Add suport for unions of symbols.
+(define-function zero
+  (λ (t)
+    (match (t/normalize-type t)
+      [(t/abstract-integer _) 0]
+      [(t/array n v) (make-pvector n (zero:impl v))]
+      [(t/tuple ts)  (map zero:impl ts)]
+      [(t/record fs) (for/hash ([(k v) (in-dict fs)])
+                       (values k (zero:impl v)))]
+      [_ (error "This type does not support a zero value" t)]))
+  (λ (t)
+    (expect-type 'zero 0 t)
+    (t/static-data-value t)))

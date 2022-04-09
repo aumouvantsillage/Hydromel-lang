@@ -6,15 +6,15 @@
 
 import "fifo1-3.mel"
 
-component fifo2(T : type, I : T)
+component fifo2(T : type)
     port cp : splice consumer_producer(T)
 
-    instance f = fifo1(T, I)
+    instance f = fifo1(T)
     f.c.valid  = c.valid
     f.c.data   = c.data
     c.ready    = f.c.ready
 
-    instance g = fifo1(T, I)
+    instance g = fifo1(T)
     g.c.valid  = f.p.valid
     g.c.data   = f.p.data
     f.p.ready  = g.c.ready

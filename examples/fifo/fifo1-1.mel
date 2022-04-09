@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-component fifo1(T : type, I : T)
+component fifo1(T : type)
     port c_valid : in  bit
     port c_ready : out bit
     port c_data  : in  T
@@ -18,6 +18,6 @@ component fifo1(T : type, I : T)
 
     signal write : bit = c_valid and not (full xor p_ready)
     signal full        = register(0, write or not c_ready)
-    signal data_reg    = register(I, c_data when write)
+    signal data_reg    = register(zero(T), c_data when write)
     p_data             = if full then data_reg else c_data
 end

@@ -10,7 +10,7 @@ interface producer(T : type)
     port data  : out T
 end
 
-component fifo1(T : type, I : T)
+component fifo1(T : type)
     port c : flip producer(T)
     port p : producer(T)
 
@@ -19,6 +19,6 @@ component fifo1(T : type, I : T)
 
     signal write : bit = c.valid and not (full xor p.ready)
     signal full        = register(0, write or not c.ready)
-    signal data_reg    = register(I, c.data when write)
+    signal data_reg    = register(zero(T), c.data when write)
     p.data             = if full then data_reg else c.data
 end

@@ -271,7 +271,8 @@
            (unless (equal? (syntax-e (meta/composite-port-intf-name target-port))
                            (syntax-e (meta/composite-port-intf-name expr-port)))
              (raise-syntax-error #f "Right-hand side and left-hand side of assignment have different interfaces" stx))
-           (check-composite-assignment stx #'target #'expr target-port))
+           ; Here we pass s.target and s.expr because they will be checked again.
+           (check-composite-assignment stx #'s.target #'s.expr target-port))
          ; If the left-hand side is a signal, generate an assignment statement.
          (q/l (assignment target #,(check-assigned-expr #'expr))))]
 
