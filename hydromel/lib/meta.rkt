@@ -21,7 +21,7 @@
     (thunk
       ; If not found, look into each spliced composite port.
       (define port (for/fold ([res #f])
-                             ([p (in-list (dict-values fields))]
+                             ([p (in-dict-values fields)]
                               #:when (and (composite-port? p) (composite-port-splice? p))
                               #:break res)
                      ; Find a port with the given name in the interface
