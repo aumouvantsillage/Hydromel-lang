@@ -25,7 +25,7 @@
   parameter data-port composite-port alias
   typedef constant local-signal instance
   if-statement for-statement statement-block
-  assignment connect-statement
+  assignment
   literal-expr name-expr field-expr
   indexed-port-expr
   call-expr call-expr/cast register-expr
@@ -215,11 +215,6 @@
   (begin
     (typing-functions expr)
     (update-slot! slt expr (typer-for expr))))
-
-; Connect two interface instances.
-; See std.rkt for the implementation of connect.
-(define-syntax-parse-rule (connect-statement left right)
-  (connect left right))
 
 ; An if statement expands to a conditional statement that generates a hash map.
 ; That hash map is assigned to a variable with the same name as the if label.

@@ -263,15 +263,15 @@
        #:with expr   (check #'s.expr)
        (define target-port (check-assignment-target #'target))
        (if (meta/composite-port? target-port)
-         ; If the left-hand side is a composite port, generate a connect statement.
-         ; TODO expand to separate, type-checked assignments.
+         ; If the left-hand side is a composite port,
+         ; generate an assignment for each data port.
          (let ([expr-port (resolve #'expr)])
            (unless (meta/composite-port? expr-port)
              (raise-syntax-error #f "Right-hand side of assignment is not a composite port" #'expr))
            (unless (equal? (syntax-e (meta/composite-port-intf-name target-port))
                            (syntax-e (meta/composite-port-intf-name expr-port)))
              (raise-syntax-error #f "Right-hand side and left-hand side of assignment have different interfaces" stx))
-           (s/l (connect-statement target expr)))
+           (check-composite-assignment stx #'target #'expr target-port))
          ; If the left-hand side is a signal, generate an assignment statement.
          (q/l (assignment target #,(check-assigned-expr #'expr))))]
 
@@ -465,6 +465,15 @@
 
       [_ #f]))
 
+  (define (flip? expr [res #f])
+    (syntax-parse expr
+      [s:stx/field-expr
+       (define res^ (flip? #'s.expr res))
+       (match (resolve #'s.expr)
+         [(meta/composite-port _ f? _) (xor f? res^)]
+         [(meta/instance _) (not res^)])]
+      [_ res]))
+
   ; Check an expression that appears in the left-hand side of an assignment.
   (define (check-assignment-target stx)
     (define target (resolve stx))
@@ -472,14 +481,6 @@
       ; If the left-hand side of an assignment resolves to a data port,
       ; check the mode of this port.
       [(meta/data-port mode)
-       (define (flip? stx [res #f])
-         (syntax-parse stx
-           [s:stx/field-expr
-            (define res^ (flip? #'s.expr res))
-            (match (resolve #'s.expr)
-              [(meta/composite-port _ f? _) (xor f? res^)]
-              [(meta/instance _) (not res^)])]
-           [_ res]))
        (unless (equal? mode (if (flip? stx) 'in 'out))
          (raise-syntax-error #f "Port cannot be assigned" stx))]
 
@@ -591,4 +592,21 @@
          ; Return the component name.
          comp]
 
-        [other other])))
+        [other other]))
+
+  ; TODO allow to connect ports with multiplicity
+  (define (check-composite-assignment stx target expr port)
+    (define intf (lookup (meta/composite-port-intf-name port)))
+    (define/syntax-parse (stmt ...)
+      (for/list ([(name intf-port) (in-dict (meta/design-unit-fields intf))])
+        (define/syntax-parse target^ (quasisyntax/loc stx (field-expr #,target #,name)))
+        (define/syntax-parse expr^   (quasisyntax/loc stx (field-expr #,expr   #,name)))
+        (match intf-port
+          [(meta/data-port mode)
+           (check
+             (if (equal? mode (if (flip? #'target^) 'in 'out))
+               (syntax/loc stx (assignment target^ expr^))
+               (syntax/loc stx (assignment expr^   target^))))]
+          [(meta/composite-port intf-name _ _)
+           (check-composite-assignment stx #'target^ #'expr^ intf-port)])))
+    (syntax/loc stx (begin stmt ...))))

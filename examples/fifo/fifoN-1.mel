@@ -17,7 +17,6 @@ component fifo(T : type, I : T, N : natural)
     else
         instance g = fifo(T, I, N-1)
         g.c = f.p
-        #p   = g.p
-        g.p = p
+        p   = g.p
     end
 end
