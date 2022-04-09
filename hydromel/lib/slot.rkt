@@ -63,6 +63,7 @@
          ; copy the content of the non-empty slot into the empty one.
          ; If both items are empty slots, copy the left slot itself
          ; into the right dictionary.
+         ; TODO Add type checking.
          (cond [(and sl sr) (error "Cannot overwrite an existing connection at" k)]
                [sl          (set-slot-data! vr sl)]
                [sr          (set-slot-data! vl sr)]
