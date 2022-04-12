@@ -13,11 +13,15 @@ component fifo1(T : type)
     port p_ready : in  bit
     port p_data  : out T
 
-    p_valid = c_valid or full
-    c_ready = p_ready or not full
+    signal full : bit = register(0, if full then
+                                        c_valid or not p_ready
+                                    else
+                                        c_valid and not p_ready)
+                                        
+    signal write  = c_valid and (if full then p_ready else not p_ready)
+    signal r_data = register(zero(T), c_data when write)
 
-    signal write : bit = c_valid and not (full xor p_ready)
-    signal full        = register(0, write or not c_ready)
-    signal data_reg    = register(zero(T), c_data when write)
-    p_data             = if full then data_reg else c_data
+    c_ready = p_ready or not full
+    p_valid = c_valid or full
+    p_data  = if full then r_data else c_data
 end

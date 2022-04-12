@@ -10,17 +10,20 @@
   hydromel/lib/signal
   hydromel/lib/helpers
   hydromel/lib/vcd
-  "fifoN-1.mel")
+  "fifoN-1.mel"
+  "fifo3-tests.rkt")
 
 (define inst (fifo-make (unsigned 8) 3))
 
-(slot-set! (inst c valid) (signal 0  1  1  1  1  1 1 0))
-(slot-set! (inst c data)  (signal 10 10 20 30 40))
-(slot-set! (inst p ready) (signal 0  0  0  0  0  0 1 0 1 0 1 0 1 0))
+(slot-set! (inst c valid) (list->signal c_valid-in))
+(slot-set! (inst c data)  (list->signal c_data-in))
+(slot-set! (inst p ready) (list->signal p_ready-in))
 
-(define duration 15)
+(test-signal "fifo.c.ready" (slot-ref inst c ready) c_ready-exp)
+(test-signal "fifo.p.valid" (slot-ref inst p valid) p_valid-exp)
+(test-signal "fifo.p.data"  (slot-ref inst p data)  p_data-exp)
 
 (define-runtime-path vcd-file "fifoN-1.vcd")
 
-(vcd inst duration "10 ns"
+(vcd inst (length c_valid-in) "10 ns"
   (open-output-file vcd-file #:exists 'replace))

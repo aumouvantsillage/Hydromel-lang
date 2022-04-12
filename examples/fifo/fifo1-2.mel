@@ -14,11 +14,15 @@ component fifo1(T : type)
     port c : flip producer(T)
     port p : producer(T)
 
-    p.valid = c.valid or full
-    c.ready = p.ready or not full
+    signal full : bit = register(0, if full then
+                                        c.valid or not p.ready
+                                    else
+                                        c.valid and not p.ready)
 
-    signal write : bit = c.valid and not (full xor p.ready)
-    signal full        = register(0, write or not c.ready)
-    signal data_reg    = register(zero(T), c.data when write)
-    p.data             = if full then data_reg else c.data
+    signal write  = c.valid and (if full then p.ready else not p.ready)
+    signal r_data = register(zero(T), c.data when write)
+
+    c.ready = p.ready or not full
+    p.valid = c.valid or full
+    p.data  = if full then r_data else c.data
 end
