@@ -7,14 +7,18 @@
 import "fifo1-3.mel"
 
 component fifo(T : type, N : natural)
-    port cp : splice consumer_producer(T)
+    port cp : splice conducer(T)
 
-    instance f<N> = fifo1(T)
-    f<0>.c = c
+    if N == 0 then
+        p = c
+    else
+        instance f<N> = fifo1(T)
+        f<0>.c = c
 
-    for n in 1 .. N-1 loop
-        f<n>.c = f<n-1>.p
+        for n in 1 .. N-1 loop
+            f<n>.c = f<n-1>.p
+        end
+
+        p = f<N-1>.p
     end
-
-    p = f<N-1>.p
 end

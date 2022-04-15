@@ -10,13 +10,13 @@ interface producer(T : type)
     port data  : out T
 end
 
-interface consumer_producer(T : type)
+interface conducer(T : type)
     port c : flip producer(T)
     port p : producer(T)
 end
 
 component fifo1(T : type)
-    port cp : splice consumer_producer(T)
+    port cp : splice conducer(T)
 
     signal full : bit = register(0, if full then
                                         c.valid or not p.ready

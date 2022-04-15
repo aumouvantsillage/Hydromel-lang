@@ -7,7 +7,7 @@
 import "fifo1-3.mel"
 
 component fifo2(T : type)
-    port cp : splice consumer_producer(T)
+    port cp : splice conducer(T)
 
     instance f = fifo1(T)
     f.c.valid  = c.valid
@@ -22,4 +22,4 @@ component fifo2(T : type)
     p.valid   = g.p.valid
     p.data    = g.p.data
     g.p.ready = p.ready
- end
+end

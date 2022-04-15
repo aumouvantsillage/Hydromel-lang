@@ -7,14 +7,14 @@
 import "fifo1-3.mel"
 
 component fifo(T : type, N : natural)
-    port cp : splice consumer_producer(T)
+    port cp : splice conducer(T)
 
-    instance f = fifo1(T)
-    f.c = c
-
-    if N == 1 then
-        p = f.p
+    if N == 0 then
+        p = c
     else
+        instance f = fifo1(T)
+        f.c = c
+
         instance g = fifo(T, N-1)
         g.c = f.p
         p   = g.p
