@@ -376,3 +376,14 @@
 (test-constant rng2 (range -3 4))
 (test-constant rng3 (range 3 -1 -1))
 (test-constant rng4 (range 3 -4 -1))
+
+; ------------------------------------------------------------------------------
+; zero
+; ------------------------------------------------------------------------------
+
+(test-constant z1 0)
+(test-constant z2 0)
+(test-constant z3 (make-pvector 3 0))
+(test-constant z4 (list 0 (make-pvector 3 0)))
+(test-constant z5 (hash 'x 0 'y (make-pvector 3 0)))
+(test-constant z6 '~a)

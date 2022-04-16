@@ -418,3 +418,14 @@ constant rng1 = 0 .. 3
 constant rng2 = -3 .. 3
 constant rng3 = 3 .. 0
 constant rng4 = 3 .. -3
+
+# ------------------------------------------------------------------------------
+# zero
+# ------------------------------------------------------------------------------
+
+constant z1 = zero(unsigned(8))
+constant z2 = zero(signed(8))
+constant z3 = zero(array(3, unsigned(8)))
+constant z4 = zero(tuple(unsigned(8), array(3, unsigned(8))))
+constant z5 = zero(record(x : unsigned(8), y : array(3, unsigned(8))))
+constant z6 = zero(enumeration(~a, ~b, ~c))

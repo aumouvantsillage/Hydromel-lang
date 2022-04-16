@@ -7,7 +7,7 @@
 (require
   syntax/parse/define
   racket/hash
-  (only-in data/collection length)
+  (only-in data/collection length nth)
   data/pvector
   (prefix-in base/ racket/base)
   (prefix-in num/ "numeric.rkt")
@@ -51,6 +51,11 @@
 
 (struct tuple datatype (elt-types) #:transparent)
 
+(define (tuple:return-type . ts)
+  (unless (andmap static-data? ts)
+    (error "Cannot determine array type"))
+  (static-data (tuple (map static-data-value ts)) (type:impl)))
+
 (struct union datatype (types)
   #:transparent
   #:property prop:procedure (λ (t v) ((normalize-type t) v)))
@@ -67,7 +72,7 @@
 (define (make-array:impl:return-type . ts)
   (unless (andmap static-data? ts)
     (error "Cannot determine array type"))
-  (static-data (apply make-array:impl (map static-data-value ts) (type:impl))))
+  (static-data (apply make-array:impl (map static-data-value ts)) (type:impl)))
 
 (struct record datatype (fields) #:transparent)
 
@@ -76,7 +81,10 @@
 (define (make-record:impl . kv)
   (record (apply hash kv)))
 
-; TODO make-record:impl:return-type
+(define (make-record:impl:return-type . ts)
+  (unless (andmap static-data? ts)
+    (error "Cannot determine array type"))
+  (static-data (apply make-record:impl (map static-data-value ts)) (type:impl)))
 
 ; The range type is used internally.
 (struct range datatype (type) #:transparent)
@@ -131,7 +139,10 @@
 (define (enumeration:impl . syms)
   (union (map symbol syms)))
 
-; TODO enumeration:impl:return-type
+(define (enumeration:impl:return-type . ts)
+  (unless (andmap static-data? ts)
+    (error "Cannot determine array type"))
+  (static-data (apply enumeration:impl (map static-data-value ts)) (type:impl)))
 
 ; Type helpers.
 
@@ -188,35 +199,36 @@
 (define (common-supertype t u)
   (match (list t u)
     ; If one of the arguments is none, return the other.
-    [(list _              (none))         t]
-    [(list (none)         _)              u]
+    [(list _      (none)) t]
+    [(list (none) _)      u]
     ; For integer types, return an integer type with
     ; appropriate signedness and the required width.
-    [(list (unsigned m)   (unsigned n))   (unsigned (max m n))]
-    [(list (signed   m)   (signed   n))   (signed   (max m n))]
-    [(list (unsigned m)   (signed   n))   (signed   (max (add1 m) n))]
-    [(list (signed   m)   (unsigned n))   (signed   (max m (add1 n)))]
+    [(list (unsigned m) (unsigned n)) (unsigned (max m n))]
+    [(list (signed   m) (signed   n)) (signed   (max m n))]
+    [(list (unsigned m) (signed   n)) (signed   (max (add1 m) n))]
+    [(list (signed   m) (unsigned n)) (signed   (max m (add1 n)))]
     ; Arrays have a common supertype when they have the same length.
     ; The result is an array type wose element type is the common supertype
     ; of the element types of t and u.
-    [(list (array    n v) (array    m w))
-     #:when (= n m)                       (array n (common-supertype/normalize v w))]
+    [(list (array n v) (array m w)) #:when (= n m)
+     (array n (common-supertype/normalize v w))]
     ; Symbol types have a common supertype when they refer to the same symbol.
-    [(list (symbol   q)   (symbol   r))
-     #:when (equal? q r)                  t]
+    [(list (symbol q) (symbol r)) #:when (equal? q r)
+     t]
     ; The common supertype of two record types contain fields with the
     ; intersection of their names, and the common supertypes of their types.
-    [(list (record ft)    (record   fu))  (record (hash-intersect ft fu #:combine common-supertype/normalize))]
+    [(list (record ft) (record fu))
+     (record (hash-intersect ft fu #:combine common-supertype/normalize))]
     ; This function expects t and u to be normalized.
     ; If they were based on unions before normalization, they should already
     ; have been reduced to non-union types.
     ; If we still get unions at this point, it means that t or u could not be
     ; reduced to simpler types, so we return a union here as well.
-    [(list (union    ts)  (union    us))  (union (append ts us))]
-    [(list (union    ts)  _)              (union (cons u ts))]
-    [(list _              (union    us))  (union (cons t us))]
+    [(list (union ts) (union us)) (union (append us ts))]
+    [(list (union ts) _)          (union (cons u ts))]
+    [(list _          (union us)) (union (append us (list t)))]
     ; If a common supertype could not be found, return a union of t and u.
-    [_                                    (union (list t u))]))
+    [_ (union (list u t))]))
 
 (define (common-supertype/normalize t u)
   (common-supertype (normalize-type t) (normalize-type u)))

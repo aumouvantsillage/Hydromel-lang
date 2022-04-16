@@ -783,3 +783,29 @@
 (test-return-type/exn (_range_ (t/any)        (t/unsigned 8)))
 (test-return-type/exn (_range_ (t/unsigned 8) (t/any)))
 (test-return-type/exn (_range_ (t/any)        (t/any)))
+
+; ------------------------------------------------------------------------------
+; zero
+; ------------------------------------------------------------------------------
+
+(test-function (zero (t/signed 8))   0)
+(test-function (zero (t/unsigned 8)) 0)
+(test-function (zero (t/array 3 (t/unsigned 8))) (make-pvector 3 0))
+(test-function (zero (t/tuple (list (t/unsigned 8) (t/array 3 (t/unsigned 8)))))
+               (list 0 (make-pvector 3 0)))
+(test-function (zero (t/record (hash 'x (t/unsigned 8) 'y (t/array 3 (t/unsigned 8)))))
+               (hash 'x 0 'y (make-pvector 3 0)))
+(test-function (zero (t/union (list (t/symbol 'a) (t/symbol 'b) (t/symbol 'c))))
+               'a)
+(test-function (zero (t/union (list
+                                (t/union (list (t/symbol 'a) (t/symbol 'b)))
+                                (t/symbol 'c))))
+               'a)
+(test-function (zero (t/union (list
+                                (t/symbol 'a)
+                                (t/union (list (t/symbol 'b) (t/symbol 'c))))))
+               'a)
+(test-function (zero (t/union (list
+                                (t/union (list (t/symbol 'a) (t/symbol 'b)))
+                                (t/union (list (t/symbol 'c) (t/symbol 'd))))))
+               'a)
