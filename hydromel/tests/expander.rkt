@@ -19,9 +19,9 @@
 
 
 (interface I0
-  (parameter N (call-expr unsigned (literal-expr 32)))
-  (data-port x in  (call-expr signed (name-expr N)))
-  (data-port y out (call-expr signed (name-expr N))))
+  (parameter N (call-expr unsigned-type (literal-expr 32)))
+  (data-port x in  (call-expr signed-type  (name-expr N)))
+  (data-port y out (call-expr signed-type  (name-expr N))))
 
 (define i0-inst (I0-make 30))
 
@@ -30,9 +30,9 @@
   (check-pred slot? (dict-ref i0-inst 'y)))
 
 (component C0
-  (parameter N (call-expr unsigned (literal-expr 32)))
-  (data-port x in  (call-expr signed (name-expr N)))
-  (data-port y out (call-expr signed (name-expr N)))
+  (parameter N (call-expr unsigned-type  (literal-expr 32)))
+  (data-port x in  (call-expr signed-type  (name-expr N)))
+  (data-port y out (call-expr signed-type  (name-expr N)))
   (assignment (name-expr y) (slot-expr (name-expr x))))
 
 (define c0-inst (C0-make 30))
@@ -46,21 +46,21 @@
   (check-sig-equal? (slot-ref c0-inst y) (slot-ref c0-inst x) 5))
 
 (test-case "Can infer the type of a port"
-  (check-equal? (slot-type (dict-ref c0-inst 'x)) (signed 30)))
+  (check-equal? (slot-type (dict-ref c0-inst 'x)) (signed-type  30)))
 
 (interface I1
-  (data-port x in  (call-expr signed (literal-expr 32)))
-  (data-port y out (call-expr signed (literal-expr 32))))
+  (data-port x in  (call-expr signed-type  (literal-expr 32)))
+  (data-port y out (call-expr signed-type  (literal-expr 32))))
 
 (interface I2
-  (data-port z in (call-expr signed (literal-expr 32)))
+  (data-port z in (call-expr signed-type  (literal-expr 32)))
   (composite-port i () I1)
-  (data-port u out (call-expr signed (literal-expr 32))))
+  (data-port u out (call-expr signed-type  (literal-expr 32))))
 
 (interface I3
-  (data-port v in (call-expr signed (literal-expr 32)))
+  (data-port v in (call-expr signed-type  (literal-expr 32)))
   (composite-port j () I2)
-  (data-port w out (call-expr signed (literal-expr 32))))
+  (data-port w out (call-expr signed-type  (literal-expr 32))))
 
 (define i2-inst (I2-make))
 (define i3-inst (I3-make))
@@ -81,9 +81,9 @@
   (check-pred slot? (dict-ref i3-inst 'w)))
 
 (component C1
-  (data-port v in (call-expr signed (literal-expr 32)))
+  (data-port v in (call-expr signed-type  (literal-expr 32)))
   (composite-port j () I2)
-  (data-port w out (call-expr signed (literal-expr 32)))
+  (data-port w out (call-expr signed-type  (literal-expr 32)))
   (assignment (name-expr w) (slot-expr (name-expr v))))
 
 (define c1-inst (C1-make))
@@ -109,7 +109,7 @@
     (check-pred dict? (vector-ref (dict-ref i4-inst 'i) n))))
 
 (interface I5
-  (parameter N (call-expr unsigned (literal-expr 32)))
+  (parameter N (call-expr unsigned-type  (literal-expr 32)))
   (composite-port i ((name-expr N)) I1))
 
 (define i5-inst (I5-make 5))
@@ -121,7 +121,7 @@
     (check-pred dict? (vector-ref (dict-ref i5-inst 'i) n))))
 
 (interface I6
-  (parameter M (call-expr unsigned (literal-expr 32)))
+  (parameter M (call-expr unsigned-type  (literal-expr 32)))
   (composite-port j () I5 (name-expr M)))
 
 (define i6-inst (I6-make 3))
@@ -163,12 +163,12 @@
   (check-sig-equal? (slot-ref c3-inst i 2 y) (slot-ref c3-inst i 2 x) 5))
 
 (interface I7
-  (data-port x in (call-expr signed (literal-expr 32))))
+  (data-port x in (call-expr signed-type  (literal-expr 32))))
 
 (component C4
   (composite-port i ((literal-expr 3)) I7)
-  (data-port y in (call-expr signed (literal-expr 32)))
-  (data-port z out (call-expr signed (literal-expr 32)))
+  (data-port y in (call-expr signed-type  (literal-expr 32)))
+  (data-port z out (call-expr signed-type  (literal-expr 32)))
   (assignment (name-expr z)
               (lift-expr [y^ (slot-expr (name-expr y))]
                          (slot-expr (field-expr (indexed-port-expr (name-expr i) (name-expr y^)) x)))))
@@ -183,14 +183,14 @@
   (check-sig-equal? (slot-ref c4-inst z) (signal 10 20 30 20 10 30) 6))
 
 (component C5
-  (data-port x in (call-expr signed (literal-expr 32)))
-  (data-port y in (call-expr signed (literal-expr 32)))
-  (data-port z out (call-expr signed (literal-expr 32)))
+  (data-port x in (call-expr signed-type  (literal-expr 32)))
+  (data-port y in (call-expr signed-type  (literal-expr 32)))
+  (data-port z out (call-expr signed-type  (literal-expr 32)))
   (assignment (name-expr z)
     (lift-expr [x^ (slot-expr (name-expr x))]
                [y^ (slot-expr (name-expr y))]
       (call-expr _cast_:impl
-        (call-expr signed (literal-expr 32))
+        (call-expr signed-type  (literal-expr 32))
         (call-expr + (name-expr x^) (name-expr y^))))))
 
 (define c5-inst (C5-make))
@@ -201,11 +201,11 @@
   (check-sig-equal? (slot-ref c5-inst z) (signal 11 22 33 44 55) 5))
 
 (component C6
-  (data-port x in (call-expr signed (literal-expr 32)))
-  (data-port y in (call-expr signed (literal-expr 32)))
-  (data-port z in (call-expr signed (literal-expr 32)))
-  (data-port u in (call-expr signed (literal-expr 32)))
-  (data-port v out (call-expr signed (literal-expr 32)))
+  (data-port x in (call-expr signed-type  (literal-expr 32)))
+  (data-port y in (call-expr signed-type  (literal-expr 32)))
+  (data-port z in (call-expr signed-type  (literal-expr 32)))
+  (data-port u in (call-expr signed-type  (literal-expr 32)))
+  (data-port v out (call-expr signed-type  (literal-expr 32)))
   (local-signal xy (lift-expr [x^ (slot-expr (name-expr x))]
                               [y^ (slot-expr (name-expr y))]
                               (call-expr * (name-expr x^) (name-expr y^))))
@@ -216,7 +216,7 @@
     (lift-expr [xy^ (slot-expr (name-expr xy))]
                [zu^ (slot-expr (name-expr zu))]
       (call-expr _cast_:impl
-        (call-expr signed (literal-expr 32))
+        (call-expr signed-type  (literal-expr 32))
         (call-expr + (name-expr xy^) (name-expr zu^))))))
 
 (define c6-inst (C6-make))
@@ -229,18 +229,18 @@
   (check-sig-equal? (slot-ref c6-inst v) (signal 23 46 69 92 115) 5))
 
 (component C7
-  (parameter N (call-expr unsigned (literal-expr 32)))
-  (data-port x in (call-expr signed (literal-expr 32)))
-  (data-port y out (call-expr signed (literal-expr 32)))
+  (parameter N (call-expr unsigned-type  (literal-expr 32)))
+  (data-port x in (call-expr signed-type  (literal-expr 32)))
+  (data-port y out (call-expr signed-type  (literal-expr 32)))
   (assignment (name-expr y)
               (lift-expr [x^ (slot-expr (name-expr x))]
                 (call-expr _cast_:impl
-                  (call-expr signed (literal-expr 32))
+                  (call-expr signed-type  (literal-expr 32))
                   (call-expr * (name-expr x^) (name-expr N))))))
 
 (component C8
-  (data-port x in (call-expr signed (literal-expr 32)))
-  (data-port y out (call-expr signed (literal-expr 32)))
+  (data-port x in (call-expr signed-type  (literal-expr 32)))
+  (data-port y out (call-expr signed-type  (literal-expr 32)))
   (instance c () C7 (literal-expr 10))
   (assignment (field-expr (name-expr c) x) (slot-expr (name-expr x)))
   (assignment (name-expr y) (slot-expr (field-expr (name-expr c) y))))
@@ -252,9 +252,9 @@
   (check-sig-equal? (slot-ref c8-inst y) (signal 100 200 300 400 500) 5))
 
 (component C9
-  (data-port x0 in (call-expr signed (literal-expr 32)))
-  (data-port x1 in (call-expr signed (literal-expr 32)))
-  (data-port y out (call-expr signed (literal-expr 32)))
+  (data-port x0 in (call-expr signed-type  (literal-expr 32)))
+  (data-port x1 in (call-expr signed-type  (literal-expr 32)))
+  (data-port y out (call-expr signed-type  (literal-expr 32)))
   (instance c ((literal-expr 2)) C7 (literal-expr 10))
   (assignment (field-expr (indexed-port-expr (name-expr c) (literal-expr 0)) x) (slot-expr (name-expr x0)))
   (assignment (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) x) (slot-expr (name-expr x1)))
@@ -262,7 +262,7 @@
     (lift-expr [y0 (slot-expr (field-expr (indexed-port-expr (name-expr c) (literal-expr 0)) y))]
                [y1 (slot-expr (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) y))]
       (call-expr _cast_:impl
-        (call-expr signed (literal-expr 32))
+        (call-expr signed-type  (literal-expr 32))
         (call-expr + (name-expr y0) (name-expr y1))))))
 
 (define c9-inst (C9-make))
@@ -273,8 +273,8 @@
   (check-sig-equal? (slot-ref c9-inst y) (signal 110 220 330 440 550) 5))
 
 (component C10
-  (data-port x in (call-expr signed (literal-expr 32)))
-  (data-port y out (call-expr signed (literal-expr 32)))
+  (data-port x in (call-expr signed-type  (literal-expr 32)))
+  (data-port y out (call-expr signed-type  (literal-expr 32)))
   (assignment (name-expr y) (register-expr (literal-expr 0) (slot-expr (name-expr x)))))
 
 (define c10-inst (C10-make))
@@ -284,9 +284,9 @@
   (check-sig-equal? (slot-ref c10-inst y) (signal 0  10 20 30 40 50) 6))
 
 (component C11
-  (data-port x in (call-expr signed (literal-expr 32)))
-  (data-port y in (call-expr signed (literal-expr 32)))
-  (data-port z out (call-expr signed (literal-expr 32)))
+  (data-port x in (call-expr signed-type  (literal-expr 32)))
+  (data-port y in (call-expr signed-type  (literal-expr 32)))
+  (data-port z out (call-expr signed-type  (literal-expr 32)))
   (assignment (name-expr z) (register-expr (literal-expr 0) (when-clause (slot-expr (name-expr x)))
                                            (slot-expr (name-expr y)))))
 
@@ -298,9 +298,9 @@
   (check-sig-equal? (slot-ref c11-inst z) (signal 0  10 20 30 0  50) 6))
 
 (component C12
-  (data-port x in (call-expr signed (literal-expr 32)))
-  (data-port y in (call-expr signed (literal-expr 32)))
-  (data-port z out (call-expr signed (literal-expr 32)))
+  (data-port x in (call-expr signed-type  (literal-expr 32)))
+  (data-port y in (call-expr signed-type  (literal-expr 32)))
+  (data-port z out (call-expr signed-type  (literal-expr 32)))
   (assignment (name-expr z) (register-expr (literal-expr 0)
                                            (slot-expr (name-expr y)) (when-clause (slot-expr (name-expr x))))))
 
@@ -312,10 +312,10 @@
   (check-sig-equal? (slot-ref c12-inst z) (signal 0  0  20 20 40) 6))
 
 (component C13
-  (data-port x in (call-expr signed (literal-expr 32)))
-  (data-port y in (call-expr signed (literal-expr 32)))
-  (data-port z in (call-expr signed (literal-expr 32)))
-  (data-port u out (call-expr signed (literal-expr 32)))
+  (data-port x in (call-expr signed-type  (literal-expr 32)))
+  (data-port y in (call-expr signed-type  (literal-expr 32)))
+  (data-port z in (call-expr signed-type  (literal-expr 32)))
+  (data-port u out (call-expr signed-type  (literal-expr 32)))
   (assignment (name-expr u)
     (register-expr (literal-expr 0) (when-clause (slot-expr (name-expr x)))
                    (slot-expr (name-expr z)) (when-clause (slot-expr (name-expr y))))))
@@ -330,7 +330,7 @@
 
 (component C14
   (constant N (literal-expr 56))
-  (data-port y out (call-expr signed (literal-expr 32)))
+  (data-port y out (call-expr signed-type  (literal-expr 32)))
   (assignment (name-expr y) (signal-expr (name-expr N))))
 
 (define c14-inst (C14-make))
@@ -343,7 +343,7 @@
 
 (interface I8
   (constant N (literal-expr 56))
-  (data-port y out (call-expr signed (literal-expr 32))))
+  (data-port y out (call-expr signed-type  (literal-expr 32))))
 
 (component C15
   (composite-port p () I8)
@@ -355,7 +355,7 @@
   (check-sig-equal? (slot-ref c15-inst p y) (signal 56) 1))
 
 (component C16
-  (data-port y out (call-expr signed (literal-expr 32)))
+  (data-port y out (call-expr signed-type  (literal-expr 32)))
   (instance c () C14)
   (assignment (name-expr y) (signal-expr (field-expr (name-expr c) N))))
 
@@ -365,7 +365,7 @@
   (check-sig-equal? (slot-ref c16-inst y) (signal 56) 1))
 
 (component C17
-  (data-port y out (call-expr signed (literal-expr 32)))
+  (data-port y out (call-expr signed-type  (literal-expr 32)))
   (instance c () C15)
   (assignment (name-expr y) (signal-expr (field-expr (field-expr (name-expr c) p) N))))
 
@@ -377,7 +377,7 @@
 (constant K0 (literal-expr 44))
 
 (component C18
-  (data-port y out (call-expr signed (literal-expr 32)))
+  (data-port y out (call-expr signed-type  (literal-expr 32)))
   (assignment (name-expr y) (signal-expr (name-expr K0 -constant))))
 
 (define c18-inst (C18-make))
@@ -387,7 +387,7 @@
 
 (component C19
   (constant N (literal-expr 255))
-  (data-port x in (call-expr signed (literal-expr 32)))
+  (data-port x in (call-expr signed-type  (literal-expr 32)))
   (local-signal y (name-expr x))
   (local-signal z (name-expr N)))
 
@@ -398,17 +398,17 @@
 
 (test-case "Can infer the type of a local signal that copies a constant"
   (check-equal? (slot-type (dict-ref c19-inst 'y)) (slot-type (dict-ref c19-inst 'x)))
-  (check-equal? (slot-type (dict-ref c19-inst 'z)) (static-data 255 (unsigned 8))))
+  (check-equal? (slot-type (dict-ref c19-inst 'z)) (const-type 255 (unsigned-type  8))))
 
 (component C20
-  (data-port x in  (call-expr signed (literal-expr 4)))
-  (data-port y in  (call-expr signed (literal-expr 4)))
-  (data-port z out (call-expr signed (literal-expr 8)))
+  (data-port x in  (call-expr signed-type  (literal-expr 4)))
+  (data-port y in  (call-expr signed-type  (literal-expr 4)))
+  (data-port z out (call-expr signed-type  (literal-expr 8)))
   (assignment (name-expr z)
     (lift-expr [x^ (slot-expr (name-expr x))]
                [y^ (slot-expr (name-expr y))]
-      (call-expr/cast _concat_:impl (name-expr x^) (call-expr signed (literal-expr 4))
-                                    (name-expr y^) (call-expr signed (literal-expr 4))))))
+      (call-expr/cast _concat_:impl (name-expr x^) (call-expr signed-type  (literal-expr 4))
+                                    (name-expr y^) (call-expr signed-type  (literal-expr 4))))))
 
 (define c20-inst (C20-make))
 (slot-set! (c20-inst x) (signal 0 5 -2))
@@ -418,8 +418,8 @@
   (check-sig-equal? (slot-ref c20-inst z) (signal 0 83 -20) 3))
 
 (component C21
-  (data-port x in  (call-expr unsigned (literal-expr 8)))
-  (data-port y out (call-expr unsigned (literal-expr 8)))
+  (data-port x in  (call-expr unsigned-type  (literal-expr 8)))
+  (data-port y out (call-expr unsigned-type  (literal-expr 8)))
   (assignment (name-expr y) (slot-expr (name-expr u)))
   (local-signal u (register-expr (literal-expr 0) (slot-expr (name-expr s))))
   (local-signal s (register-expr (literal-expr 0) (slot-expr (name-expr x)))))
@@ -427,13 +427,13 @@
 (define c21-inst (C21-make))
 
 (test-case "Can infer types when assignments are in reverse order"
-  (check-equal? (normalize-type (slot-type (dict-ref c21-inst 's))) (normalize-type (slot-type (dict-ref c21-inst 'x))))
-  (check-equal? (normalize-type (slot-type (dict-ref c21-inst 'u))) (normalize-type (slot-type (dict-ref c21-inst 's)))))
+  (check-equal? (normalize (slot-type (dict-ref c21-inst 's))) (normalize (slot-type (dict-ref c21-inst 'x))))
+  (check-equal? (normalize (slot-type (dict-ref c21-inst 'u))) (normalize (slot-type (dict-ref c21-inst 's)))))
 
 (component C22
-  (data-port x in  (call-expr array (literal-expr 4) (call-expr unsigned (literal-expr 8))))
-  (data-port i in  (call-expr unsigned (literal-expr 2)))
-  (data-port y out (call-expr unsigned (literal-expr 8)))
+  (data-port x in  (call-expr array-type(literal-expr 4) (call-expr unsigned-type  (literal-expr 8))))
+  (data-port i in  (call-expr unsigned-type  (literal-expr 2)))
+  (data-port y out (call-expr unsigned-type  (literal-expr 8)))
   (assignment (name-expr y) (lift-expr [x^ (slot-expr (name-expr x))]
                                        [i^ (slot-expr (name-expr i))]
                               (call-expr _nth_:impl (name-expr x^) (name-expr i^)))))
@@ -446,7 +446,7 @@
   (check-sig-equal? (slot-ref c22-inst y) (signal 10 20 30 40) 4))
 
 (component C23
-  (data-port y out (call-expr array (literal-expr 3) (call-expr unsigned (literal-expr 8))))
+  (data-port y out (call-expr array-type(literal-expr 3) (call-expr unsigned-type  (literal-expr 8))))
   (assignment (name-expr y) (signal-expr (call-expr pvector (literal-expr 10) (literal-expr 20) (literal-expr 30)))))
 
 (define c23-inst (C23-make))
@@ -455,8 +455,8 @@
   (check-sig-equal? (slot-ref c23-inst y) (signal (pvector 10 20 30)) 1))
 
 (component C24
-  (data-port x in (call-expr unsigned (literal-expr 8)))
-  (data-port y out (call-expr array (literal-expr 3) (call-expr unsigned (literal-expr 9))))
+  (data-port x in (call-expr unsigned-type  (literal-expr 8)))
+  (data-port y out (call-expr array-type(literal-expr 3) (call-expr unsigned-type  (literal-expr 9))))
   (assignment (name-expr y)
     (lift-expr [x^ (slot-expr (name-expr x))]
       (array-for-expr
@@ -470,8 +470,8 @@
   (check-sig-equal? (slot-ref c24-inst y) (signal (pvector 11 12 13) (pvector 21 22 23) (pvector 31 32 33)) 3))
 
 (component C25
-  (data-port x in  (call-expr unsigned (literal-expr 4)))
-  (data-port y out (call-expr unsigned (literal-expr 4)))
+  (data-port x in  (call-expr unsigned-type  (literal-expr 4)))
+  (data-port y out (call-expr unsigned-type  (literal-expr 4)))
   (assignment (name-expr y)
     (lift-expr [x^ (slot-expr (name-expr x))]
       (concat-for-expr
@@ -485,11 +485,11 @@
   (check-sig-equal? (slot-ref c25-inst y) (signal 5 13 3) 3))
 
 (interface I9
-  (data-port z in (call-expr unsigned (literal-expr 1))))
+  (data-port z in (call-expr unsigned-type  (literal-expr 1))))
 
 (component C26
   (composite-port x ((literal-expr 4)) I9)
-  (data-port y out (call-expr unsigned (literal-expr 4)))
+  (data-port y out (call-expr unsigned-type  (literal-expr 4)))
   (assignment (name-expr y)
     (concat-for-expr
       (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z))]
@@ -507,7 +507,7 @@
 
 (component C31
   (composite-port x ((literal-expr 4)) I9)
-  (data-port y out (call-expr unsigned (literal-expr 8)))
+  (data-port y out (call-expr unsigned-type  (literal-expr 8)))
   (assignment (name-expr y)
     (concat-for-expr
       (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z))]
@@ -526,7 +526,7 @@
 
 (component C32
   (composite-port x ((literal-expr 4)) I9)
-  (data-port y out (call-expr unsigned (literal-expr 10)))
+  (data-port y out (call-expr unsigned-type  (literal-expr 10)))
   (assignment (name-expr y)
     (concat-for-expr
       (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z))]
@@ -545,7 +545,7 @@
 
 (component C27
   (composite-port x ((literal-expr 4)) I9)
-  (data-port y out (call-expr array (literal-expr 4) (call-expr unsigned (literal-expr 1))))
+  (data-port y out (call-expr array-type(literal-expr 4) (call-expr unsigned-type  (literal-expr 1))))
   (assignment (name-expr y)
     (array-for-expr
       (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z))]
@@ -563,7 +563,7 @@
 
 (component C28
   (composite-port x ((literal-expr 4)) I9)
-  (data-port y out (call-expr array (literal-expr 12) (call-expr unsigned (literal-expr 3))))
+  (data-port y out (call-expr array-type(literal-expr 12) (call-expr unsigned-type  (literal-expr 3))))
   (assignment (name-expr y)
     (array-for-expr
       (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z))]
@@ -582,7 +582,7 @@
 
 (component C29
   (composite-port x ((literal-expr 4)) I9)
-  (data-port y out (call-expr array (literal-expr 10) (call-expr unsigned (literal-expr 3))))
+  (data-port y out (call-expr array-type(literal-expr 10) (call-expr unsigned-type  (literal-expr 3))))
   (assignment (name-expr y)
     (array-for-expr
       (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i)) z))]
@@ -599,8 +599,8 @@
 (test-case "Can make an 2D array comprehension with index dependencies using an array composite port"
   (check-sig-equal? (slot-ref c29-inst y) (signal #(3 2 1 0 2 1 0 2 1 1) #(3 2 1 0 3 2 1 2 1 0) #(4 3 2 1 3 2 1 1 0 0)) 3))
 
-(typedef word (call-expr unsigned (literal-expr 32)))
-(typedef utwice (parameter n (call-expr natural:impl)) (call-expr unsigned (call-expr * (name-expr n) (literal-expr 2))))
+(typedef word (call-expr unsigned-type  (literal-expr 32)))
+(typedef utwice (parameter n (call-expr natural:impl)) (call-expr unsigned-type  (call-expr * (name-expr n) (literal-expr 2))))
 
 (component C30
   (data-port x in (call-expr word:impl))
@@ -610,8 +610,8 @@
 (define c30-inst (C30-make))
 
 (test-case "Can declare module-level types"
-  (check-equal? (slot-type (slot-ref* c30-inst x)) (unsigned 32))
-  (check-equal? (slot-type (slot-ref* c30-inst y)) (unsigned 32)))
+  (check-equal? (slot-type (slot-ref* c30-inst x)) (unsigned-type  32))
+  (check-equal? (slot-type (slot-ref* c30-inst y)) (unsigned-type  32)))
 
 (component C33
   (composite-port x ((literal-expr 2) (literal-expr 3)) I9)

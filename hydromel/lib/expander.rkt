@@ -116,7 +116,7 @@
 
 (define-syntax-parse-rule (define-parameter-slot name actual-name type)
   (begin
-    (define name (make-slot actual-name (static-data actual-name type) (thunk (static-data/literal actual-name))))
+    (define name (make-slot actual-name (const-type actual-name type) (thunk (const-type/literal actual-name))))
     (type-check name)))
 
 (define-syntax-parse-rule (typedef name ((~literal parameter) param-name param-type) ... expr)
@@ -129,16 +129,16 @@
       (define-parameter-slot param-name arg-name param-type) ...
       expr)
     (define (rtype-name arg-name ...)
-      (static-data (impl-name (static-data-value arg-name) ...) (type:impl)))))
+      (const-type (impl-name (const-type-value arg-name) ...) (type:impl)))))
 
 ; A constant infers its type immediately before computing its value.
 ; Here, we benefit from the fact that type-of will return a
-; static-data where the expression has already been evaluated.
+; const-type where the expression has already been evaluated.
 (define-syntax-parse-rule (define-constant-slot name expr)
   (begin
     (typing-functions expr)
     (define name (let ([t (type-of expr)])
-                   (make-slot (static-data-value t) t)))))
+                   (make-slot (const-type-value t) t)))))
 
 ; A constant expands to a slot assigned to a variable.
 (define-syntax-parser constant
@@ -226,7 +226,7 @@
 (define-syntax-parse-rule (for-statement name iter-name iter-expr body ...)
   #:with iter-name^ (generate-temporary #'iter-name)
   (define name (for/vector ([iter-name^ (in-list iter-expr)])
-                 (define iter-name (make-slot iter-name^ (static-data/literal iter-name^)))
+                 (define iter-name (make-slot iter-name^ (const-type/literal iter-name^)))
                  body ...)))
 
 ; A statement block executes statements and returns a hash map that exposes
@@ -368,7 +368,7 @@
    #'(type-of body)]
 
   [(_ (~and (literal-expr _) this-expr))
-   #'(static-data/literal this-expr)]
+   #'(const-type/literal this-expr)]
 
   [(_ this-expr)
    #:with lbl (type-label #'this-expr)
@@ -407,7 +407,7 @@
                                  (syntax-span stx)))))]))
 
 (define-syntax-parse-rule (comprehension-slot left right)
-  (make-slot #f (common-supertype (literal-type left) (literal-type right))))
+  (make-slot #f (common-supertype (type-of-literal left) (type-of-literal right))))
 
 (define-syntax-parser typing-functions
   #:literals [slot-expr signal-expr lift-expr array-for-expr concat-for-expr name-expr literal-expr]
@@ -433,7 +433,7 @@
                               [(iter-name) (comprehension-slot (apply min rng) (apply max rng))] ...)
        (typing-functions body)
        (define (this-type-label)
-         (array len (type-of body))))]
+         (array-type len (type-of body))))]
 
   [(_ (~and (concat-for-expr body (~seq iter-name iter-expr) ...) this-expr))
    #:with this-type-label (type-label #'this-expr)
@@ -468,13 +468,13 @@
   ; This is a special case for (type-of) forms generated in checker.rkt
   ; Maybe we should generate these forms in expander instead.
   [(_ (~and (type-of expr) this-expr))
-   #'(static-data this-expr (type:impl))]
+   #'(const-type this-expr (type:impl))]
 
   [(_ (choices expr ...))
-   #'(tuple (list (type-of expr) ...))]
+   #'(tuple-type (list (type-of expr) ...))]
 
   [(_ (register-expr i (~optional (when-clause r)) d (~optional (when-clause e))))
-   #'(union (list (type-of i) (type-of d)))]
+   #'(union-type (list (type-of i) (type-of d)))]
 
   [(_ (field-expr expr field-name))
    #'(slot-type (dict-ref (remove-dynamic-indices expr) 'field-name))]
@@ -484,7 +484,7 @@
    #:with (tv ...) (generate-temporaries (attribute arg))
    #'(rt (type-of arg) ...)]
 
-  [_ #'(any)])
+  [_ #'(any-type)])
 
 ; Replace dynamic indices with zeros in indexed expressions.
 ; This only concerns access to interface ports with multiplicity,
@@ -506,7 +506,7 @@
      (define u (slot-type* inst))
      (unless (<: u t)
        ; TODO show source code instead of generated code, or source location only.
-       (raise-result-error 'type-check (format-type t) (format-type u)))]
+       (raise-result-error 'type-check (type->string t) (type->string u)))]
 
     [(hash-table ('* _) (_ vs) ...)
      (for-each type-check vs)]
@@ -538,7 +538,7 @@
 ; Concatenation expressions are converted to function calls in the checker.
 (disable-forms import or-expr and-expr rel-expr add-expr mult-expr shift-expr
                if-expr case-expr prefix-expr range-expr slice-expr concat-expr
-               indexed-array-expr array-expr cast-expr assign-expr record-type
+               indexed-array-expr array-expr cast-expr assign-expr record-type-expr
                array-assoc-expr array-assoc slice-assoc-expr slice-assoc record-expr
                tuple-expr
   "should not be used outside of begin-tiny-hdl")

@@ -8,7 +8,6 @@
   syntax/parse/define
   "expander.rkt"
   "std.rkt"
-  "types.rkt"
   (prefix-in stx/ "syntax.rkt")
   (for-syntax
     racket

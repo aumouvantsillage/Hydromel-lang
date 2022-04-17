@@ -9,11 +9,7 @@
   (for-syntax
     (prefix-in meta/ "meta.rkt")
     racket/syntax)
-  (only-in "types.rkt"
-    static-data/literal
-    static-data?
-    static-data-value
-    none))
+  "types.rkt")
 
 (provide
   define-function
@@ -78,7 +74,7 @@
        (do-define-function cast? name fn-name rt-fn))]
 
   [(_ cast? name fn)
-   #'(do-define-function cast? name fn (const (none)))])
+   #'(do-define-function cast? name fn (const (none-type)))])
 
 (define-syntax-parse-rule (define-return-type cast? name fn)
   #:with rt-name (function-return-type-name #'name)
@@ -91,28 +87,28 @@
   #:datum-literals [cast no-cast]
   [(_ no-cast name (λ (arg:id ...) body ...))
    #'(λ (arg ...)
-       (if (and (static-data? arg) ...)
-         (static-data/literal (name (static-data-value arg) ...))
+       (if (and (const-type? arg) ...)
+         (const-type/literal (name (const-type-value arg) ...))
          (let () body ...)))]
 
   [(_ cast name (λ (arg:id ...) body ...))
    #'(λ (arg ...)
        (define t (let () body ...))
-       (if (and (static-data? arg) ...)
-         (static-data/literal (t (name (static-data-value arg) ...)))
+       (if (and (const-type? arg) ...)
+         (const-type/literal (t (name (const-type-value arg) ...)))
          t))]
 
   [(_ no-cast name (λ args:id body ...))
    #'(λ args
-       (if (andmap static-data? args)
-         (static-data/literal (apply name (map static-data-value args)))
+       (if (andmap const-type? args)
+         (const-type/literal (apply name (map const-type-value args)))
          (let () body ...)))]
 
   [(_ cast name (λ args:id body ...))
    #'(λ args
        (define t (let () body ...))
-       (if (andmap static-data? args)
-         (static-data/literal (t (apply name (map static-data-value args))))
+       (if (andmap const-type? args)
+         (const-type/literal (t (apply name (map const-type-value args))))
          t))]
 
   [(_ cast? name (const body ...))

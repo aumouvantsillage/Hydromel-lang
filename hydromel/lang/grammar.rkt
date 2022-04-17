@@ -158,7 +158,7 @@ prefix-expr: ("-" | "not") maybe-prefix-expr
   record-expr |
   register-expr |
   call-expr |
-  record-type |
+  record-type-expr |
   cast-expr |
   /"(" expression /")"
 
@@ -226,9 +226,9 @@ cast-expr:
 @type-expression:
   name-expr |
   call-expr |
-  record-type
+  record-type-expr
 
-record-type:
+record-type-expr:
   /"record" /"(" record-field (/"," record-field)* /","? /")"
 
 ; TODO spliced fields?

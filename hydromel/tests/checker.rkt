@@ -524,8 +524,8 @@
 (define c33-inst (C33-make))
 
 (test-case "Can infer types when assignments are in reverse order"
-  (check-equal? (normalize-type (slot-type (dict-ref c33-inst 's))) (normalize-type (slot-type (dict-ref c33-inst 'x))))
-  (check-equal? (normalize-type (slot-type (dict-ref c33-inst 'u))) (normalize-type (slot-type (dict-ref c33-inst 's)))))
+  (check-equal? (normalize (slot-type (dict-ref c33-inst 's))) (normalize (slot-type (dict-ref c33-inst 'x))))
+  (check-equal? (normalize (slot-type (dict-ref c33-inst 'u))) (normalize (slot-type (dict-ref c33-inst 's)))))
 
 (begin-hydromel
   (component C34
@@ -668,8 +668,8 @@
 (define c42-inst (C42-make))
 
 (test-case "Can declare module-level types"
-  (check-equal? (slot-type (slot-ref* c42-inst x)) (unsigned 32))
-  (check-equal? (slot-type (slot-ref* c42-inst y)) (unsigned 32)))
+  (check-equal? (slot-type (slot-ref* c42-inst x)) (unsigned-type 32))
+  (check-equal? (slot-type (slot-ref* c42-inst y)) (unsigned-type 32)))
 
 (begin-hydromel
   (component C41

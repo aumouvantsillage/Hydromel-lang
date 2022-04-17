@@ -7,7 +7,6 @@
 (require
   "expander.rkt"
   "std.rkt"
-  "types.rkt"
   (for-syntax
     racket/syntax
     syntax/parse))
@@ -141,7 +140,7 @@
     #:literals [call-expr or-expr and-expr rel-expr add-expr mult-expr shift-expr
                 if-expr case-expr prefix-expr range-expr slice-expr concat-expr
                 array-expr array-assoc-expr slice-assoc-expr indexed-array-expr
-                field-expr cast-expr assign-expr record-type record-expr tuple-expr]
+                field-expr cast-expr assign-expr record-type-expr record-expr tuple-expr]
     #:attributes [fn-name (arg 1)]
     (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr shift-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
@@ -183,9 +182,9 @@
       #:attr fn-name #'_concat_)
     (pattern (array-expr arg ...)
       #:attr fn-name #'_array_)
-    (pattern (record-type (~seq field-name field-type) ...)
+    (pattern (record-type-expr (~seq field-name field-type) ...)
       #:with (field ...) #'((~@ (literal-expr field-name) field-type) ...)
-      #:attr fn-name #'make-record
+      #:attr fn-name #'record
       #:attr (arg 1) (attribute field))
     (pattern (record-expr (~seq field-name field-value) ...)
       #:with (field ...) #'((~@ (literal-expr field-name) field-value) ...)
@@ -193,8 +192,6 @@
       #:attr (arg 1) (attribute field))
     (pattern (tuple-expr arg ...)
       #:attr fn-name #'_tuple_)
-    (pattern (call-expr (~datum array) arg ...)
-      #:attr fn-name #'make-array)
     (pattern (call-expr fn-name arg ...))
     (pattern :call-expr/cast))
     ; field-expr is handled in checker.rkt

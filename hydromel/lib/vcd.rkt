@@ -7,7 +7,7 @@
 (require
   threading
   (only-in "numeric.rkt" integer->bit-string)
-  (only-in "types.rkt" normalize-type abstract-integer-width)
+  (only-in "types.rkt" normalize abstract-integer-type-width)
   "signal.rkt"
   "slot.rkt"
   "helpers.rkt")
@@ -21,7 +21,7 @@
                           [index      (in-naturals)])
                  (define samples (~> slt slot-data (signal-take duration)))
                  (values name (waveform (format "s~a" index)
-                                        (~> slt slot-type normalize-type abstract-integer-width)
+                                        (~> slt slot-type normalize abstract-integer-type-width)
                                         samples))))
 
   ; VCD header.

@@ -12,7 +12,7 @@
   hydromel/lib/vcd
   "register_bank.mel")
 
-(define inst (register_bank-make (unsigned 8) 4))
+(define inst (register_bank-make (unsigned-type 8) 4))
 
 (slot-set! (inst write) (signal 0  1  0  0  1  0  0  1  0  0  1  0  0  0  0  0))
 (slot-set! (inst addr)  (signal 0  0  0  1  1  1  2  2  2  3  3  3  0  1  2  3))
