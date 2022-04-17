@@ -22,7 +22,7 @@
 
 (print-slot-table (slot-table inst) duration)
 
-; (define-runtime-path vcd-file "register_bank.vcd")
-;
-; (vcd inst duration "10 ns"
-;   (open-output-file vcd-file #:exists 'replace))
+(define-runtime-path vcd-file "register_bank.vcd")
+
+(dump-vcd inst duration "10 ns"
+  (open-output-file vcd-file #:exists 'replace))

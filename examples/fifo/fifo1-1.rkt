@@ -28,5 +28,5 @@
 
 (define-runtime-path vcd-file "fifo1-1.vcd")
 
-(vcd inst (length c_valid-in) "10 ns"
+(dump-vcd inst (length c_valid-in) "10 ns"
   (open-output-file vcd-file #:exists 'replace))

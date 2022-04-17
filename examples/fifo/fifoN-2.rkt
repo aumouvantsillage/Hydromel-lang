@@ -25,5 +25,5 @@
 
 (define-runtime-path vcd-file "fifoN-2.vcd")
 
-(vcd inst (length c_valid-in) "10 ns"
+(dump-vcd inst (length c_valid-in) "10 ns"
   (open-output-file vcd-file #:exists 'replace))
