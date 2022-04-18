@@ -117,6 +117,8 @@
     ; If t is a record, normalize its field types.
     [(record-type fs)                  (record-type (for/hash ([(k v) (in-dict fs)])
                                                       (values k (normalize v))))]
+    ; If t is a range, normalize its value type.
+    [(range-type t)                    (range-type (normalize t))]
     ; In all other cases, the type is already normalized.
     [_                                 t]))
 
