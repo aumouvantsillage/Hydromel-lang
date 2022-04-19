@@ -129,7 +129,9 @@
       (define-parameter-slot param-name arg-name param-type) ...
       expr)
     (define (rtype-name arg-name ...)
-      (const-type (impl-name (const-type-value arg-name) ...) (type:impl)))))
+      ; TODO Type checking should happen here.
+      ; TODO Is is relevant to return a const-type?
+      (const-type/literal (impl-name (const-type-value arg-name) ...)))))
 
 ; A constant infers its type immediately before computing its value.
 ; Here, we benefit from the fact that type-of will return a
@@ -468,7 +470,7 @@
   ; This is a special case for (type-of) forms generated in checker.rkt
   ; Maybe we should generate these forms in expander instead.
   [(_ (~and (type-of expr) this-expr))
-   #'(const-type this-expr (type:impl))]
+   #'(const-type/literal this-expr)]
 
   [(_ (choices expr ...))
    #'(tuple-type (list (type-of expr) ...))]
