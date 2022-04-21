@@ -151,8 +151,9 @@
   [(_ name expr)
    #:with name^ (format-id #'name "~a-constant" #'name)
    #'(begin
-       (provide name^)
-       (define-constant-slot name^ expr))])
+       (provide name name^)
+       (define-constant-slot name^ expr)
+       (define name (slot-data name^)))])
 
 ; An alias expands to a partial access to the target port.
 ; The alias and the corresponding port must refer to the same slot.

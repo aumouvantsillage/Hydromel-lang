@@ -13,8 +13,7 @@
   "std.mel")
 
 (define-syntax-parse-rule (test-constant name val)
-  #:with cste-name (format-id #'name "~a-constant" #'name)
-  (test-equal? (symbol->string 'name) (slot-data cste-name) val))
+  (test-equal? (symbol->string 'name) name val))
 
 ; ------------------------------------------------------------------------------
 ; if
