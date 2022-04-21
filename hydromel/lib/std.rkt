@@ -82,43 +82,43 @@
     (boolean-type)))
 
 ; The Hydromel if statement is expanded to a call-expr to _if_.
-(define-function* _if_)
+(declare-function _if_)
 
-(define-syntax-parse-rule (_if_:impl (~seq cnd thn) ... els)
-  (cond [(int->bool:impl cnd) thn]
+(define-syntax-parse-rule (_if_ (~seq cnd thn) ... els)
+  (cond [(int->bool cnd) thn]
         ...
         [else els]))
 
-(define (_if_:impl:return-type . ts)
+(define (_if_:return-type . ts)
   (match ts
     [(list tc tt te ...)
      (match tc
        ; If the first condition is static and true, return the type of the first "then" clause.
        [(const-type v _)
-        (if (int->bool:impl v)
+        (if (int->bool v)
           tt
-          (apply _if_:impl:return-type te))]
+          (apply _if_:return-type te))]
        ; If the first condition is not static, return a union of the type of the first "then" clause
        ; and the type of the rest.
        [_
-        (union-type (list tt (apply _if_:impl:return-type te)))])]
+        (union-type (list tt (apply _if_:return-type te)))])]
     [(list te) te]))
 
 ; The Hydromel case statement is expanded to a call-expr to _case_.
-(define-function* _case_)
+(declare-function _case_)
 
-(define-syntax-parse-rule (_case_:impl expr (~seq ch thn) ... (~optional els))
+(define-syntax-parse-rule (_case_ expr (~seq ch thn) ... (~optional els))
   #:with els^ (or (attribute els) #'(error "Value did not not match any choice"))
   (let ([v expr])
     (cond [(member v ch) thn]
           ...
           [else els^])))
 
-(define (_case_:impl:return-type tx . ts)
+(define (_case_:return-type tx . ts)
   (match tx
     ; If the expression is static and true, inspect the cases for static choices.
     [(const-type v _)
-     (apply _case_:impl:return-type/static v ts)]
+     (apply _case_:return-type/static v ts)]
     ; If the expression is not static, return a union of all target clauses.
     [_
      (define last-n (sub1 (length ts)))
@@ -126,14 +126,14 @@
                             #:when (or (odd? n) (= n last-n)))
                    it))]))
 
-(define (_case_:impl:return-type/static v . ts)
+(define (_case_:return-type/static v . ts)
   (match ts
     [(list tc tt te ...)
      ; If the expression value matches a static choice, return the corresponding type.
      (define tc^ (filter const-type? (tuple-type-elt-types tc)))
      (if (member v (map const-type-value tc^))
        tt
-       (apply _case_:impl:return-type/static v te))]
+       (apply _case_:return-type/static v te))]
     [(list te) te]))
 
 ; ------------------------------------------------------------------------------
@@ -308,7 +308,7 @@
 
 ; The binary concatenetion operation defaults to the unsigned version.
 ; The signed case is handled automatically because the expander inserts
-; a conversion to the type returned by concat:impl:return-type.
+; a conversion to the type returned by concat:return-type.
 ; Since this function needs to know the width of its arguments,
 ; their types are inserted by the checker.
 (define-function/cast _concat_
@@ -426,11 +426,11 @@
 
 ; _cast_ does not actually convert the given value because
 ; a call to the conversion function is already inserted by the expander.
-(define-function*/cast _cast_)
+(declare-function/cast _cast_)
 
-(define-syntax-parse-rule (_cast_:impl a b) b)
+(define-syntax-parse-rule (_cast_ a b) b)
 
-(define (_cast_:impl:return-type ta tb)
+(define (_cast_:return-type ta tb)
   (expect-type 'cast 0 ta)
   (define ta^ (normalize (const-type-value ta)))
   (define tr (match ta^
@@ -458,11 +458,11 @@
   (λ (t)
     (match (normalize t)
       [(abstract-integer-type _) 0]
-      [(array-type n v)          (make-pvector n (zero:impl v))]
-      [(tuple-type ts)           (map zero:impl ts)]
+      [(array-type n v)          (make-pvector n (zero v))]
+      [(tuple-type ts)           (map zero ts)]
       [(record-type fs)          (for/hash ([(k v) (in-dict fs)])
-                                   (values k (zero:impl v)))]
-      [(union-type ts)           (zero:impl (first ts))]
+                                   (values k (zero v)))]
+      [(union-type ts)           (zero (first ts))]
       [(symbol-type s)           s]
       [_ (error "This type does not support a zero value" t)]))
   (λ (t)
@@ -473,21 +473,21 @@
 ; Type constructors.
 ; ------------------------------------------------------------------------------
 
-(define-function any any-type (const (type:impl)))
+(define-function any any-type (const (type)))
 
-(define-function none none-type (const (type:impl)))
+(define-function none none-type (const (type)))
 
 (define-function signed signed-type
   (λ (t)
     (expect-value   'signed 0 t)
     (expect-integer 'signed 0 t)
-    (type:impl)))
+    (type)))
 
 (define-function unsigned unsigned-type
   (λ (t)
     (expect-value   'unsigned 0 t)
     (expect-integer 'unsigned 0 t)
-    (type:impl)))
+    (type)))
 
 (define-function tuple
   (λ args
@@ -495,7 +495,7 @@
   (λ ts
     (expect-values 'tuple ts)
     (expect-types  'tuple ts)
-    (type:impl)))
+    (type)))
 
 (define-function union
   (λ args
@@ -503,13 +503,13 @@
   (λ ts
     (expect-values 'union ts)
     (expect-types  'union ts)
-    (type:impl)))
+    (type)))
 
 (define-function array
   (λ args
     (match args
       [(list t) t]
-      [(list n nts ...) (array-type n (apply array:impl nts))]))
+      [(list n nts ...) (array-type n (apply array nts))]))
   (λ ts
     (expect-values 'array ts)
     (define last-n (sub1 (length ts)))
@@ -517,7 +517,7 @@
       (if (= n last-n)
         (expect-type    'array n t)
         (expect-integer 'array n t)))
-    (type:impl)))
+    (type)))
 
 (define-function record
   (λ args
@@ -528,26 +528,26 @@
       (if (even? n)
         (expect-symbol 'record n t)
         (expect-type   'record n t)))
-    (type:impl)))
+    (type)))
 
 (define-function type
   (const (subtype-type (any-type)))
-  (const (type:impl)))
+  (const (type)))
 
 (define-function subtype subtype-type
-  (const (type:impl)))
+  (const (type)))
 
 (define-function bit
   (const (unsigned-type 1))
-  (const (type:impl)))
+  (const (type)))
 
 (define-function natural
   (const (unsigned-type #f))
-  (const (type:impl)))
+  (const (type)))
 
 (define-function integer
   (const (signed-type #f))
-  (const (type:impl)))
+  (const (type)))
 
 (define-function enumeration
   (λ args
@@ -555,4 +555,4 @@
   (λ ts
     (expect-values  'enumeration ts)
     (expect-symbols 'enumeration ts)
-    (type:impl)))
+    (type)))

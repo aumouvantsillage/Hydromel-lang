@@ -13,7 +13,7 @@
   "fifoN-2.mel"
   "fifo3-tests.rkt")
 
-(define inst (fifo-make (unsigned-type 8) 3))
+(define inst (fifo-make (unsigned 8) 3))
 
 (slot-set! (inst c valid) (list->signal c_valid-in))
 (slot-set! (inst c data)  (list->signal c_data-in))

@@ -5,6 +5,7 @@
 #lang racket
 
 (require
+  racket/syntax
   syntax/parse/define
   syntax/id-table)
 
@@ -12,7 +13,8 @@
   with-scope
   set-scope
   bind!
-  lookup)
+  lookup
+  internal-name)
 
 (struct scope (parent table))
 
@@ -28,11 +30,14 @@
 (define (bind! name data)
   (dict-set! (scope-table (current-scope)) name data))
 
+(define (internal-name name)
+  (format-id name "~a$hydromel" name))
+
 (define (lookup name [pred (const #t)] #:scope [sc (syntax-property name 'scope)])
   (if sc
     (dict-ref (scope-table sc) name
       (thunk (lookup name pred #:scope (scope-parent sc))))
-    (let ([res (syntax-local-value name)])
+    (let ([res (syntax-local-value (internal-name name))])
       (unless res
         (raise-syntax-error #f "No declaration found for this identifier" name))
       res)))

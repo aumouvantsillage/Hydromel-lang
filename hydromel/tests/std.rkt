@@ -13,7 +13,8 @@
   (for-syntax
     racket/match
     racket/syntax
-    (prefix-in meta/ "../lib/meta.rkt")))
+    (prefix-in meta/ "../lib/meta.rkt")
+    "../lib/scope.rkt"))
 
 (define-syntax-parse-rule (test-function (name arg ...) res)
   (test-equal? (format "~a~a" 'name '(arg ...)) (call name arg ...) res))
@@ -29,14 +30,14 @@
 
 (define-syntax-parser call
   [(_ name arg ...)
-   (match-define (struct meta/function (fn-name cast?)) (syntax-local-value #'name))
+   (match-define (struct meta/function (fn-name cast?)) (lookup #'name))
    (if cast?
      #`(let ([rt (call:return-type name (const-type/literal arg) ...)])
          (rt (#,fn-name arg ...)))
      #`(#,fn-name arg ...))])
 
 (define-syntax-parse-rule (call:return-type name arg ...)
-   #:with fn-name (meta/function-name (syntax-local-value #'name))
+   #:with fn-name (meta/function-name (lookup #'name))
    #:with rt-name (format-id #'fn-name "~a:return-type" #'fn-name)
    (rt-name arg ...))
 
@@ -648,8 +649,8 @@
 (test-return-type (_nth_ (array-type 3 (unsigned-type 4)) (unsigned-type 2)) (unsigned-type 4))
 (test-return-type/exn (_nth_ (array-type 3 (unsigned-type 4)) (symbol-type 'x)))
 
-(test-return-type (_nth_ (array:impl 2 3 (unsigned-type 4)) (unsigned-type 2)) (array-type 3 (unsigned-type 4)))
-(test-return-type (_nth_ (array:impl 2 3 (unsigned-type 4)) (unsigned-type 2) (unsigned-type 2)) (unsigned-type 4))
+(test-return-type (_nth_ (array 2 3 (unsigned-type 4)) (unsigned-type 2)) (array-type 3 (unsigned-type 4)))
+(test-return-type (_nth_ (array 2 3 (unsigned-type 4)) (unsigned-type 2) (unsigned-type 2)) (unsigned-type 4))
 
 (test-return-type/exn (_nth_ (unsigned-type 8) (unsigned-type 4)))
 (test-return-type/exn (_nth_ (unsigned-type 8) (symbol-type 'x)))
@@ -687,7 +688,7 @@
 (test-function/exn (_set_nth_ (pvector 10 20 30) 'x 55))
 
 (test-return-type (_set_nth_ (array-type 3 (unsigned-type 4)) (unsigned-type 2) (unsigned-type 3)) (array-type 3 (unsigned-type 4)))
-(test-return-type (_set_nth_ (array:impl 2 3 (unsigned-type 4)) (tuple-type (list (unsigned-type 2) (unsigned-type 2))) (unsigned-type 3)) (array:impl 2 3 (unsigned-type 4)))
+(test-return-type (_set_nth_ (array 2 3 (unsigned-type 4)) (tuple-type (list (unsigned-type 2) (unsigned-type 2))) (unsigned-type 3)) (array 2 3 (unsigned-type 4)))
 (test-return-type/exn (_set_nth_ (array-type 3 (unsigned-type 4)) (unsigned-type 2) (unsigned-type 5)))
 (test-return-type/exn (_set_nth_ (array-type 3 (unsigned-type 4)) (unsigned-type 2) (symbol-type 'x)))
 (test-return-type/exn (_set_nth_ (array-type 3 (unsigned-type 4)) (symbol-type 'x) (unsigned-type 3)))

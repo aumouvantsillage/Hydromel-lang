@@ -35,28 +35,30 @@
      #'(require s.path))]
 
   [(_ s:stx/typedef)
-   #:with impl-name (format-id #'s.name "~a:impl" #'s.name)
+   #:with lookup-name (internal-name #'s.name)
    #'(begin
-       (provide s.name)
-       (define-syntax s.name (meta/make-function #'impl-name)))]
+       (provide lookup-name)
+       (define-syntax lookup-name (meta/make-function #'s.name)))]
 
   [(_ s:stx/constant)
-   #:with alt-name (generate-temporary (format-id #'s.name "hdrml:constant:~a" #'s.name))
+   #:with lookup-name (internal-name #'s.name)
    #'(begin
-       (provide s.name)
-       (define-syntax s.name (meta/constant #t)))]
+       (provide lookup-name)
+       (define-syntax lookup-name (meta/constant #t)))]
 
   [(_ s:stx/interface)
+   #:with lookup-name (internal-name #'s.name)
    #:with (p ...) (design-unit-field-metadata (attribute s.body))
    #'(begin
-       (provide s.name)
-       (define-syntax s.name (meta/make-interface (list p ...))))]
+       (provide lookup-name)
+       (define-syntax lookup-name (meta/make-interface (list p ...))))]
 
   [(_ s:stx/component)
+   #:with lookup-name (internal-name #'s.name)
    #:with (p ...) (design-unit-field-metadata (attribute s.body))
    #'(begin
-       (provide s.name)
-       (define-syntax s.name (meta/make-component (list p ...))))]
+       (provide lookup-name)
+       (define-syntax lookup-name (meta/make-component (list p ...))))]
 
   [_
    #'(begin)])
@@ -122,7 +124,7 @@
 
       [s:stx/typedef
        (when (current-design-unit)
-         (bind! #'s.name (meta/make-function (format-id #'s.name "~a:impl" #'s.name))))
+         (bind! #'s.name (meta/make-function #'s.name)))
        (with-scope (add-scopes* this-syntax))]
 
       [s:stx/constant #:when (current-design-unit)
@@ -337,7 +339,7 @@
                                       #'s.fn-name))
        ; Bitwise concatenation is a special case where we interleave
        ; argument values with their inferred types.
-       (define/syntax-parse (arg+ ...) (if (equal? (syntax->datum #'fn-name) '_concat_:impl)
+       (define/syntax-parse (arg+ ...) (if (equal? (syntax->datum #'fn-name) '_concat_)
                                          #'((~@ arg (type-of arg)) ...)
                                          #'(arg ...)))
        (if (and (meta/function? fn) (meta/function-cast? fn))

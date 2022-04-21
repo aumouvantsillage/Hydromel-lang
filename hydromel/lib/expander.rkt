@@ -121,17 +121,16 @@
 
 (define-syntax-parse-rule (typedef name ((~literal parameter) param-name param-type) ... expr)
   #:with (arg-name   ...) (generate-temporaries (attribute param-name))
-  #:with impl-name  (format-id #'name "~a:impl"             #'name)
-  #:with rtype-name (format-id #'name "~a:impl:return-type" #'name)
+  #:with rtype-name (format-id #'name "~a:return-type" #'name)
   (begin
-    (provide impl-name rtype-name)
-    (define (impl-name arg-name ...)
+    (provide name rtype-name)
+    (define (name arg-name ...)
       (define-parameter-slot param-name arg-name param-type) ...
       expr)
     (define (rtype-name arg-name ...)
       ; TODO Type checking should happen here.
       ; TODO Is is relevant to return a const-type?
-      (const-type/literal (impl-name (const-type-value arg-name) ...)))))
+      (const-type/literal (name (const-type-value arg-name) ...)))))
 
 ; A constant infers its type immediately before computing its value.
 ; Here, we benefit from the fact that type-of will return a
@@ -221,7 +220,7 @@
 ; An if statement expands to a conditional statement that generates a hash map.
 ; That hash map is assigned to a variable with the same name as the if label.
 (define-syntax-parse-rule (if-statement name (~seq condition then-body) ... else-body)
-  (define name (cond [(int->bool:impl condition) then-body]
+  (define name (cond [(int->bool condition) then-body]
                      ...
                      [else else-body])))
 
