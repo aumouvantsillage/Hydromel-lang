@@ -356,9 +356,9 @@
          [(meta/function fn-name _)
           (q/l (call-expr #,fn-name))]
 
-         ; For a global constant name, append a suffix to access the actual constant.
+         ; For a global constant name, append a suffix to access the constant slot.
          [(meta/constant #t)
-          (s/l (name-expr s.name -constant))]
+          (s/l (name-expr s.name $constant))]
 
          [else stx])]
 

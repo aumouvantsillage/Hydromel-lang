@@ -149,7 +149,7 @@
    #'(define-constant-slot name expr)]
   ; Module-level constant.
   [(_ name expr)
-   #:with name^ (format-id #'name "~a-constant" #'name)
+   #:with name^ (format-id #'name "~a$constant" #'name)
    #'(begin
        (provide name name^)
        (define-constant-slot name^ expr)

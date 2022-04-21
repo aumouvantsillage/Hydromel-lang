@@ -378,7 +378,7 @@
 
 (component C18
   (data-port y out (call-expr signed  (literal-expr 32)))
-  (assignment (name-expr y) (signal-expr (name-expr K0 -constant))))
+  (assignment (name-expr y) (signal-expr (name-expr K0 $constant))))
 
 (define c18-inst (C18-make))
 
