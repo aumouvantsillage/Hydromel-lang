@@ -9,7 +9,7 @@
   "std.rkt"
   "slot.rkt"
   "signal.rkt"
-  (only-in "types.rkt" normalize))
+  (only-in "types.rkt" minimize))
 
 (provide
   slot-ref
@@ -66,7 +66,7 @@
     (define data (slot-data slt))
     (printf "~a : ~v = ~a\n"
       name
-      (normalize (slot-type slt))
+      (minimize (slot-type slt))
       (if (signal? data)
         (signal-take data duration)
         data))))

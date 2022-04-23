@@ -340,7 +340,7 @@
        ; Bitwise concatenation is a special case where we interleave
        ; argument values with their inferred types.
        (define/syntax-parse (arg+ ...) (if (equal? (syntax->datum #'fn-name) '_concat_)
-                                         #'((~@ arg (type-of arg)) ...)
+                                         #'((~@ arg (expression-type arg)) ...)
                                          #'(arg ...)))
        (if (and (meta/function? fn) (meta/function-cast? fn))
          (s/l (call-expr/cast fn-name arg+ ...))
@@ -425,8 +425,8 @@
   ; - a call whose arguments have static values.
   (define (static? stx)
     (syntax-parse stx
-      #:literals [type-of]
-      [(type-of _)             #t]
+      #:literals [expression-type]
+      [(expression-type _)     #t]
       [s:stx/literal-expr      #t]
       [s:stx/name-expr         (define c (lookup #'s.name)) (or (meta/constant? c) (meta/parameter? c))]
       [s:stx/field-expr        (or  (static? #'s.expr) (meta/constant? (resolve stx)))]

@@ -427,8 +427,8 @@
 (define c21-inst (C21-make))
 
 (test-case "Can infer types when assignments are in reverse order"
-  (check-equal? (normalize (slot-type (dict-ref c21-inst 's))) (normalize (slot-type (dict-ref c21-inst 'x))))
-  (check-equal? (normalize (slot-type (dict-ref c21-inst 'u))) (normalize (slot-type (dict-ref c21-inst 's)))))
+  (check-equal? (minimize (slot-type (dict-ref c21-inst 's))) (minimize (slot-type (dict-ref c21-inst 'x))))
+  (check-equal? (minimize (slot-type (dict-ref c21-inst 'u))) (minimize (slot-type (dict-ref c21-inst 's)))))
 
 (component C22
   (data-port x in  (call-expr array (literal-expr 4) (call-expr unsigned  (literal-expr 8))))

@@ -524,8 +524,8 @@
 (define c33-inst (C33-make))
 
 (test-case "Can infer types when assignments are in reverse order"
-  (check-equal? (normalize (slot-type (dict-ref c33-inst 's))) (normalize (slot-type (dict-ref c33-inst 'x))))
-  (check-equal? (normalize (slot-type (dict-ref c33-inst 'u))) (normalize (slot-type (dict-ref c33-inst 's)))))
+  (check-equal? (minimize (slot-type (dict-ref c33-inst 's))) (minimize (slot-type (dict-ref c33-inst 'x))))
+  (check-equal? (minimize (slot-type (dict-ref c33-inst 'u))) (minimize (slot-type (dict-ref c33-inst 's)))))
 
 (begin-hydromel
   (component C34

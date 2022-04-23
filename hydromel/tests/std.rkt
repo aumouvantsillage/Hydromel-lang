@@ -45,14 +45,14 @@
 ; This does not test that f:return-type has the minimal width.
 (define-syntax-rule (test-return-type/accept (name arg ...))
   (test-true (format "~a:return-type~a" 'name '(arg ...))
-             (<: (type-of-literal (call name arg ...))
+             (<: (type-of (call name arg ...))
                  (call:return-type name (make-const-type arg) ...))))
 
 ; Test that literal-type(f(x ...)) = f:return-type(literal-type(x) ...)
 (define-syntax-rule (test-return-type/strict (name arg ...))
   (test-equal? (format "~a:return-type~a" 'name '(arg ...))
-               (normalize (call:return-type name (make-const-type arg) ...))
-               (type-of-literal (call name arg ...))))
+               (minimize (call:return-type name (make-const-type arg) ...))
+               (type-of (call name arg ...))))
 
 ; ------------------------------------------------------------------------------
 ; int->bool

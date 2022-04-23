@@ -32,7 +32,7 @@
   slot-expr signal-expr lift-expr
   choices
   array-for-expr concat-for-expr
-  type-of)
+  expression-type)
 
 ; ------------------------------------------------------------------------------
 ; Design units
@@ -133,12 +133,12 @@
       (make-const-type (name (const-type-value arg-name) ...)))))
 
 ; A constant infers its type immediately before computing its value.
-; Here, we benefit from the fact that type-of will return a
+; Here, we benefit from the fact that expression-type will return a
 ; const-type where the expression has already been evaluated.
 (define-syntax-parse-rule (define-constant-slot name expr)
   (begin
     (typing-functions expr)
-    (define name (let ([t (type-of expr)])
+    (define name (let ([t (expression-type expr)])
                    (make-slot (const-type-value t) t)))))
 
 ; A constant expands to a slot assigned to a variable.
@@ -281,7 +281,7 @@
 
 (define-syntax-parse-rule (call-expr/cast fn-name arg ...)
   #:with expr this-syntax
-  ((type-of expr) (fn-name arg ...)))
+  ((expression-type expr) (fn-name arg ...)))
 
 (define-syntax-parse-rule (choices expr ...)
   (list expr ...))
@@ -361,13 +361,13 @@
 ; This code is meant to be executed lazily, either in a slot type
 ; or inside a signal, so that out-of-order dependencies are correctly handled.
 ; Only constants infer their types immediately.
-(define-syntax-parser type-of
+(define-syntax-parser expression-type
   #:literals [name-expr literal-expr slot-expr signal-expr]
   [(_ (name-expr name ...))
    #'(slot-type (concat-name name ...))]
 
   [(_ ((~or* slot-expr signal-expr) (~and ((~or* name-expr literal-expr) _ ...) body)))
-   #'(type-of body)]
+   #'(expression-type body)]
 
   [(_ (~and (literal-expr _) this-expr))
    #'(make-const-type this-expr)]
@@ -384,7 +384,7 @@
                   (signal-expr (name-expr _ ...))
                   (signal-expr (literal-expr _ ...)))
             this-expr))
-   #'(thunk (type-of this-expr))]
+   #'(thunk (expression-type this-expr))]
 
   [(_ this-expr)
    (type-label #'this-expr)])
@@ -399,7 +399,7 @@
      (type-label #'body)]
 
     [_
-     (format-id stx "type-of:~a"
+     (format-id stx "~a$type"
        (or
          (syntax-property stx 'label)
          (string->symbol (format "~a$~a:~a:~a"
@@ -409,7 +409,7 @@
                                  (syntax-span stx)))))]))
 
 (define-syntax-parse-rule (comprehension-slot left right)
-  (make-slot #f (common-supertype (type-of-literal left) (type-of-literal right))))
+  (make-slot #f (common-supertype (type-of left) (type-of right))))
 
 (define-syntax-parser typing-functions
   #:literals [slot-expr signal-expr lift-expr array-for-expr concat-for-expr name-expr literal-expr]
@@ -435,12 +435,12 @@
                               [(iter-name) (comprehension-slot (apply min rng) (apply max rng))] ...)
        (typing-functions body)
        (define (this-type-label)
-         (array-type len (type-of body))))]
+         (array-type len (expression-type body))))]
 
   [(_ (~and (concat-for-expr body (~seq iter-name iter-expr) ...) this-expr))
    #:with this-type-label (type-label #'this-expr)
    #:with (~and (first-rng _ ...) (rng ...)) (generate-temporaries (attribute iter-name))
-   ; TODO Check that (type-of body) is (abstract-integer 1) for all iterator values
+   ; TODO Check that (expression-type body) is (abstract-integer 1) for all iterator values
    #'(splicing-letrec-values ([(rng ...) (for*/lists (rng ...)
                                                      ([iter-name (in-list iter-expr)] ...)
                                            (values iter-name ...))]
@@ -448,7 +448,7 @@
                               [(iter-name) (comprehension-slot (apply min rng) (apply max rng))] ...)
        (typing-functions body)
        (define (this-type-label)
-         (resize (type-of body) len)))]
+         (resize (expression-type body) len)))]
 
   [(_ ((~or* name-expr literal-expr) _ ...))
    #'(begin)]
@@ -466,17 +466,17 @@
 ; TODO Warn on circular dependencies in register-expr
 (define-syntax-parser typing-function-body
   #:literals [choices register-expr when-clause
-              field-expr call-expr call-expr/cast type-of]
-  ; This is a special case for (type-of) forms generated in checker.rkt
+              field-expr call-expr call-expr/cast expression-type]
+  ; This is a special case for (expression-type) forms generated in checker.rkt
   ; Maybe we should generate these forms in expander instead.
-  [(_ (~and (type-of expr) this-expr))
+  [(_ (~and (expression-type expr) this-expr))
    #'(make-const-type this-expr)]
 
   [(_ (choices expr ...))
-   #'(tuple-type (list (type-of expr) ...))]
+   #'(tuple-type (list (expression-type expr) ...))]
 
   [(_ (register-expr i (~optional (when-clause r)) d (~optional (when-clause e))))
-   #'(union-type (list (type-of i) (type-of d)))]
+   #'(union-type (list (expression-type i) (expression-type d)))]
 
   [(_ (field-expr expr field-name))
    #'(slot-type (dict-ref (remove-dynamic-indices expr) 'field-name))]
@@ -484,7 +484,7 @@
   [(_ (~and ((~or* call-expr call-expr/cast) name arg ...) expr))
    #:with rt (format-id #'name "~a:return-type" #'name)
    #:with (tv ...) (generate-temporaries (attribute arg))
-   #'(rt (type-of arg) ...)]
+   #'(rt (expression-type arg) ...)]
 
   [_ #'(any-type)])
 

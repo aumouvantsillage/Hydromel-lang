@@ -113,7 +113,7 @@
   (λ (ta tb)
     (assert-<: 'and 0 ta (integer))
     (assert-<: 'and 1 tb (integer))
-    (match (list (normalize ta) (normalize tb))
+    (match (list (minimize ta) (minimize tb))
       [(list (signed-type            na) (signed-type           nb)) (signed-type   (max na nb))]
       [(list (unsigned-type          na) (abstract-integer-type nb)) (unsigned-type (max na nb))]
       [(list (abstract-integer-type  na) (unsigned-type         nb)) (unsigned-type (max na nb))])))
@@ -122,7 +122,7 @@
   (λ (ta tb)
     (assert-<: 'or 0 ta (integer))
     (assert-<: 'or 1 tb (integer))
-    (match (list (normalize ta) (normalize tb))
+    (match (list (minimize ta) (minimize tb))
       [(list (unsigned-type         na) (unsigned-type          nb)) (unsigned-type (max na nb))]
       [(list (signed-type           na) (abstract-integer-type  nb)) (signed-type   (max na nb))]
       [(list (abstract-integer-type na) (signed-type            nb)) (signed-type   (max na nb))])))
@@ -131,7 +131,7 @@
   (λ (ta tb)
     (assert-<: 'xor 0 ta (integer))
     (assert-<: 'xor 1 tb (integer))
-    (match (list (normalize ta) (normalize tb))
+    (match (list (minimize ta) (minimize tb))
       [(list (unsigned-type na) (unsigned-type nb)) (unsigned-type (max na nb))]
       [(list (signed-type   na) (unsigned-type nb)) (signed-type   (max na (add1 nb)))]
       [(list (unsigned-type na) (signed-type   nb)) (signed-type   (max (add1 na) nb))]
@@ -147,18 +147,18 @@
   (λ (t)
     (assert-<: 'unsigned_width 0 t (integer))
     (~>> t
-         normalize
+         minimize
          abstract-integer-type-width
-         type-of-literal)))
+         type-of)))
 
 ; Returns the minimum width to encode a given number
 ; as an signed integer.
 (define-function signed_width min-signed-width
   (λ (t)
     (assert-<: 'signed_width 0 t (integer))
-    (match (normalize t)
-      [(signed-type   n) (type-of-literal n)]
-      [(unsigned-type n) (type-of-literal (add1 n))])))
+    (match (minimize t)
+      [(signed-type   n) (type-of n)]
+      [(unsigned-type n) (type-of (add1 n))])))
 
 ; Comparison operations return integers 0 and 1.
 (define-function _==_
@@ -200,14 +200,14 @@
 (define (add-sub-return-type name ta tb)
   (assert-<: name 0 ta (integer))
   (assert-<: name 1 tb (integer))
-  (define tr (common-supertype/normalize ta tb))
+  (define tr (minimize (common-supertype ta tb)))
   (resize tr (add1 (abstract-integer-type-width tr))))
 
 (define-function _*_ *
   (λ (ta tb)
     (assert-<: '* 0 ta (integer))
     (assert-<: '* 1 tb (integer))
-    (match (list (normalize ta) (normalize tb))
+    (match (list (minimize ta) (minimize tb))
       [(list (unsigned-type         na) (unsigned-type         nb)) (unsigned-type (+ na nb))]
       [(list (abstract-integer-type na) (signed-type           nb)) (signed-type   (+ na nb))]
       [(list (signed-type           na) (abstract-integer-type nb)) (signed-type   (+ na nb))])))
@@ -216,7 +216,7 @@
   (λ (ta tb)
     (assert-<: '/ 0 ta (integer))
     (assert-<: '/ 1 tb (integer))
-    (match (list (normalize ta) (normalize tb))
+    (match (list (minimize ta) (minimize tb))
       [(list ta^                        (unsigned-type _)) ta^]
       [(list (abstract-integer-type na) (signed-type   _)) (signed-type (add1 na))])))
 
@@ -225,7 +225,7 @@
   (λ (ta)
     (assert-<: '- 0 ta (integer))
     (~>> ta
-         normalize
+         minimize
          abstract-integer-type-width
          add1
          signed-type)))
@@ -234,7 +234,7 @@
   (λ (ta tb)
     (assert-<: '<< 0 ta (integer))
     (assert-<: '<< 1 tb (integer))
-    (define ta^ (normalize ta))
+    (define ta^ (minimize ta))
     (define na (abstract-integer-type-width ta^))
     (match tb
       [(const-type nb _)  (resize ta^ (max 0 (+ na nb)))]
@@ -247,7 +247,7 @@
   (λ (ta tb)
     (assert-<: '>> 0 ta (integer))
     (assert-<: '>> 1 tb (integer))
-    (define ta^ (normalize ta))
+    (define ta^ (minimize ta))
     (define na (abstract-integer-type-width ta^))
     (match tb
       [(const-type    nb _) (resize ta^ (max 0 (- na nb)))]
@@ -264,7 +264,7 @@
   (λ (ta tb)
     (assert-<: 'range 0 ta (integer))
     (assert-<: 'range 1 tb (integer))
-    (range-type (common-supertype/normalize ta tb))))
+    (range-type (common-supertype ta tb))))
 
 ; The slicing operation defaults to the unsigned version.
 ; The signed case is handled automatically because the expander inserts
@@ -282,7 +282,7 @@
                    [(const-type n _) n]
                    [(unsigned-type   n) (min-unsigned-value n)]
                    [(signed-type     n) (min-signed-value   n)]))
-    (resize (normalize ta) (max 0 (add1 (- left right))))))
+    (resize (minimize ta) (max 0 (add1 (- left right))))))
 
 (define-function _set_slice_
   (λ args
@@ -308,7 +308,7 @@
           [(list h ... v t)
            (assert-<: 'concat (length res) t (integer))
            (define l (~>> t
-                          normalize
+                          minimize
                           abstract-integer-type-width
                           sub1))
            (loop (cons (list v l 0) res) h)]
@@ -317,7 +317,7 @@
     (define ts^ (for/list ([(t n) (in-indexed ts)] #:when (odd? n))
                   (define t^ (const-type-value t))
                   (assert-<: 'concat (/ (sub1 n) 2) t^ (integer))
-                  (normalize t^)))
+                  (minimize t^)))
     (define w (for/sum ([it (in-list ts^)])
                 (abstract-integer-type-width it)))
     (match ts^
@@ -350,7 +350,7 @@
               ([(t n) (in-indexed (rest ts))])
       (assert-<: 'nth n res (array 0 (any)))
       (assert-<: 'nth (add1 n) t (integer))
-      (array-type-elt-type (normalize res)))))
+      (array-type-elt-type (minimize res)))))
 
 (define (set-nth/multi arr ns v)
   (match ns
@@ -365,7 +365,7 @@
         [_                 res])))
   (λ ts
     (assert-<: 'set_nth 0 (first ts) (array 0 (any)))
-    (define ta (normalize (first ts)))
+    (define ta (minimize (first ts)))
     (let loop ([ts (rest ts)] [n 1])
       (unless (empty? ts)
         (match-define (list tn tv txs ...) ts)
@@ -386,8 +386,8 @@
   (λ (ta tb)
     (assert-<: 'field 0 ta (record))
     (assert-<: 'field 1 tb (symbol-type #f))
-    (define ta^ (normalize ta))
-    (define tb^ (normalize tb))
+    (define ta^ (minimize ta))
+    (define tb^ (minimize tb))
     (define field-name (symbol-type-value tb^))
     (dict-ref (record-type-fields ta^) field-name
       (thunk (error "Unknown field" field-name)))))
@@ -400,12 +400,12 @@
         [_                res])))
   (λ ts
     (assert-<: 'set_field 0 (first ts) (record))
-    (define ta (normalize (first ts)))
+    (define ta (minimize (first ts)))
     (let loop ([n 1] [kvs (rest ts)])
       (match kvs
         [(list tk tv tr ...)
          (assert-<: 'set_field 1 tk (symbol-type #f))
-         (define field-name (symbol-type-value (normalize tk)))
+         (define field-name (symbol-type-value (minimize tk)))
          (define tf (dict-ref (record-type-fields ta) field-name
                       (thunk (error "Unknown field" field-name))))
          (assert-<: 'set_field (add1 n) tv tf)
@@ -428,18 +428,18 @@
 
 (define (_cast_:return-type ta tb)
   (assert-<: 'cast 0 ta (type))
-  (define ta^ (normalize (const-type-value ta)))
+  (define ta^ (minimize (const-type-value ta)))
   (define tr (match ta^
                [(signed-type #f)
                 (assert-<: 'cast 1 tb (integer))
-                (define tb^ (normalize tb))
+                (define tb^ (minimize tb))
                 (match tb^
                   [(signed-type   _) tb^]
                   [(unsigned-type n) (signed-type n)])]
 
                [(unsigned-type #f)
                 (assert-<: 'cast 1 tb (integer))
-                (define tb^ (normalize tb))
+                (define tb^ (minimize tb))
                 (match tb^
                   [(signed-type   n) (unsigned-type n)]
                   [(unsigned-type _) tb^])]
@@ -454,7 +454,7 @@
 
 (define-function zero
   (λ (t)
-    (match (normalize t)
+    (match (minimize t)
       [(abstract-integer-type _) 0]
       [(array-type n v)          (make-pvector n (zero v))]
       [(tuple-type ts)           (map zero ts)]

@@ -7,7 +7,7 @@
 (require
   threading
   (only-in "numeric.rkt" integer->bit-string)
-  (only-in "types.rkt" normalize abstract-integer-type array-type)
+  (only-in "types.rkt" minimize abstract-integer-type array-type)
   (only-in data/collection nth)
   "signal.rkt"
   "slot.rkt"
@@ -39,7 +39,7 @@
   (match inst
     [(slot sig _ _) #:when sig
      (define samples (signal-take sig duration))
-     (match (normalize (slot-type inst))
+     (match (minimize (slot-type inst))
        [(abstract-integer-type w)
         (fprintf out "$var wire ~a ~a ~a $end\n" w path scope)
         (waveform path w samples)]
