@@ -7,12 +7,9 @@
 (require
   syntax/parse/define
   racket/hash
-  (only-in data/collection length nth)
+  (only-in data/collection length)
   data/pvector
-  (prefix-in base/ racket/base)
-  (prefix-in num/ "numeric.rkt")
-  (for-syntax
-    (prefix-in meta/ "meta.rkt")))
+  "numeric.rkt")
 
 (provide
   (struct-out any-type)
@@ -36,11 +33,11 @@
 
 (struct signed-type abstract-integer-type ()
   #:transparent
-  #:property prop:procedure (λ (t v) (num/signed v (abstract-integer-type-width t))))
+  #:property prop:procedure (λ (t v) (signed v (abstract-integer-type-width t))))
 
 (struct unsigned-type abstract-integer-type ()
   #:transparent
-  #:property prop:procedure (λ (t v) (num/unsigned v (abstract-integer-type-width t))))
+  #:property prop:procedure (λ (t v) (unsigned v (abstract-integer-type-width t))))
 
 (struct tuple-type abstract-type (elt-types) #:transparent)
 
@@ -84,8 +81,8 @@
   (cond [(symbol? x)        (symbol-type x)]
         [(abstract-type? x) (subtype-type (any-type))]
         [(integer? x)       (if (>= x 0)
-                              (unsigned-type (num/min-unsigned-width x))
-                              (signed-type   (num/min-signed-width   x)))]
+                              (unsigned-type (min-unsigned-width x))
+                              (signed-type   (min-signed-width   x)))]
         [(pvector? x)       (array-type (length x)
                                         (union-type (for/list ([v x])
                                                       (type-of-literal v))))]
@@ -100,8 +97,8 @@
   (match t
     ; If t represents a static integer value with unbounded width,
     ; return an integer type with minimal width.
-    [(const-type n (unsigned-type #f)) (unsigned-type (num/min-unsigned-width n))]
-    [(const-type n (signed-type   #f)) (signed-type   (num/min-signed-width   n))]
+    [(const-type n (unsigned-type #f)) (unsigned-type (min-unsigned-width n))]
+    [(const-type n (signed-type   #f)) (signed-type   (min-signed-width   n))]
     ; If t represents any other static value, return its normalized type.
     [(const-type _ t)                  (normalize t)]
     ; If t is a union type, return the common supertype of its normalized alternatives.
@@ -213,19 +210,19 @@
     [(union-type    ts)  (format "union(~a)" (for/fold ([acc ""])
                                                        ([it (in-list ts)])
                                                (define s (type->string it))
-                                               (if (positive? (string-length acc))
+                                               (if (positive? (length acc))
                                                  (string-append acc ", " s)
                                                  s)))]
     [(tuple-type    ts)  (format "tuple(~a)" (for/fold ([acc ""])
                                                        ([it (in-list ts)])
                                                (define s (type->string it))
-                                               (if (> (string-length acc) 0)
+                                               (if (> (length acc) 0)
                                                  (string-append acc ", " s)
                                                  s)))]
     [(record-type fs)    (format "record(~a)" (for/fold ([acc ""])
                                                         ([(k v) (in-dict fs)])
                                                 (define s (format "~a: ~a" k (type->string v)))
-                                                (if (> (string-length acc) 0)
+                                                (if (> (length acc) 0)
                                                   (string-append acc ", " s)
                                                   s)))]
     [(symbol-type s)     (format "~~~a" s)]
