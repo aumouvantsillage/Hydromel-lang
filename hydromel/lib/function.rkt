@@ -56,7 +56,7 @@
        (define rt-name (return-type-function cast? name rt-fn)))]
 
   [(_ cast? name fn)
-   #'(define-function* cast? name fn (const (none-type)))])
+   #'(define-function* cast? name fn (const (union-type empty)))])
 
 (define-syntax-parser return-type-function
   #:literals [λ const]

@@ -15,13 +15,13 @@
     (prefix-in meta/ "meta.rkt")))
 
 (provide
-  (struct-out any-type) (struct-out none-type)
+  (struct-out any-type)
   (struct-out abstract-integer-type) (struct-out signed-type) (struct-out unsigned-type)
   (struct-out tuple-type) (struct-out array-type) (struct-out record-type) (struct-out union-type)
   (struct-out range-type) (struct-out symbol-type) (struct-out boolean-type)
   (struct-out subtype-type) (struct-out const-type)
   normalize resize type->string <:
-  type-of-literal const-type/literal common-supertype)
+  type-of-literal const-type/literal common-supertype common-supertype/normalize)
 
 ; A data type can be used as a conversion function.
 ; The default behavior is to return the given data unchanged.
@@ -30,8 +30,6 @@
   #:property prop:procedure (λ (t v) v))
 
 (struct any-type datatype () #:transparent)
-
-(struct none-type datatype () #:transparent)
 
 ; Abstract type for signed and unsigned integers.
 (struct abstract-integer-type datatype (width) #:transparent)
@@ -108,7 +106,7 @@
     [(const-type _ t)                  (normalize t)]
     ; If t is a union type, return the common supertype of its normalized alternatives.
     ; TODO using foldl will not produce a minimal supertype. Maybe sort/partition ts according to <:
-    [(union-type ts)                   (foldl common-supertype (none-type)
+    [(union-type ts)                   (foldl common-supertype (union-type empty)
                                                                (map normalize ts))]
     ; If t is an array type, normalize its element type.
     [(array-type n t)                  (array-type n (normalize t))]
@@ -126,22 +124,20 @@
 ; It must be the "simplest" type r such that t <: r and u <: r.
 (define (common-supertype t u)
   (match (list t u)
-    ; If one of the arguments is none, return the other.
-    [(list _          (none-type)) t]
-    [(list (none-type) _)          u]
     ; For integer types, return an integer type with
     ; appropriate signedness and the required width.
     [(list (unsigned-type m) (unsigned-type n)) (unsigned-type (max m n))]
     [(list (signed-type   m) (signed-type   n)) (signed-type   (max m n))]
     [(list (unsigned-type m) (signed-type   n)) (signed-type   (max (add1 m) n))]
     [(list (signed-type   m) (unsigned-type n)) (signed-type   (max m (add1 n)))]
-    ; Arrays have a common supertype when they have the same length.
-    ; The result is an array type wose element type is the common supertype
+    ; The result is an array type whose element type is the common supertype
     ; of the element types of t and u.
-    [(list (array-type n v) (array-type m w)) #:when (= n m)
+    [(list (array-type n v) (array-type m w))
      (array-type (min n m) (common-supertype/normalize v w))]
     ; TODO tuples
-    ; Symbol types have a common supertype when they refer to the same symbol.
+    ; Equal symbol types are their common supertype.
+    ; We do not return the empty symbol if q and r are different because it
+    ; would break enumerations.
     [(list (symbol-type q) (symbol-type r)) #:when (equal? q r)
      t]
     ; The common supertype of two record types contain fields with the
@@ -153,23 +149,24 @@
     ; have been reduced to non-union types.
     ; If we still get unions at this point, it means that t or u could not be
     ; reduced to simpler types, so we return a union here as well.
-    [(list (union-type ts) (union-type us)) (union-type (append us ts))]
-    [(list (union-type ts) _)               (union-type (cons u ts))]
-    [(list _               (union-type us)) (union-type (append us (list t)))]
+    [(list (union-type '()) _)                u]
+    [(list _                (union-type '())) t]
+    [(list (union-type ts)  (union-type us))  (union-type (append us ts))]
+    [(list (union-type ts)  _)                (union-type (cons   u  ts))]
+    [(list _                (union-type us))  (union-type (append us (list t)))]
     ; If a common supertype could not be found, return a union of t and u.
-    [_                                      (union-type (list u t))]))
+    [_                                        (union-type (list u t))]))
 
 (define (common-supertype/normalize t u)
   (common-supertype (normalize t) (normalize u)))
 
 (define (<: t u)
-  (define t^ (normalize t))
-  (define u^ (normalize u))
-  (match (list t^ u^)
+  (match (list t u)
     ; All types are subtypes of any.
     [(list _  (any-type)) #t]
-    ; none is a subtype of all types.
-    [(list (none-type) _) #t]
+    ; Unwrap const types.
+    [(list _                 (const-type _ u^)) (<: t u^)]
+    [(list (const-type _ t^) _)                 (<: t^ u)]
     ; All integer types are subtypes of the unbounded signed type.
     ; All unsigned types are subtypes of the unbounded unsigned type.
     [(list (abstract-integer-type _) (signed-type   #f)) #t]
@@ -180,13 +177,14 @@
     [(list (signed-type   n) (signed-type   m)) (<= n m)]
     [(list (unsigned-type n) (unsigned-type m)) (<= n m)]
     [(list (unsigned-type n) (signed-type   m)) (<  n m)]
-    ; A symbol type can only be a subtype of itself.
+    ; A symbol type can only be a subtype of the empty symbol or itself.
+    [(list (symbol-type ts) (symbol-type #f)) #t]
     [(list (symbol-type ts) (symbol-type us)) (equal? ts us)]
-    ; An array type t is a subtype of an array type u if they have the same length
+    ; An array type t is a subtype of an array type u if t is at least as long as u
     ; and if the element type of t is a subtype of the element type of u.
     [(list (array-type n v) (array-type m w)) (and (>= n m) (<: v w))]
-    ; A tuple type t is a subtype of a tuple type u if all the element types of t
-    ; are subtypes of the element types of u.
+    ; A tuple type t is a subtype of a tuple type u if t is at least as long as u
+    ; and corresponding element types in t are subtypes of the element types in u.
     [(list (tuple-type ts) (tuple-type us)) (and (>= (length ts) (length us))
                                                  (for/and ([it (in-list ts)]
                                                            [iu (in-list us)])
@@ -194,14 +192,14 @@
     ; A union type t is a subtype of a type u if all its alternatives are subtypes of u.
     ; A type t is a subtype of a union type u if t is a subtype of at least one alternative of u.
     [(list (union-type ts) _) (for/and ([it (in-list ts)])
-                                (<: it u^))]
+                                (<: it u))]
     [(list _ (union-type us)) (for/or ([it (in-list us)])
-                                (<: t^ it))]
-    ; A record type t is a subtype of a record type u if all field names in t
-    ; exist in u, and field types in t are subtypes of the corresponding field types in u.
-    [(list (record-type ft) (record-type fu)) (for/and ([(k v) (in-dict ft)])
-                                                (and (dict-has-key? fu k)
-                                                     (<: v (dict-ref fu k))))]
+                                (<: t it))]
+    ; A record type t is a subtype of a record type u if all field names in u
+    ; exist in t, and field types in t are subtypes of the corresponding field types in u.
+    [(list (record-type ft) (record-type fu)) (for/and ([(k v) (in-dict fu)])
+                                                (and (dict-has-key? ft k)
+                                                     (<: (dict-ref ft k) v)))]
     ; Subtyping between types.
     [(list (subtype-type ta) (subtype-type tb))  (<: ta tb)]
     [_ #f]))
@@ -218,16 +216,16 @@
                                                (if (positive? (string-length acc))
                                                  (string-append acc ", " s)
                                                  s)))]
-    [(tuple-type    ts)  (format "tuple(~a)" (for/fold ([acc #f])
+    [(tuple-type    ts)  (format "tuple(~a)" (for/fold ([acc ""])
                                                        ([it (in-list ts)])
                                                (define s (type->string it))
-                                               (if (string? acc)
+                                               (if (> (string-length acc) 0)
                                                  (string-append acc ", " s)
                                                  s)))]
-    [(record-type fs)    (format "record(~a)" (for/fold ([acc #f])
+    [(record-type fs)    (format "record(~a)" (for/fold ([acc ""])
                                                         ([(k v) (in-dict fs)])
                                                 (define s (format "~a: ~a" k (type->string v)))
-                                                (if (string? acc)
+                                                (if (> (string-length acc) 0)
                                                   (string-append acc ", " s)
                                                   s)))]
     [(symbol-type s)     (format "~~~a" s)]

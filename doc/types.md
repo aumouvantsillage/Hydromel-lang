@@ -5,11 +5,18 @@ Hydromel has a [structural type system](https://en.wikipedia.org/wiki/Structural
 
 A type constructor is a function that returns a type. Some type constructors take arguments: for instance, `unsigned(N)` returns the type of N-bit unsigned integers. When a type constructor has no argument, we usually omit the parentheses: `bit` is the same as `bit()` and returns the type of 1-bit unsigned integers.
 
-The operator `<:` defines the subtyping relation. It is a non-strict partial order relation:
+Notations
+---------
+
+The notation `T <: U` means "`T` is a subtype of `U`", or "A value of type `T` is also a value of type `U`".
+The subtype relation is a non-strict partial order relation:
 
 * It is reflexive. A type `T` is a subtype of itself: `T <: T`.
 * It is transitive: if `T <: U` and `U <: V`, then `T <: V`.
 * It is antisymmetric: if `T <: U` and `U <: T`, then `T = U`.
+
+The notation `x : T` means "`x` has type `T`".
+It can be expressed as `typeof(x) <: T`.
 
 Top and bottom types
 --------------------
@@ -17,19 +24,22 @@ Top and bottom types
 The constructors `any` and `none` are defined with the following subtyping rules:
 
 * All types are subtypes of `any`.
-* `none` is a subtype of all types.
+* `none` is a subtype of all types. It is define as a `union` with an empty list of alternatives.
 
-The types of types
-------------------
+The type of types
+-----------------
 
-Hydromel defines the constructor `subtype(T)` to specify a type that is a subtype of a given type `T`.
+Hydromel defines the constructor `subtype` with the following meaning:
 
-`type` is a constructor for the type of types and is defined as `subtype(any)`.
+`T : subtype(U)` means that `T` is a type and `T <: U`.
 
-In Hydromel, we can write:
+The general constructor for types is: `type = subtype(any)`.
 
-* `T : type` to specify that `T` is a type.
-* `T : subtype(U)` to specify that `T` is a type and `T <: U`.
+Since for all types, `T <: T`, we can always write `T : subtype(T)`.
+We define `typeof(T) = subtype(T)`.
+
+The expression `T : subtype(U)` can also be rewritten as:
+`typeof(T) <: subtype(U)`, so `subtype(T) <: subtype(U)`
 
 Integer types
 -------------
@@ -53,6 +63,11 @@ The corresponding types follow these subtyping relations:
 The `bit` constructor is provided as an alias for the 1-bit unsigned integer type constructor:
 
 `bit = unsigned(1)`
+
+For an integer value `x`, `typeof(x)` returns:
+
+* `unsigned(N)` if `x ≥ 0` with `N` the minimum number of bits to represent `x` as a pure binary value. If `x = 0` then `N = 1`, else, `N` is the integer value such that `2^(N-1) ≤ x < 2^N`.
+* `signed(N)` if `x < 0` with `N` the minimum number of bits to represent `x` as a 2's complement binary value. If `x = -1` then `N = 1` else `N` is the integer value such that `-2^(N-1) ≤ x < -2^(N-2)`.
 
 Symbol types
 ------------
@@ -97,15 +112,21 @@ Constant type
 
 The `const` constructor is used internally to represent the type of a value that is known at elaboration time. A `const` packs a value with its declared or computed type.
 
-`const(V, T)` where `typeof(V) <: T`
+`const(x, T)` where `x : T`
 
-It is used primarily when the return type of a function depends on the values of some arguments, such as in bit shifts or slicing operations.
+It is used primarily when the return type of a function depends on the values of some arguments, such as in bit shifts, concatenation or slicing operations. In most cases, `typeof(x) = T` but there are situations where we want to enforce a more general type for `x`, so that `typeof(x) <: T`.
+For instance, the result of a cast `unsigned(4)|3|` is of type `const(3, unsigned(4))` to specify that the value 3 must be processed as a 4-bit wide integer.
 
-During type checking, `const` instances are *normalized* before any subtyping relation can be applied.
+During type checking, `const(x, T) <: T`.
 
-* `normalize(const(v, integer)) = signed(signed_width(v))`
-* `normalize(const(v, natural)) = unsigned(unsigned_width(v))`
-* `normalize(const(v, T)) = T` otherwise.
+Normal forms
+------------
+
+Types are *normalized* according to the following rules:
+
+* `normalize(const(x, integer)) = signed(signed_width(x))`
+* `normalize(const(x, natural)) = unsigned(unsigned_width(x))`
+* `normalize(const(x, T)) = T` otherwise.
 * `normalize(array(N, T)) = array(N, normalize(T))`
 * `normalize(tuple(T, ...)) = tuple(normalize(T), ...)`
 * `normalize(record(K : T, ...)) = record(K : normalize(T), ...)`
