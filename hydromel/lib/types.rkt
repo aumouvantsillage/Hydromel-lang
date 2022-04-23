@@ -76,7 +76,7 @@
   (const-type value (type-of value)))
 
 ; Return the actual type of a const-type.
-(define (normalize-const-type t)
+(define (const-type-collapse t)
   (match t
     [(const-type n (unsigned-type #f)) (unsigned-type (min-unsigned-width n))]
     [(const-type n (signed-type   #f)) (signed-type   (min-signed-width   n))]
@@ -108,7 +108,7 @@
 ; Minimize a type t.
 (define (minimize t)
   (match t
-    [(const-type _ _) (minimize (normalize-const-type t))]
+    [(const-type _ _) (minimize (const-type-collapse t))]
     ; TODO using foldl will not always produce a minimal supertype. Maybe sort/partition ts according to <:
     [(union-type ts)  (foldl common-supertype (union-type empty) (map minimize ts))]
     [(array-type n t) (array-type n (minimize t))]
@@ -123,8 +123,8 @@
 ; The result is not minimized.
 (define (common-supertype t u)
   (match (list t u)
-    [(list (const-type _ _)  _)                 (common-supertype (normalize-const-type t) u)]
-    [(list _                 (const-type _ _))  (common-supertype t (normalize-const-type u))]
+    [(list (const-type _ _)  _)                 (common-supertype (const-type-collapse t) u)]
+    [(list _                 (const-type _ _))  (common-supertype t (const-type-collapse u))]
     ; For integer types, return an integer type with
     ; appropriate signedness and the required width.
     [(list (unsigned-type m) (unsigned-type n)) (unsigned-type (max m n))]
