@@ -116,7 +116,7 @@
 
 (define-syntax-parse-rule (define-parameter-slot name actual-name type)
   (begin
-    (define name (make-slot actual-name (const-type actual-name type) (thunk (const-type/literal actual-name))))
+    (define name (make-slot actual-name (const-type actual-name type) (thunk (make-const-type actual-name))))
     (type-check name)))
 
 (define-syntax-parse-rule (typedef name ((~literal parameter) param-name param-type) ... expr)
@@ -130,7 +130,7 @@
     (define (rtype-name arg-name ...)
       ; TODO Type checking should happen here.
       ; TODO Is is relevant to return a const-type?
-      (const-type/literal (name (const-type-value arg-name) ...)))))
+      (make-const-type (name (const-type-value arg-name) ...)))))
 
 ; A constant infers its type immediately before computing its value.
 ; Here, we benefit from the fact that type-of will return a
@@ -228,7 +228,7 @@
 (define-syntax-parse-rule (for-statement name iter-name iter-expr body ...)
   #:with iter-name^ (generate-temporary #'iter-name)
   (define name (for/vector ([iter-name^ (in-list iter-expr)])
-                 (define iter-name (make-slot iter-name^ (const-type/literal iter-name^)))
+                 (define iter-name (make-slot iter-name^ (make-const-type iter-name^)))
                  body ...)))
 
 ; A statement block executes statements and returns a hash map that exposes
@@ -370,7 +370,7 @@
    #'(type-of body)]
 
   [(_ (~and (literal-expr _) this-expr))
-   #'(const-type/literal this-expr)]
+   #'(make-const-type this-expr)]
 
   [(_ this-expr)
    #:with lbl (type-label #'this-expr)
@@ -470,7 +470,7 @@
   ; This is a special case for (type-of) forms generated in checker.rkt
   ; Maybe we should generate these forms in expander instead.
   [(_ (~and (type-of expr) this-expr))
-   #'(const-type/literal this-expr)]
+   #'(make-const-type this-expr)]
 
   [(_ (choices expr ...))
    #'(tuple-type (list (type-of expr) ...))]

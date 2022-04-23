@@ -64,27 +64,27 @@
   [(_ no-cast name (λ (arg:id ...) body ...))
    #'(λ (arg ...)
        (if (and (const-type? arg) ...)
-         (const-type/literal (name (const-type-value arg) ...))
+         (make-const-type (name (const-type-value arg) ...))
          (let () body ...)))]
 
   [(_ cast name (λ (arg:id ...) body ...))
    #'(λ (arg ...)
        (define t (let () body ...))
        (if (and (const-type? arg) ...)
-         (const-type/literal (t (name (const-type-value arg) ...)))
+         (make-const-type (t (name (const-type-value arg) ...)))
          t))]
 
   [(_ no-cast name (λ args:id body ...))
    #'(λ args
        (if (andmap const-type? args)
-         (const-type/literal (apply name (map const-type-value args)))
+         (make-const-type (apply name (map const-type-value args)))
          (let () body ...)))]
 
   [(_ cast name (λ args:id body ...))
    #'(λ args
        (define t (let () body ...))
        (if (andmap const-type? args)
-         (const-type/literal (t (apply name (map const-type-value args))))
+         (make-const-type (t (apply name (map const-type-value args))))
          t))]
 
   [(_ cast? name (const body ...))

@@ -21,18 +21,18 @@
   (struct-out range-type) (struct-out symbol-type) (struct-out boolean-type)
   (struct-out subtype-type) (struct-out const-type)
   normalize resize type->string <:
-  type-of-literal const-type/literal common-supertype common-supertype/normalize)
+  type-of-literal make-const-type common-supertype common-supertype/normalize)
 
 ; A data type can be used as a conversion function.
 ; The default behavior is to return the given data unchanged.
-(struct datatype ()
+(struct abstract-type ()
   #:transparent
   #:property prop:procedure (λ (t v) v))
 
-(struct any-type datatype () #:transparent)
+(struct any-type abstract-type () #:transparent)
 
 ; Abstract type for signed and unsigned integers.
-(struct abstract-integer-type datatype (width) #:transparent)
+(struct abstract-integer-type abstract-type (width) #:transparent)
 
 (struct signed-type abstract-integer-type ()
   #:transparent
@@ -42,34 +42,34 @@
   #:transparent
   #:property prop:procedure (λ (t v) (num/unsigned v (abstract-integer-type-width t))))
 
-(struct tuple-type datatype (elt-types) #:transparent)
+(struct tuple-type abstract-type (elt-types) #:transparent)
 
-(struct union-type datatype (types)
+(struct union-type abstract-type (types)
   #:transparent
   #:property prop:procedure (λ (t v) ((normalize t) v)))
 
-(struct array-type datatype (size elt-type) #:transparent)
+(struct array-type abstract-type (size elt-type) #:transparent)
 
-(struct record-type datatype (fields) #:transparent)
+(struct record-type abstract-type (fields) #:transparent)
 
 ; The range type is used internally.
-(struct range-type datatype (type) #:transparent)
+(struct range-type abstract-type (type) #:transparent)
 
 ; The boolean type is used internally.
-(struct boolean-type datatype () #:transparent)
+(struct boolean-type abstract-type () #:transparent)
 
 ; The symbol type is used internally.
-(struct symbol-type datatype (value) #:transparent)
+(struct symbol-type abstract-type (value) #:transparent)
 
 ; Subtype of a given type.
-(struct subtype-type datatype (supertype) #:transparent)
+(struct subtype-type abstract-type (supertype) #:transparent)
 
 ; A type to keep a literal value with its type.
-(struct const-type datatype (value type)
+(struct const-type abstract-type (value type)
   #:transparent
   #:property prop:procedure (λ (t v) ((const-type-type t) v)))
 
-(define (const-type/literal value)
+(define (make-const-type value)
   (const-type value (type-of-literal value)))
 
 ; Type helpers.
@@ -81,18 +81,18 @@
     [_ (error "Resize expects integer type. Found " (type->string t))]))
 
 (define (type-of-literal x)
-  (cond [(symbol? x)   (symbol-type x)]
-        [(datatype? x) (subtype-type (any-type))]
-        [(integer? x)  (if (>= x 0)
-                         (unsigned-type (num/min-unsigned-width x))
-                         (signed-type   (num/min-signed-width   x)))]
-        [(pvector? x)  (array-type (length x)
-                                   (union-type (for/list ([v x])
-                                                 (type-of-literal v))))]
-        [(hash? x)     (record-type (for/hash ([(k v) (in-dict x)])
-                                      (values k (type-of-literal v))))]
-        [(list? x)     (tuple-type (map type-of-literal x))]
-        [else          (error "Cannot determine the type of literal" x)]))
+  (cond [(symbol? x)        (symbol-type x)]
+        [(abstract-type? x) (subtype-type (any-type))]
+        [(integer? x)       (if (>= x 0)
+                              (unsigned-type (num/min-unsigned-width x))
+                              (signed-type   (num/min-signed-width   x)))]
+        [(pvector? x)       (array-type (length x)
+                                        (union-type (for/list ([v x])
+                                                      (type-of-literal v))))]
+        [(hash? x)          (record-type (for/hash ([(k v) (in-dict x)])
+                                           (values k (type-of-literal v))))]
+        [(list? x)          (tuple-type (map type-of-literal x))]
+        [else               (error "Cannot determine the type of literal" x)]))
 
 ; Normalize a type t. Here we are only interested in concrete data types,
 ; which excludes (subtype-type _).

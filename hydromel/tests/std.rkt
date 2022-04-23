@@ -32,7 +32,7 @@
   [(_ name arg ...)
    (match-define (struct meta/function (fn-name cast?)) (lookup #'name))
    (if cast?
-     #`(let ([rt (call:return-type name (const-type/literal arg) ...)])
+     #`(let ([rt (call:return-type name (make-const-type arg) ...)])
          (rt (#,fn-name arg ...)))
      #`(#,fn-name arg ...))])
 
@@ -46,12 +46,12 @@
 (define-syntax-rule (test-return-type/accept (name arg ...))
   (test-true (format "~a:return-type~a" 'name '(arg ...))
              (<: (type-of-literal (call name arg ...))
-                 (call:return-type name (const-type/literal arg) ...))))
+                 (call:return-type name (make-const-type arg) ...))))
 
 ; Test that literal-type(f(x ...)) = f:return-type(literal-type(x) ...)
 (define-syntax-rule (test-return-type/strict (name arg ...))
   (test-equal? (format "~a:return-type~a" 'name '(arg ...))
-               (normalize (call:return-type name (const-type/literal arg) ...))
+               (normalize (call:return-type name (make-const-type arg) ...))
                (type-of-literal (call name arg ...))))
 
 ; ------------------------------------------------------------------------------
@@ -78,23 +78,23 @@
 (test-function (_if_ 0 10 0 20 1 30 40) 30)
 (test-function (_if_ 0 10 0 20 0 30 40) 40)
 
-(test-return-type (_if_ (const-type/literal 1) (unsigned-type 4) (unsigned-type 8)) (unsigned-type 4))
-(test-return-type (_if_ (const-type/literal 0) (unsigned-type 4) (unsigned-type 8)) (unsigned-type 8))
+(test-return-type (_if_ (make-const-type 1) (unsigned-type 4) (unsigned-type 8)) (unsigned-type 4))
+(test-return-type (_if_ (make-const-type 0) (unsigned-type 4) (unsigned-type 8)) (unsigned-type 8))
 (test-return-type (_if_ (unsigned-type 1) (unsigned-type 4) (unsigned-type 8)) (union-type (list (unsigned-type 4) (unsigned-type 8))))
 
-(test-return-type (_if_ (const-type/literal 1) (unsigned-type 4)
-                        (const-type/literal 1) (unsigned-type 8)
+(test-return-type (_if_ (make-const-type 1) (unsigned-type 4)
+                        (make-const-type 1) (unsigned-type 8)
                                                (unsigned-type 12)) (unsigned-type 4))
-(test-return-type (_if_ (const-type/literal 1) (unsigned-type 4)
+(test-return-type (_if_ (make-const-type 1) (unsigned-type 4)
                         (unsigned-type 1)      (unsigned-type 8)
                                                (unsigned-type 12)) (unsigned-type 4))
-(test-return-type (_if_ (const-type/literal 0) (unsigned-type 4)
-                        (const-type/literal 1) (unsigned-type 8)
+(test-return-type (_if_ (make-const-type 0) (unsigned-type 4)
+                        (make-const-type 1) (unsigned-type 8)
                                                (unsigned-type 12)) (unsigned-type 8))
-(test-return-type (_if_ (const-type/literal 0) (unsigned-type 4)
-                        (const-type/literal 0) (unsigned-type 8)
+(test-return-type (_if_ (make-const-type 0) (unsigned-type 4)
+                        (make-const-type 0) (unsigned-type 8)
                                                (unsigned-type 12)) (unsigned-type 12))
-(test-return-type (_if_ (const-type/literal 0) (unsigned-type 4)
+(test-return-type (_if_ (make-const-type 0) (unsigned-type 4)
                         (unsigned-type 1)      (unsigned-type 8)
                                                (unsigned-type 12)) (union-type (list (unsigned-type 8) (unsigned-type 12))))
 
@@ -114,15 +114,15 @@
 (test-function (_case_ 40 '(10 15) 1 '(20 25) 2 '(30 35) 3 4) 4)
 (test-function/exn (_case_ 40 '(10 15) 1 '(20 25) 2 '(30 35) 3))
 
-(test-return-type (_case_ (const-type/literal 10) (tuple-type (list (const-type/literal 10))) (unsigned-type 4) (tuple-type (list (const-type/literal 20))) (unsigned-type 8) (tuple-type (list (const-type/literal 30))) (unsigned-type 12))
+(test-return-type (_case_ (make-const-type 10) (tuple-type (list (make-const-type 10))) (unsigned-type 4) (tuple-type (list (make-const-type 20))) (unsigned-type 8) (tuple-type (list (make-const-type 30))) (unsigned-type 12))
                   (unsigned-type 4))
-(test-return-type (_case_ (const-type/literal 20) (tuple-type (list (const-type/literal 10))) (unsigned-type 4) (tuple-type (list (const-type/literal 20))) (unsigned-type 8) (tuple-type (list (const-type/literal 30))) (unsigned-type 12))
+(test-return-type (_case_ (make-const-type 20) (tuple-type (list (make-const-type 10))) (unsigned-type 4) (tuple-type (list (make-const-type 20))) (unsigned-type 8) (tuple-type (list (make-const-type 30))) (unsigned-type 12))
                   (unsigned-type 8))
-(test-return-type (_case_ (const-type/literal 30) (tuple-type (list (const-type/literal 10))) (unsigned-type 4) (tuple-type (list (const-type/literal 20))) (unsigned-type 8) (tuple-type (list (const-type/literal 30))) (unsigned-type 12))
+(test-return-type (_case_ (make-const-type 30) (tuple-type (list (make-const-type 10))) (unsigned-type 4) (tuple-type (list (make-const-type 20))) (unsigned-type 8) (tuple-type (list (make-const-type 30))) (unsigned-type 12))
                   (unsigned-type 12))
-(test-return-type (_case_ (const-type/literal 40) (tuple-type (list (const-type/literal 10))) (unsigned-type 4) (tuple-type (list (const-type/literal 20))) (unsigned-type 8) (tuple-type (list (const-type/literal 30))) (unsigned-type 12) (unsigned-type 16))
+(test-return-type (_case_ (make-const-type 40) (tuple-type (list (make-const-type 10))) (unsigned-type 4) (tuple-type (list (make-const-type 20))) (unsigned-type 8) (tuple-type (list (make-const-type 30))) (unsigned-type 12) (unsigned-type 16))
                   (unsigned-type 16))
-(test-return-type/exn (_case_ (const-type/literal 40) (tuple-type (list (const-type/literal 10))) (unsigned-type 4) (tuple-type (list (const-type/literal 20))) (unsigned-type 8) (tuple-type (list (const-type/literal 30))) (unsigned-type 12)))
+(test-return-type/exn (_case_ (make-const-type 40) (tuple-type (list (make-const-type 10))) (unsigned-type 4) (tuple-type (list (make-const-type 20))) (unsigned-type 8) (tuple-type (list (make-const-type 30))) (unsigned-type 12)))
 
 (test-return-type (_case_ (any-type) (any-type) (unsigned-type 4) (any-type) (unsigned-type 8) (any-type) (unsigned-type 12))
                   (union-type (list (unsigned-type 4) (unsigned-type 8) (unsigned-type 12))))
@@ -547,8 +547,8 @@
 (test-function (_slice_ #x-AB03 11 8) #x4)
 (test-function (_slice_ #x-AB03 12 8) #x-C)
 
-(test-return-type (_slice_ (unsigned-type 16) (const-type/literal 11) (const-type/literal 8)) (unsigned-type 4))
-(test-return-type (_slice_ (signed-type   16) (const-type/literal 11) (const-type/literal 8)) (signed-type 4))
+(test-return-type (_slice_ (unsigned-type 16) (make-const-type 11) (make-const-type 8)) (unsigned-type 4))
+(test-return-type (_slice_ (signed-type   16) (make-const-type 11) (make-const-type 8)) (signed-type 4))
 
 ; ------------------------------------------------------------------------------
 ; _set_slice_
@@ -562,13 +562,13 @@
 (test-function (_set_slice_ #x-AB03 11 8 #xFFF3)  #x-AC03)
 (test-function (_set_slice_ #x-AB03 11 8 #x-D)    #x-AC03)
 
-(test-return-type (_set_slice_ (unsigned-type 16) (const-type/literal 11) (const-type/literal 8) (const-type/literal 4)) (unsigned-type 16))
-(test-return-type (_set_slice_ (signed-type 16) (const-type/literal 11) (const-type/literal 8) (const-type/literal 4)) (signed-type 16))
+(test-return-type (_set_slice_ (unsigned-type 16) (make-const-type 11) (make-const-type 8) (make-const-type 4)) (unsigned-type 16))
+(test-return-type (_set_slice_ (signed-type 16) (make-const-type 11) (make-const-type 8) (make-const-type 4)) (signed-type 16))
 
-(test-return-type/exn (_set_slice_ (any-type) (const-type/literal 11) (const-type/literal 8) (const-type/literal 4)))
-(test-return-type/exn (_set_slice_ (signed-type 16) (any-type) (const-type/literal 8) (const-type/literal 4)))
-(test-return-type/exn (_set_slice_ (signed-type 16) (const-type/literal 11) (any-type) (const-type/literal 4)))
-(test-return-type/exn (_set_slice_ (signed-type 16) (const-type/literal 11) (const-type/literal 8) (any-type)))
+(test-return-type/exn (_set_slice_ (any-type) (make-const-type 11) (make-const-type 8) (make-const-type 4)))
+(test-return-type/exn (_set_slice_ (signed-type 16) (any-type) (make-const-type 8) (make-const-type 4)))
+(test-return-type/exn (_set_slice_ (signed-type 16) (make-const-type 11) (any-type) (make-const-type 4)))
+(test-return-type/exn (_set_slice_ (signed-type 16) (make-const-type 11) (make-const-type 8) (any-type)))
 
 ; ------------------------------------------------------------------------------
 ; _concat_
@@ -582,24 +582,24 @@
 
 (test-return-type (_concat_) (const-type 0 (unsigned-type 1)))
 
-(test-return-type (_concat_ (unsigned-type 1) (const-type/literal (unsigned-type 4))
-                            (unsigned-type 2) (const-type/literal (unsigned-type 5))
-                            (unsigned-type 3) (const-type/literal (unsigned-type 6)))
+(test-return-type (_concat_ (unsigned-type 1) (make-const-type (unsigned-type 4))
+                            (unsigned-type 2) (make-const-type (unsigned-type 5))
+                            (unsigned-type 3) (make-const-type (unsigned-type 6)))
                   (unsigned-type 15))
 
-(test-return-type (_concat_ (unsigned-type 1) (const-type/literal (signed-type   4))
-                            (unsigned-type 2) (const-type/literal (unsigned-type 5))
-                            (unsigned-type 3) (const-type/literal (unsigned-type 6)))
+(test-return-type (_concat_ (unsigned-type 1) (make-const-type (signed-type   4))
+                            (unsigned-type 2) (make-const-type (unsigned-type 5))
+                            (unsigned-type 3) (make-const-type (unsigned-type 6)))
                   (signed-type 15))
 
-(test-return-type (_concat_ (unsigned-type 1) (const-type/literal (unsigned-type 4))
-                            (unsigned-type 2) (const-type/literal (signed-type   5))
-                            (unsigned-type 3) (const-type/literal (signed-type   6)))
+(test-return-type (_concat_ (unsigned-type 1) (make-const-type (unsigned-type 4))
+                            (unsigned-type 2) (make-const-type (signed-type   5))
+                            (unsigned-type 3) (make-const-type (signed-type   6)))
                   (unsigned-type 15))
 
-(test-return-type (_concat_ (unsigned-type 1) (const-type/literal (signed-type 4))
-                            (unsigned-type 2) (const-type/literal (signed-type 5))
-                            (unsigned-type 3) (const-type/literal (signed-type 6)))
+(test-return-type (_concat_ (unsigned-type 1) (make-const-type (signed-type 4))
+                            (unsigned-type 2) (make-const-type (signed-type 5))
+                            (unsigned-type 3) (make-const-type (signed-type 6)))
                   (signed-type 15))
 
 ; ------------------------------------------------------------------------------
@@ -619,7 +619,7 @@
 
 (test-function (_record_ 'x 12 'y 50) #hash((x . 12) (y . 50)))
 
-(test-return-type (_record_ (const-type/literal 'x) (unsigned-type 4) (const-type/literal 'y) (unsigned-type 6))
+(test-return-type (_record_ (make-const-type 'x) (unsigned-type 4) (make-const-type 'y) (unsigned-type 6))
                   (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 6))))
 
 (test-return-type/exn (_record_ (unsigned-type 4) (unsigned-type 8)))
@@ -703,11 +703,11 @@
 (test-function (_field_ (hash 'x 10 'y 20) 'y) 20)
 (test-function/exn (_field_ (hash 'x 10 'y 20) 'z))
 
-(test-return-type (_field_ (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8))) (const-type/literal 'x)) (unsigned-type 4))
-(test-return-type (_field_ (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8))) (const-type/literal 'y)) (unsigned-type 8))
-(test-return-type/exn (_field_ (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8))) (const-type/literal 'z)))
-(test-return-type/exn (_field_ (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8))) (const-type/literal 12)))
-(test-return-type/exn (_field_ (any-type) (const-type/literal 'z)))
+(test-return-type (_field_ (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8))) (make-const-type 'x)) (unsigned-type 4))
+(test-return-type (_field_ (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8))) (make-const-type 'y)) (unsigned-type 8))
+(test-return-type/exn (_field_ (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8))) (make-const-type 'z)))
+(test-return-type/exn (_field_ (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8))) (make-const-type 12)))
+(test-return-type/exn (_field_ (any-type) (make-const-type 'z)))
 
 ; ------------------------------------------------------------------------------
 ; _set_field_
@@ -718,21 +718,21 @@
 (test-function (_set_field_ (hash 'x 10 'y 20 'z 30) 'x 55 'z 66) (hash 'x 55 'y 20 'z 66))
 
 (test-return-type (_set_field_ (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8)))
-                               (const-type/literal 'x) (unsigned-type 3))
+                               (make-const-type 'x) (unsigned-type 3))
                   (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8))))
 (test-return-type (_set_field_ (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8)))
-                               (const-type/literal 'y) (unsigned-type 7))
+                               (make-const-type 'y) (unsigned-type 7))
                   (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8))))
 (test-return-type/exn (_set_field_ (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8)))
-                                   (const-type/literal 'z) (unsigned-type 3)))
+                                   (make-const-type 'z) (unsigned-type 3)))
 (test-return-type/exn (_set_field_ (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8)))
-                                   (const-type/literal 'x) (unsigned-type 5)))
+                                   (make-const-type 'x) (unsigned-type 5)))
 (test-return-type/exn (_set_field_ (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8)))
-                                   (const-type/literal 'y) (unsigned-type 9)))
+                                   (make-const-type 'y) (unsigned-type 9)))
 (test-return-type/exn (_set_field_ (record-type (hash 'x (unsigned-type 4) 'y (unsigned-type 8)))
-                                   (const-type/literal 12) (unsigned-type 3)))
+                                   (make-const-type 12) (unsigned-type 3)))
 (test-return-type/exn (_set_field_ (any-type)
-                                   (const-type/literal 'x) (unsigned-type 3)))
+                                   (make-const-type 'x) (unsigned-type 3)))
 
 ; ------------------------------------------------------------------------------
 ; _cast_
@@ -752,20 +752,20 @@
 (test-function (_cast_ (unsigned-type #f) 36) 36)
 (test-function (_cast_ (unsigned-type #f) -36) 92)
 
-(test-return-type (_cast_ (const-type/literal (unsigned-type 8)) (unsigned-type 5)) (unsigned-type 8))
-(test-return-type (_cast_ (const-type/literal (unsigned-type 4)) (unsigned-type 5)) (unsigned-type 4))
-(test-return-type (_cast_ (const-type/literal (unsigned-type 8)) (signed-type 5)) (unsigned-type 8))
-(test-return-type (_cast_ (const-type/literal (signed-type 8)) (unsigned-type 5)) (signed-type 8))
-(test-return-type (_cast_ (const-type/literal (signed-type 3)) (unsigned-type 5)) (signed-type 3))
-(test-return-type (_cast_ (const-type/literal (signed-type 8)) (signed-type 5)) (signed-type 8))
-(test-return-type (_cast_ (const-type/literal (unsigned-type #f)) (unsigned-type 5)) (unsigned-type 5))
-(test-return-type (_cast_ (const-type/literal (unsigned-type #f)) (signed-type 5)) (unsigned-type 5))
-(test-return-type (_cast_ (const-type/literal (signed-type #f)) (unsigned-type 5)) (signed-type 5))
-(test-return-type (_cast_ (const-type/literal (signed-type #f)) (signed-type 5)) (signed-type 5))
+(test-return-type (_cast_ (make-const-type (unsigned-type 8)) (unsigned-type 5)) (unsigned-type 8))
+(test-return-type (_cast_ (make-const-type (unsigned-type 4)) (unsigned-type 5)) (unsigned-type 4))
+(test-return-type (_cast_ (make-const-type (unsigned-type 8)) (signed-type 5)) (unsigned-type 8))
+(test-return-type (_cast_ (make-const-type (signed-type 8)) (unsigned-type 5)) (signed-type 8))
+(test-return-type (_cast_ (make-const-type (signed-type 3)) (unsigned-type 5)) (signed-type 3))
+(test-return-type (_cast_ (make-const-type (signed-type 8)) (signed-type 5)) (signed-type 8))
+(test-return-type (_cast_ (make-const-type (unsigned-type #f)) (unsigned-type 5)) (unsigned-type 5))
+(test-return-type (_cast_ (make-const-type (unsigned-type #f)) (signed-type 5)) (unsigned-type 5))
+(test-return-type (_cast_ (make-const-type (signed-type #f)) (unsigned-type 5)) (signed-type 5))
+(test-return-type (_cast_ (make-const-type (signed-type #f)) (signed-type 5)) (signed-type 5))
 
-(test-return-type/exn (_cast_ (const-type/literal 40) (unsigned-type 5)))
-(test-return-type/exn (_cast_ (const-type/literal (unsigned-type #f)) (any-type)))
-(test-return-type/exn (_cast_ (const-type/literal (signed-type #f)) (any-type)))
+(test-return-type/exn (_cast_ (make-const-type 40) (unsigned-type 5)))
+(test-return-type/exn (_cast_ (make-const-type (unsigned-type #f)) (any-type)))
+(test-return-type/exn (_cast_ (make-const-type (signed-type #f)) (any-type)))
 
 ; ------------------------------------------------------------------------------
 ; _range_
