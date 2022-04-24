@@ -10,6 +10,8 @@ It is available under the conditions of the Mozilla Public License 2.0.
 
 ## Install
 
+Install [Racket](https://racket-lang.org/), then:
+
 ```
 git clone https://github.com/aumouvantsillage/Hydromel-lang.git
 cd Hydromel-lang/hydromel

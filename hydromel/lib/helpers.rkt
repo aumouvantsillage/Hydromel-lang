@@ -9,7 +9,7 @@
   "std.rkt"
   "slot.rkt"
   "signal.rkt"
-  (only-in "types.rkt" minimize))
+  "types.rkt")
 
 (provide
   slot-ref
@@ -64,9 +64,9 @@
 (define (print-slot-table tbl duration)
   (for ([(name slt) (in-dict tbl)])
     (define data (slot-data slt))
-    (printf "~a : ~v = ~a\n"
+    (printf "~a : ~a = ~a\n"
       name
-      (minimize (slot-type slt))
+      (type->string (slot-type slt))
       (if (signal? data)
         (signal-take data duration)
         data))))
