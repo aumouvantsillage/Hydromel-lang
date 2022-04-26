@@ -158,8 +158,8 @@
     ; All types are subtypes of any.
     [(list _  (any-type)) #t]
     ; Unwrap const types.
-    [(list _                 (const-type _ u^)) (<: t u^)]
-    [(list (const-type _ t^) _)                 (<: t^ u)]
+    [(list _                (const-type _ _)) (<: t (const-type-collapse u))]
+    [(list (const-type _ _) _)                (<: (const-type-collapse t) u)]
     ; All integer types are subtypes of the unbounded signed type.
     ; All unsigned types are subtypes of the unbounded unsigned type.
     [(list (abstract-integer-type _) (signed-type   #f)) #t]

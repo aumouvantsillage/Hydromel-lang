@@ -1,0 +1,31 @@
+digraph {
+    rankdir = "BT"
+    integer -> any;
+    natural -> integer;
+    "signed(N+1)" -> integer;
+    "signed(N)" -> "signed(N+1)";
+    "unsigned(N+1)" -> natural;
+    "unsigned(N)" -> "unsigned(N+1)";
+    "unsigned(N)" -> "signed(N+1)";
+    txu [label=<type-of(x)<br/>where 0 ≤ x &lt; 2<sup>N</sup>>];
+    txu -> "unsigned(N)";
+    txs [label=<type-of(x)<br/>where -2<sup>N-1</sup> ≤ x &lt; 2<sup>N-1</sup>>];
+    txs -> "signed(N)";
+
+    "symbol(~s)\n= type-of(~s)" -> any;
+
+    "array(N, T)" -> any;
+    "array(N, U)\nwhere U <: T" -> "array(N, T)";
+    "array(N+1, T)" -> "array(N, T)";
+
+    "tuple(T1, ..., TN)" -> any;
+    "tuple(U1, ..., UN)\nwhere Ui <: Ti" -> "tuple(T1, ..., TN)";
+    "tuple(T1, ..., TN, TN+1)" -> "tuple(T1, ..., TN)";
+
+    "record(K1:T1, ..., KN:TN)" -> any;
+    "record(K1:U1, ..., KN:UN)\nwhere Ui <: Ti" -> "record(K1:T1, ..., KN:TN)";
+    "record(K1:T1, ..., KN:TN, KN+1:TN+1)" -> "record(K1:T1, ..., KN:TN)";
+
+    Ti -> "union(T1, ..., TN)\nwhere Ti <: U for all 1 ≤ i ≤ N";
+    "union(T1, ..., TN)\nwhere Ti <: U for all 1 ≤ i ≤ N" -> "U";
+}
