@@ -35,10 +35,25 @@
 (test-false "8 : signed(4)"                 (<: (type-of 8)    (signed 4)))
 (test-false "-9 : signed(4)"                (<: (type-of -9)   (signed 4)))
 
+(test-true "~a : symbol(~a)"                (<: (type-of '~a)  (symbol-type '~a)))
+(test-true "~a : symbol()"                  (<: (type-of '~a)  (symbol-type #f)))
+
+(test-true  "array(4, unsigned(8)) <: array(3, unsigned 8)"  (<: (array 4 (unsigned 8)) (array 3 (unsigned 8))))
+(test-false "array(4, unsigned(8)) /<: array(5, unsigned 8)" (<: (array 4 (unsigned 8)) (array 5 (unsigned 8))))
+(test-true  "array(4, unsigned(8)) <: array(4, unsigned 9)"  (<: (array 4 (unsigned 8)) (array 4 (unsigned 9))))
+(test-false "array(4, unsigned(8)) /<: array(4, unsigned 7)" (<: (array 4 (unsigned 8)) (array 4 (unsigned 7))))
+(test-true  "array(4, unsigned(8)) <: array(3, unsigned 9)"  (<: (array 4 (unsigned 8)) (array 3 (unsigned 9))))
+(test-false "array(4, unsigned(8)) /<: array(5, unsigned 7)" (<: (array 4 (unsigned 8)) (array 5 (unsigned 7))))
+
+(test-true "tuple(unsigned(16), array(4, unsigned 8)) <: tuple(unsigned(32), array(3, unsigned(9)))"
+           (<: (tuple (unsigned 16) (array 4 (unsigned 8)))
+               (tuple (unsigned 32) (array 3 (unsigned 9)))))
+
+(test-true "tuple(unsigned(16), array(4, unsigned 8), symbol(~x)) <: tuple(unsigned(16), array(4, unsigned(8)))"
+           (<: (tuple (unsigned 16) (array 4 (unsigned 8)) (symbol-type '~x))
+               (tuple (unsigned 16) (array 4 (unsigned 8)))))
+
 ; TODO const-type
-; TODO symbol
-; TODO array
-; TODO tuple
 ; TODO record
 ; TODO union
 ; TODO range? should be an array or tuple?

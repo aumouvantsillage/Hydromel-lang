@@ -1,0 +1,212 @@
+#lang hydromel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+component test_integer_is_any
+    port x : in integer
+    port y : out any
+    y = x
+end
+
+component test_any_is_not_integer
+    port x : in any
+    port y : out integer
+    y = x
+end
+
+component test_natural_is_integer
+    port x : in natural
+    port y : out integer
+    y = x
+end
+
+component test_signed32_is_integer
+    port x : in signed(32)
+    port y : out integer
+    y = x
+end
+
+component test_signed31_is_signed32
+    port x : in signed(31)
+    port y : out signed(32)
+    y = x
+end
+
+component test_signed32_is_not_signed31
+    port x : in signed(32)
+    port y : out signed(31)
+    y = x
+end
+
+component test_unsigned32_is_natural
+    port x : in unsigned(32)
+    port y : out natural
+    y = x
+end
+
+component test_unsigned31_is_unsigned32
+    port x : in unsigned(31)
+    port y : out unsigned(32)
+    y = x
+end
+
+component test_unsigned32_is_not_unsigned31
+    port x : in unsigned(32)
+    port y : out unsigned(31)
+    y = x
+end
+
+component test_unsigned31_is_signed32
+    port x : in unsigned(31)
+    port y : out signed(32)
+    y = x
+end
+
+component test_unsigned32_is_not_signed32
+    port x : in unsigned(32)
+    port y : out signed(32)
+    y = x
+end
+
+component test_signed32_is_not_unsigned32
+    port x : in signed(32)
+    port y : out unsigned(32)
+    y = x
+end
+
+component test_signed1_is_not_unsigned32
+    port x : in signed(1)
+    port y : out unsigned(32)
+    y = x
+end
+
+component test_15_is_unsigned4
+    port y : out unsigned(4)
+    y = 15
+end
+
+component test_0_is_unsigned4
+    port y : out unsigned(4)
+    y = 0
+end
+
+component test_minus1_is_not_unsigned4
+    port y : out unsigned(4)
+    y = -1
+end
+
+component test_16_is_not_unsigned4
+    port y : out unsigned(4)
+    y = 16
+end
+
+component test_minus8_is_signed4
+    port y : out signed(4)
+    y = -8
+end
+
+component test_7_is_signed4
+    port y : out signed(4)
+    y = 7
+end
+
+component test_8_is_not_signed4
+    port y : out signed(4)
+    y = 8
+end
+
+component test_minus9_is_not_signed4
+    port y : out signed(4)
+    y = -9
+end
+
+component test_array4_is_array3
+    port x : in array(4, unsigned(8))
+    port y : out array(3, unsigned(8))
+    y = x
+end
+
+component test_array4_is_not_array5
+    port x : in array(4, unsigned(8))
+    port y : out array(5, unsigned(8))
+    y = x
+end
+
+component test_array_of_unsigned8_is_array_of_unsigned9
+    port x : in array(4, unsigned(8))
+    port y : out array(4, unsigned(9))
+    y = x
+end
+
+component test_array_of_unsigned8_is_not_array_of_unsigned7
+    port x : in array(4, unsigned(8))
+    port y : out array(4, unsigned(7))
+    y = x
+end
+
+component test_array4_of_unsigned8_is_array3_of_unsigned9
+    port x : in array(4, unsigned(8))
+    port y : out array(3, unsigned(9))
+    y = x
+end
+
+component test_array4_of_unsigned8_is_not_array5_of_unsigned7
+    port x : in array(4, unsigned(8))
+    port y : out array(5, unsigned(7))
+    y = x
+end
+
+component test_tuple_u16_a4u8_is_tuple_u32_a3u9
+    port x : in tuple(unsigned(16), array(4, unsigned(8)))
+    port y : out tuple(unsigned(32), array(3, unsigned(9)))
+    y = x
+end
+
+component test_tuple_u16_a4u8_r_is_tuple_u16_a4u8
+    port x : in tuple(unsigned(16), array(4, unsigned(8)), record(x : bit))
+    port y : out tuple(unsigned(16), array(4, unsigned(8)))
+    y = x
+end
+
+# TODO record
+
+component test_union_s8_u16_u32_is_signed33
+    port x : in union(signed(8), unsigned(16), unsigned(32))
+    port y : out signed(33)
+    y = x
+end
+
+component test_union_s8_u16_u32_is_not_unsigned32
+    port x : in union(signed(8), unsigned(16), unsigned(32))
+    port y : out unsigned(32)
+    y = x
+end
+
+component test_unsigned32_is_union_s8_u16_u32
+    port x : in unsigned(32)
+    port y : out union(unsigned(8), unsigned(16), unsigned(32))
+    y = x
+end
+
+component test_signed8_is_union_s8_u16_u32
+    port x : in signed(8)
+    port y : out union(signed(8), unsigned(16), unsigned(32))
+    y = x
+end
+
+component test_sym_b_is_enum_a_b_c
+    port y : out enumeration(~a, ~b, ~c)
+    y = ~b
+end
+
+type rec_xT(T : subtype(integer)) = record(x : T)
+
+component test_signed32_is_subtype_integer
+    port y : out rec_xT(signed(4))
+end
+
+component test_any_is_not_subtype_integer
+    port y : out rec_xT(any)
+end

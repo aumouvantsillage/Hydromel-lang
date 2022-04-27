@@ -78,10 +78,11 @@
 ; Return the actual type of a const-type.
 (define (const-type-collapse t)
   (match t
-    [(const-type n (unsigned-type #f)) (unsigned-type (min-unsigned-width n))]
-    [(const-type n (signed-type   #f)) (signed-type   (min-signed-width   n))]
-    [(const-type _ u)                  u]
-    [_                                 t]))
+    [(const-type n (unsigned-type #f))        (unsigned-type (min-unsigned-width n))]
+    [(const-type n (signed-type   #f))        (signed-type   (min-signed-width   n))]
+    [(const-type t (subtype-type (any-type))) (subtype-type t)]
+    [(const-type _ u)                         u]
+    [_                                        t]))
 
 ; Resize an integer type t to the given width w.
 (define (resize t w)
@@ -200,6 +201,9 @@
 (define (type->string t)
   (define t^ (minimize t))
   (match t^
+    [(any-type)          "any"]
+    [(signed-type   #f)  "integer"]
+    [(unsigned-type #f)  "natural"]
     [(signed-type   n)   (format "signed(~a)" n)]
     [(unsigned-type n)   (format "unsigned(~a)" n)]
     [(array-type    n v) (format "array(~a, ~a)" n (type->string v))]

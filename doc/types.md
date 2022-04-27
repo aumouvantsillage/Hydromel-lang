@@ -119,17 +119,20 @@ For instance, the result of a cast `unsigned(4)|3|` is of type `const(3, unsigne
 
 During type checking, `const(x, T) <: T`.
 
-Normal forms
-------------
+`const` types are *collapsed* to ordinary types using these rules:
 
-Types are *normalized* according to the following rules:
+* `collapse(const(x, integer)) = signed(signed_width(x))`
+* `collapse(const(x, natural)) = unsigned(unsigned_width(x))`
+* `collapse(const(x, T)) = T` otherwise.
 
-* `normalize(const(x, integer)) = signed(signed_width(x))`
-* `normalize(const(x, natural)) = unsigned(unsigned_width(x))`
-* `normalize(const(x, T)) = T` otherwise.
-* `normalize(array(N, T)) = array(N, normalize(T))`
-* `normalize(tuple(T, ...)) = tuple(normalize(T), ...)`
-* `normalize(record(K : T, ...)) = record(K : normalize(T), ...)`
-* `normalize(range(T)) = range(normalize(T))`
-* `normalize(union(T, ...)) = common_supertype(normalize(T), ...)`
-* `normalize(T) = T` in other cases.
+Minimized forms
+---------------
+
+Types are *minimized* according to the following rules:
+
+* `minimize(array(N, T)) = array(N, minimize(T))`
+* `minimize(tuple(T, ...)) = tuple(minimize(T), ...)`
+* `minimize(record(K : T, ...)) = record(K : minimize(T), ...)`
+* `minimize(range(T)) = range(minimize(T))`
+* `minimize(union(T, ...)) = common_supertype(minimize(T), ...)`
+* `minimize(T) = T` in other cases.
