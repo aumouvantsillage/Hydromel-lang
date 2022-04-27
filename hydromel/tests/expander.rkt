@@ -23,7 +23,7 @@
   (data-port x in  (call-expr signed  (name-expr N)))
   (data-port y out (call-expr signed  (name-expr N))))
 
-(define i0-inst (I0-make 30))
+(define i0-inst (I0 30))
 
 (test-case "Can construct a channel for an interface with simple ports"
   (check-pred slot? (dict-ref i0-inst 'x))
@@ -35,7 +35,7 @@
   (data-port y out (call-expr signed  (name-expr N)))
   (assignment (name-expr y) (slot-expr (name-expr x))))
 
-(define c0-inst (C0-make 30))
+(define c0-inst (C0 30))
 (slot-set! (c0-inst x) (signal 23))
 
 (test-case "Can construct a channel for a component with simple ports"
@@ -62,8 +62,8 @@
   (composite-port j () I2)
   (data-port w out (call-expr signed  (literal-expr 32))))
 
-(define i2-inst (I2-make))
-(define i3-inst (I3-make))
+(define i2-inst (I2))
+(define i3-inst (I3))
 
 (test-case "Can construct a channel for an interface with composite ports and no parameters"
   (check-pred slot? (dict-ref i2-inst 'z))
@@ -86,7 +86,7 @@
   (data-port w out (call-expr signed  (literal-expr 32)))
   (assignment (name-expr w) (slot-expr (name-expr v))))
 
-(define c1-inst (C1-make))
+(define c1-inst (C1))
 
 (test-case "Can construct a channel for a component with composite ports and no parameters"
   (check-pred slot? (dict-ref c1-inst 'v))
@@ -100,7 +100,7 @@
 (interface I4
   (composite-port i ((literal-expr 3)) I1))
 
-(define i4-inst (I4-make))
+(define i4-inst (I4))
 
 (test-case "Can construct a channel for an interface with a vector port"
   (check-pred vector? (dict-ref i4-inst 'i))
@@ -112,7 +112,7 @@
   (parameter N (call-expr unsigned  (literal-expr 32)))
   (composite-port i ((name-expr N)) I1))
 
-(define i5-inst (I5-make 5))
+(define i5-inst (I5 5))
 
 (test-case "Can construct a channel for an interface with arguments"
   (check-pred vector? (dict-ref i5-inst 'i))
@@ -124,7 +124,7 @@
   (parameter M (call-expr unsigned  (literal-expr 32)))
   (composite-port j () I5 (name-expr M)))
 
-(define i6-inst (I6-make 3))
+(define i6-inst (I6 3))
 
 (test-case "Can construct a channel containing a composite port with arguments"
   (check-pred vector? (dict-ref (dict-ref i6-inst 'j) 'i))
@@ -137,7 +137,7 @@
   (assignment (field-expr (name-expr i) y)
               (slot-expr (field-expr (name-expr i) x))))
 
-(define c2-inst (C2-make))
+(define c2-inst (C2))
 (slot-set! (c2-inst i x) (signal 23))
 
 (test-case "Can access simple ports in a composite port"
@@ -152,7 +152,7 @@
   (assignment (field-expr (indexed-port-expr (name-expr i) (literal-expr 2)) y)
               (slot-expr (field-expr (indexed-port-expr (name-expr i) (literal-expr 2)) x))))
 
-(define c3-inst (C3-make))
+(define c3-inst (C3))
 (slot-set! (c3-inst i 0 x) (signal 10))
 (slot-set! (c3-inst i 1 x) (signal 20))
 (slot-set! (c3-inst i 2 x) (signal 30))
@@ -173,7 +173,7 @@
               (lift-expr [y^ (slot-expr (name-expr y))]
                          (slot-expr (field-expr (indexed-port-expr (name-expr i) (name-expr y^)) x)))))
 
-(define c4-inst (C4-make))
+(define c4-inst (C4))
 (slot-set! (c4-inst i 0 x) (signal 10))
 (slot-set! (c4-inst i 1 x) (signal 20))
 (slot-set! (c4-inst i 2 x) (signal 30))
@@ -193,7 +193,7 @@
         (call-expr signed  (literal-expr 32))
         (call-expr _+_ (name-expr x^) (name-expr y^))))))
 
-(define c5-inst (C5-make))
+(define c5-inst (C5))
 (slot-set! (c5-inst x) (signal 1  2  3  4  5))
 (slot-set! (c5-inst y) (signal 10 20 30 40 50))
 
@@ -219,7 +219,7 @@
         (call-expr signed  (literal-expr 32))
         (call-expr _+_ (name-expr xy^) (name-expr zu^))))))
 
-(define c6-inst (C6-make))
+(define c6-inst (C6))
 (slot-set! (c6-inst x) (signal 10 20 30 40 50))
 (slot-set! (c6-inst y) (signal 2))
 (slot-set! (c6-inst z) (signal 1 2 3 4 5))
@@ -245,7 +245,7 @@
   (assignment (field-expr (name-expr c) x) (slot-expr (name-expr x)))
   (assignment (name-expr y) (slot-expr (field-expr (name-expr c) y))))
 
-(define c8-inst (C8-make))
+(define c8-inst (C8))
 (slot-set! (c8-inst x) (signal 10 20 30 40 50))
 
 (test-case "Can instantiate a component"
@@ -265,7 +265,7 @@
         (call-expr signed  (literal-expr 32))
         (call-expr _+_ (name-expr y0) (name-expr y1))))))
 
-(define c9-inst (C9-make))
+(define c9-inst (C9))
 (slot-set! (c9-inst x0) (signal 10 20 30 40 50))
 (slot-set! (c9-inst x1) (signal 1 2 3 4 5))
 
@@ -277,7 +277,7 @@
   (data-port y out (call-expr signed  (literal-expr 32)))
   (assignment (name-expr y) (register-expr (literal-expr 0) (slot-expr (name-expr x)))))
 
-(define c10-inst (C10-make))
+(define c10-inst (C10))
 (slot-set! (c10-inst x) (signal 10 20 30 40 50))
 
 (test-case "Can register a signal"
@@ -290,7 +290,7 @@
   (assignment (name-expr z) (register-expr (literal-expr 0) (when-clause (slot-expr (name-expr x)))
                                            (slot-expr (name-expr y)))))
 
-(define c11-inst (C11-make))
+(define c11-inst (C11))
 (slot-set! (c11-inst x) (signal #f #f #f #t #f))
 (slot-set! (c11-inst y) (signal 10 20 30 40 50))
 
@@ -304,7 +304,7 @@
   (assignment (name-expr z) (register-expr (literal-expr 0)
                                            (slot-expr (name-expr y)) (when-clause (slot-expr (name-expr x))))))
 
-(define c12-inst (C12-make))
+(define c12-inst (C12))
 (slot-set! (c12-inst x) (signal #f #t #f #t #f))
 (slot-set! (c12-inst y) (signal 10 20 30 40 50))
 
@@ -320,7 +320,7 @@
     (register-expr (literal-expr 0) (when-clause (slot-expr (name-expr x)))
                    (slot-expr (name-expr z)) (when-clause (slot-expr (name-expr y))))))
 
-(define c13-inst (C13-make))
+(define c13-inst (C13))
 (slot-set! (c13-inst x) (signal #f #f #t #f #f))
 (slot-set! (c13-inst y) (signal #f #t #f #t #f))
 (slot-set! (c13-inst z) (signal 10 20 30 40 50))
@@ -333,7 +333,7 @@
   (data-port y out (call-expr signed  (literal-expr 32)))
   (assignment (name-expr y) (signal-expr (name-expr N))))
 
-(define c14-inst (C14-make))
+(define c14-inst (C14))
 
 (test-case "Can read a local constant"
   (check-sig-equal? (slot-ref c14-inst y) (signal 56) 1))
@@ -349,7 +349,7 @@
   (composite-port p () I8)
   (assignment (field-expr (name-expr p) y) (signal-expr (field-expr (name-expr p) N))))
 
-(define c15-inst (C15-make))
+(define c15-inst (C15))
 
 (test-case "Can read a constant from a port"
   (check-sig-equal? (slot-ref c15-inst p y) (signal 56) 1))
@@ -359,7 +359,7 @@
   (instance c () C14)
   (assignment (name-expr y) (signal-expr (field-expr (name-expr c) N))))
 
-(define c16-inst (C16-make))
+(define c16-inst (C16))
 
 (test-case "Can read a constant from an instance"
   (check-sig-equal? (slot-ref c16-inst y) (signal 56) 1))
@@ -369,7 +369,7 @@
   (instance c () C15)
   (assignment (name-expr y) (signal-expr (field-expr (field-expr (name-expr c) p) N))))
 
-(define c17-inst (C17-make))
+(define c17-inst (C17))
 
 (test-case "Can read a constant from an instance port"
   (check-sig-equal? (slot-ref c17-inst y) (signal 56) 1))
@@ -380,7 +380,7 @@
   (data-port y out (call-expr signed  (literal-expr 32)))
   (assignment (name-expr y) (signal-expr (name-expr K0 $constant))))
 
-(define c18-inst (C18-make))
+(define c18-inst (C18))
 
 (test-case "Can read a global constant"
   (check-sig-equal? (slot-ref c18-inst y) (signal 44) 1))
@@ -391,7 +391,7 @@
   (local-signal y (name-expr x))
   (local-signal z (name-expr N)))
 
-(define c19-inst (C19-make))
+(define c19-inst (C19))
 
 (test-case "Can infer the type of a local signal that copies a port"
   (check-equal? (slot-type (dict-ref c19-inst 'y)) (slot-type (dict-ref c19-inst 'x))))
@@ -410,7 +410,7 @@
       (call-expr/cast _concat_ (name-expr x^) (call-expr signed  (literal-expr 4))
                                (name-expr y^) (call-expr signed  (literal-expr 4))))))
 
-(define c20-inst (C20-make))
+(define c20-inst (C20))
 (slot-set! (c20-inst x) (signal 0 5 -2))
 (slot-set! (c20-inst y) (signal 0 3 -4))
 
@@ -424,7 +424,7 @@
   (local-signal u (register-expr (literal-expr 0) (slot-expr (name-expr s))))
   (local-signal s (register-expr (literal-expr 0) (slot-expr (name-expr x)))))
 
-(define c21-inst (C21-make))
+(define c21-inst (C21))
 
 (test-case "Can infer types when assignments are in reverse order"
   (check-equal? (minimize (slot-type (dict-ref c21-inst 's))) (minimize (slot-type (dict-ref c21-inst 'x))))
@@ -438,7 +438,7 @@
                                        [i^ (slot-expr (name-expr i))]
                               (call-expr _nth_ (name-expr x^) (name-expr i^)))))
 
-(define c22-inst (C22-make))
+(define c22-inst (C22))
 (slot-set! (c22-inst x) (signal (pvector 10 20 30 40)))
 (slot-set! (c22-inst i) (signal 0 1 2 3))
 
@@ -449,7 +449,7 @@
   (data-port y out (call-expr array (literal-expr 3) (call-expr unsigned  (literal-expr 8))))
   (assignment (name-expr y) (signal-expr (call-expr _array_ (literal-expr 10) (literal-expr 20) (literal-expr 30)))))
 
-(define c23-inst (C23-make))
+(define c23-inst (C23))
 
 (test-case "Can make a vector"
   (check-sig-equal? (slot-ref c23-inst y) (signal (pvector 10 20 30)) 1))
@@ -463,7 +463,7 @@
         (call-expr _+_ (name-expr x^) (name-expr i))
         i (call-expr _range_ (literal-expr 1) (literal-expr 3))))))
 
-(define c24-inst (C24-make))
+(define c24-inst (C24))
 (slot-set! (c24-inst x) (signal 10 20 30))
 
 (test-case "Can make a vector comprehension"
@@ -478,7 +478,7 @@
         (call-expr _slice_ (name-expr x^) (name-expr i) (name-expr i))
         i (call-expr _range_ (literal-expr 0) (literal-expr 3))))))
 
-(define c25-inst (C25-make))
+(define c25-inst (C25))
 (slot-set! (c25-inst x) (signal 10 11 12))
 
 (test-case "Can make a slice comprehension"
@@ -496,7 +496,7 @@
         (name-expr x^))
       i (call-expr _range_ (literal-expr 3) (literal-expr 0)))))
 
-(define c26-inst (C26-make))
+(define c26-inst (C26))
 (slot-set! (c26-inst x 0 z) (signal 1 0 0))
 (slot-set! (c26-inst x 1 z) (signal 1 1 0))
 (slot-set! (c26-inst x 2 z) (signal 0 1 1))
@@ -515,7 +515,7 @@
       j (call-expr _range_ (literal-expr 1) (literal-expr 0))
       i (call-expr _range_ (literal-expr 3) (literal-expr 0)))))
 
-(define c31-inst (C31-make))
+(define c31-inst (C31))
 (slot-set! (c31-inst x 0 z) (signal 1 0 0))
 (slot-set! (c31-inst x 1 z) (signal 1 1 0))
 (slot-set! (c31-inst x 2 z) (signal 0 1 1))
@@ -534,7 +534,7 @@
       j (call-expr _range_ (literal-expr 3) (literal-expr 0))
       i (call-expr _range_ (name-expr j) (literal-expr 0)))))
 
-(define c32-inst (C32-make))
+(define c32-inst (C32))
 (slot-set! (c32-inst x 0 z) (signal 1 0 0))
 (slot-set! (c32-inst x 1 z) (signal 1 1 0))
 (slot-set! (c32-inst x 2 z) (signal 0 1 1))
@@ -552,7 +552,7 @@
         (name-expr x^))
       i (call-expr _range_ (literal-expr 3) (literal-expr 0)))))
 
-(define c27-inst (C27-make))
+(define c27-inst (C27))
 (slot-set! (c27-inst x 0 z) (signal 1 0 0))
 (slot-set! (c27-inst x 1 z) (signal 1 1 0))
 (slot-set! (c27-inst x 2 z) (signal 0 1 1))
@@ -571,7 +571,7 @@
       i (call-expr _range_ (literal-expr 3) (literal-expr 0))
       j (call-expr _range_ (literal-expr 2) (literal-expr 0)))))
 
-(define c28-inst (C28-make))
+(define c28-inst (C28))
 (slot-set! (c28-inst x 0 z) (signal 1 0 0))
 (slot-set! (c28-inst x 1 z) (signal 1 1 0))
 (slot-set! (c28-inst x 2 z) (signal 0 1 1))
@@ -590,7 +590,7 @@
       i (call-expr _range_ (literal-expr 3) (literal-expr 0))
       j (call-expr _range_ (name-expr i) (literal-expr 0)))))
 
-(define c29-inst (C29-make))
+(define c29-inst (C29))
 (slot-set! (c29-inst x 0 z) (signal 1 0 0))
 (slot-set! (c29-inst x 1 z) (signal 1 1 0))
 (slot-set! (c29-inst x 2 z) (signal 0 1 1))
@@ -607,7 +607,7 @@
   (data-port y out (call-expr utwice (literal-expr 16)))
   (assignment (name-expr y) (slot-expr (name-expr x))))
 
-(define c30-inst (C30-make))
+(define c30-inst (C30))
 
 (test-case "Can declare module-level types"
   (check-equal? (slot-type (slot-ref* c30-inst x)) (unsigned  32))
@@ -624,7 +624,7 @@
                       (lift-expr [x^ (slot-expr (field-expr (indexed-port-expr (name-expr x) (name-expr i) (name-expr j)) z))]
                         (call-expr/cast _not_ (name-expr x^)))))))))
 
-(define c33-inst (C33-make))
+(define c33-inst (C33))
 
 (slot-set! (c33-inst x 0 0 z) (signal 1 0 0))
 (slot-set! (c33-inst x 0 1 z) (signal 1 1 0))

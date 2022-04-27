@@ -10,7 +10,7 @@
   hydromel/lib/helpers
   "half_adder.mel")
 
-(define inst (half_adder-make))
+(define inst (half_adder))
 
 (slot-set! (inst a) (signal 0 0 1 1))
 (slot-set! (inst b) (signal 0 1 0 1))

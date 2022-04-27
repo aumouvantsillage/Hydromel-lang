@@ -10,7 +10,7 @@
   hydromel/lib/helpers
   "full_adder.mel")
 
-(define inst (full_adder-make))
+(define inst (full_adder))
 
 (slot-set! (inst a)  (signal 0 0 0 0 1 1 1 1))
 (slot-set! (inst b)  (signal 0 0 1 1 0 0 1 1))

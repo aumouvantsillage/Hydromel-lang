@@ -44,10 +44,6 @@
                #:when (member (syntax-e (stx-car it)) id-lst))
       it))
 
-  ; Make a constructor name for a design unit.
-  (define (design-unit-ctor-name name)
-    (format-id name "~a-make" name))
-
   ; Return the list of ports, signals and instances in the given syntax object.
   (define (design-unit-fields stx-lst)
     (stx-filter stx-lst '(constant data-port composite-port local-signal alias instance if-statement for-statement)))
@@ -84,15 +80,14 @@
 ; Interfaces and components differ by the element types they are allowed
 ; to contain, but the expansion rule is exactly the same.
 (define-syntax-parse-rule (design-unit name body ...)
-  #:with ctor-name          (design-unit-ctor-name #'name)
   #:with (param-name ...)   (design-unit-parameter-names (attribute body))
   #:with (param-type ...)   (design-unit-parameter-types (attribute body))
   #:with (arg-name   ...)   (generate-temporaries        (attribute param-name))
   #:with (field-name ...)   (design-unit-field-names     (attribute body))
   #:with (spliced-name ...) (design-unit-spliced-names   (attribute body))
   (begin
-    (provide ctor-name)
-    (define (ctor-name arg-name ...)
+    (provide name)
+    (define (name arg-name ...)
       (define-parameter-slot param-name arg-name param-type) ...
       (splicing-syntax-parameterize ([in-design-unit #t])
         body ...)
@@ -200,8 +195,7 @@
    #'(build-vector m (λ (z) (channel (ms ...) intf-name arg ...)))]
 
   [(_ () intf-name arg ...)
-   #:with ctor-name (design-unit-ctor-name #'intf-name)
-   #'(ctor-name arg ...)])
+   #'(intf-name arg ...)])
 
 ; ------------------------------------------------------------------------------
 ; Statements
