@@ -5,7 +5,6 @@
 #lang racket
 
 (require
-  hydromel
   hydromel/lib/signal
   hydromel/lib/instance
   "adders.mel")
