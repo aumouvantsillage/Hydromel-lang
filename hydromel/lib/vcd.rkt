@@ -11,13 +11,13 @@
   (only-in data/collection nth)
   "signal.rkt"
   "slot.rkt"
-  "helpers.rkt")
+  "instance.rkt")
 
-(provide dump-vcd)
+(provide instance-dump-vcd)
 
 (struct waveform (short-name width values))
 
-(define (dump-vcd-array samples len elt-type scope path out)
+(define (instance-dump-vcd-array samples len elt-type scope path out)
   ; Open a new scope in the VCD file.
   (fprintf out "$scope module ~a $end\n" scope)
   (define res (for/list ([i (in-range len)])
@@ -28,14 +28,14 @@
                   [(abstract-integer-type w)
                    (fprintf out "$var wire ~a ~a ~a $end\n" w path^ i)
                    (waveform path^ w lst)]
-                  [(array-type n te) (dump-vcd-array lst n te i path^ out)]
+                  [(array-type n te) (instance-dump-vcd-array lst n te i path^ out)]
                   ; TODO support records
                   [_ (error "Unsupported data type at" path)])))
   ; Close the scope in the VCD file.
   (fprintf out "$upscope $end\n")
   (flatten res))
 
-(define (dump-vcd-vars inst duration scope path out)
+(define (instance-dump-vcd-vars inst duration scope path out)
   (match inst
     [(slot sig _ _) #:when sig
      (define samples (signal-take sig duration))
@@ -44,7 +44,7 @@
         (fprintf out "$var wire ~a ~a ~a $end\n" w path scope)
         (waveform path w samples)]
        [(array-type n te)
-        (dump-vcd-array samples n te scope path out)]
+        (instance-dump-vcd-array samples n te scope path out)]
        ; TODO support records
        [_ (error "Unsupported data type at" path)])]
 
@@ -58,7 +58,7 @@
      (define res (for/list ([(k v) (in-dict inst)]
                             [n (in-naturals)]
                             #:when (not (member k sp)))
-                   (dump-vcd-vars v duration k (format "~a_~a" path n) out)))
+                   (instance-dump-vcd-vars v duration k (format "~a_~a" path n) out)))
      ; Close the scope in the VCD file.
      (fprintf out "$upscope $end\n")
      (flatten res)]
@@ -68,17 +68,17 @@
      (fprintf out "$scope module ~a $end\n" scope)
      ; For each index and each element of the vector...
      (define res (for/list ([(v n) (in-indexed elt)])
-                   (dump-vcd-vars v duration n (format "~a_~a" path n) out)))
+                   (instance-dump-vcd-vars v duration n (format "~a_~a" path n) out)))
      ; Close the scope in the VCD file.
      (fprintf out "$upscope $end\n")
      (flatten res)]
 
     [_ (error "Unsupported data type at" path)]))
 
-(define (dump-vcd inst duration ts [out (current-output-port)])
+(define (instance-dump-vcd inst duration ts [out (current-output-port)])
   ; VCD header.
   (fprintf out "$timescale ~a $end\n" ts)
-  (define wavs (dump-vcd-vars inst duration "top" "s" out))
+  (define wavs (instance-dump-vcd-vars inst duration "top" "s" out))
   (fprintf out "$enddefinitions $end\n")
 
   ; Value changes.

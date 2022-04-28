@@ -7,15 +7,13 @@
 (require
   hydromel
   hydromel/lib/signal
-  hydromel/lib/helpers
+  hydromel/lib/instance
   "full_adder.mel")
 
 (define inst (full_adder))
 
-(slot-set! (inst a)  (signal 0 0 0 0 1 1 1 1))
-(slot-set! (inst b)  (signal 0 0 1 1 0 0 1 1))
-(slot-set! (inst ci) (signal 0 1 0 1 0 1 0 1))
+(instance-set! inst 'a  (signal 0 0 0 0 1 1 1 1))
+(instance-set! inst 'b  (signal 0 0 1 1 0 0 1 1))
+(instance-set! inst 'ci (signal 0 1 0 1 0 1 0 1))
 
-(define duration 8)
-
-(print-slot-table (slot-table inst) duration)
+(instance-dump inst 8)

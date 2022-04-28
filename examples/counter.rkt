@@ -7,15 +7,13 @@
 (require
   hydromel
   hydromel/lib/signal
-  hydromel/lib/helpers
+  hydromel/lib/instance
   "counter.mel")
 
 (define inst (counter 3))
 
-(slot-set! (inst clear) (signal 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0))
-(slot-set! (inst up)    (signal 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0))
-(slot-set! (inst down)  (signal 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 0 0 0))
+(instance-set! inst 'clear (signal 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0))
+(instance-set! inst 'up    (signal 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0))
+(instance-set! inst 'down  (signal 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 0 0 0))
 
-(define duration 19)
-
-(print-slot-table (slot-table inst) duration)
+(instance-dump inst 19)

@@ -12,24 +12,26 @@
   "types.rkt")
 
 (provide
-  slot-ref
-  slot-ref*
-  slot-set!
-  slot-table
-  print-slot-table)
+  instance-ref
+  instance-ref*
+  instance-set!
+  instance-dump)
 
-(define-syntax-parser slot-ref*
-  [(slot-ref* x)                    #'x]
-  [(slot-ref* x f:identifier i ...) #'(slot-ref* (dict-ref   x 'f) i ...)]
-  [(slot-ref* x n:number i ...)     #'(slot-ref* (vector-ref x n)  i ...)])
+(define (instance-ref* inst path)
+  (match path
+    ['()                      inst]
+    [(list hd tl ...)         (instance-ref* (instance-ref* inst hd) tl)]
+    [(? nonnegative-integer?) (vector-ref inst path)]
+    [(? symbol?)              (dict-ref inst path)]
+    [_                        (error "Invalid path" path)]))
 
-(define-syntax-parse-rule (slot-ref path ...)
-  (slot-data (slot-ref* path ...)))
+(define (instance-ref inst path)
+  (slot-data (instance-ref* inst path)))
 
-(define-syntax-parse-rule (slot-set! (path ...) value)
-  (set-slot-data! (slot-ref* path ...) value))
+(define (instance-set! inst path value)
+  (set-slot-data! (instance-ref* inst path) value))
 
-(define (slot-table inst [parent #hash()] [path #f])
+(define (instance-slot-table inst [parent #hash()] [path #f])
   (match inst
     [(slot sig _ _) #:when sig
      (hash-set parent path inst)]
@@ -46,7 +48,7 @@
        (define name (symbol->string k))
        (define path^ (if path (string-append path "." name) name))
        ; Process the current entry and add it to the slot table.
-       (slot-table v res path^))]
+       (instance-slot-table v res path^))]
 
     [(vector elt ...)
      ; For each index and each element of the vector...
@@ -56,13 +58,13 @@
        (define index (format "[~a]" n))
        (define path^ (if path (string-append path index) index))
        ; Process the current entry and add it to the slot table.
-       (slot-table v res path^))]
+       (instance-slot-table v res path^))]
 
     [_
      (error "Unsupported data type at" path inst)]))
 
-(define (print-slot-table tbl duration)
-  (for ([(name slt) (in-dict tbl)])
+(define (instance-dump inst duration)
+  (for ([(name slt) (in-dict (instance-slot-table inst))])
     (define data (slot-data slt))
     (printf "~a : ~a = ~a\n"
       name

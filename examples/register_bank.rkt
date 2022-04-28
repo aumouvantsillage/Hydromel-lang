@@ -8,21 +8,21 @@
   racket/runtime-path
   hydromel
   hydromel/lib/signal
-  hydromel/lib/helpers
+  hydromel/lib/instance
   hydromel/lib/vcd
   "register_bank.mel")
 
 (define inst (register_bank (unsigned 8) 4))
 
-(slot-set! (inst write) (signal 0  1  0  0  1  0  0  1  0  0  1  0  0  0  0  0))
-(slot-set! (inst addr)  (signal 0  0  0  1  1  1  2  2  2  3  3  3  0  1  2  3))
-(slot-set! (inst d)     (signal 99 10 99 99 20 99 99 30 99 99 40 99 99 99 99 99))
+(instance-set! inst 'write (signal 0  1  0  0  1  0  0  1  0  0  1  0  0  0  0  0))
+(instance-set! inst 'addr  (signal 0  0  0  1  1  1  2  2  2  3  3  3  0  1  2  3))
+(instance-set! inst 'd     (signal 99 10 99 99 20 99 99 30 99 99 40 99 99 99 99 99))
 
 (define duration 16)
 
-(print-slot-table (slot-table inst) duration)
+(instance-dump inst duration)
 
 (define-runtime-path vcd-file "register_bank.vcd")
 
-(dump-vcd inst duration "10 ns"
+(instance-dump-vcd inst duration "10 ns"
   (open-output-file vcd-file #:exists 'replace))
