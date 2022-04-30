@@ -16,6 +16,7 @@
     racket/syntax
     syntax/parse
     syntax/parse/define
+    "errors.rkt"
     "scope.rkt"
     (prefix-in meta/ "meta.rkt")))
 
@@ -221,7 +222,7 @@
        #:with expr (check #'s.expr)
        ; Check that the expression has a static value.
        (unless (static? #'expr)
-         (raise-syntax-error #f "Non-static expression cannot be assigned to constant" #'s.expr))
+         (raise-semantic-error "Non-static expression cannot be assigned to constant" #'s #'s.expr))
        (s/l (constant s.name expr))]
 
       [s:stx/data-port
@@ -234,7 +235,7 @@
        ; Check that the multiplicity has a static value.
        (for ([m (in-list (attribute mult))])
          (unless (static? m)
-           (raise-syntax-error #f "Non-static expression cannot be used as port multiplicity" m)))
+           (raise-semantic-error "Non-static expression cannot be used as port multiplicity" #'s m)))
        ; Check that intf-name refers to an existing interface
        (lookup #'s.intf-name meta/interface?)
        ; Check arguments
@@ -246,7 +247,7 @@
        ; Check that the multiplicity has a static value.
        (for ([m (in-list (attribute mult))])
          (unless (static? m)
-           (raise-syntax-error #f "Non-static expression cannot be used as instance multiplicity" m)))
+           (raise-semantic-error "Non-static expression cannot be used as instance multiplicity" #'s m)))
        ; Check that comp-name refers to an existing component
        (lookup #'s.comp-name meta/component?)
        (s/l (instance s.name (mult ...) s.comp-name arg ...))]
