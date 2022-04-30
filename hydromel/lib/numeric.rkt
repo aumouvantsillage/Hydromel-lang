@@ -74,7 +74,7 @@
 
 ; Concatenate a sequence of slices.
 ; Do not sign-extend the result.
-(define (unsigned-concat . items)
+(define (unsigned-concat* . items)
   (for/fold ([res 0])
             ([it (in-list items)])
     (match-define (list v l r) it)
@@ -82,12 +82,12 @@
         (arithmetic-shift (add1 (- l r)))
         (bitwise-ior (unsigned-slice v l r)))))
 
-(define-syntax-parse-rule (unsigned-concat* [v l r] ...)
-  (unsigned-concat [list v l r] ...))
+(define-syntax-parse-rule (unsigned-concat [v l r] ...)
+  (unsigned-concat* [list v l r] ...))
 
 ; Concatenate a sequence of slices.
 ; Sign-extend the result.
-(define (signed-concat . items)
+(define (signed-concat* . items)
   (match-define (list v0 l0 r0) (first items))
   (for/fold ([res (signed-slice v0 l0 r0)])
             ([it (in-list (rest items))])
@@ -96,8 +96,8 @@
         (arithmetic-shift (add1 (- l r)))
         (bitwise-ior (unsigned-slice v l r)))))
 
-(define-syntax-parse-rule (signed-concat* [v l r] ...)
-  (signed-concat [list v l r] ...))
+(define-syntax-parse-rule (signed-concat [v l r] ...)
+  (signed-concat* [list v l r] ...))
 
 (define (integer->bit-string size v)
   (list->string (for/list ([n (in-range (sub1 size) -1 -1)])
