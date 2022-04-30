@@ -5,12 +5,13 @@
 #lang racket
 
 (require
-  hydromel/sim
-  "half_adder.mel")
-
-(define inst (half_adder))
-
-(instance-set! inst 'a (signal 0 0 1 1))
-(instance-set! inst 'b (signal 0 1 0 1))
-
-(instance-dump inst 4)
+  "lib/signal.rkt"
+  "lib/std.rkt"
+  "lib/instance.rkt"
+  "lib/vcd.rkt")
+  
+(provide
+  (all-from-out "lib/signal.rkt")
+  (all-from-out "lib/std.rkt")
+  (all-from-out "lib/instance.rkt")
+  (all-from-out "lib/vcd.rkt"))

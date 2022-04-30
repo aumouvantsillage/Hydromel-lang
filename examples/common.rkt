@@ -6,8 +6,7 @@
 
 (require
   rackunit
-  hydromel/lib/signal
-  hydromel/lib/instance)
+  hydromel/sim)
 
 (provide test-signal)
 

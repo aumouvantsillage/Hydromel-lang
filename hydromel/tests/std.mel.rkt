@@ -9,7 +9,6 @@
   syntax/parse/define
   (for-syntax racket/syntax)
   data/pvector
-  hydromel/lib/slot
   "std.mel")
 
 (define-syntax-parse-rule (test-constant name val)

@@ -6,10 +6,7 @@
 
 (require
   racket/runtime-path
-  hydromel
-  hydromel/lib/signal
-  hydromel/lib/instance
-  hydromel/lib/vcd
+  hydromel/sim
   "register_bank.mel")
 
 (define inst (register_bank (unsigned 8) 4))
