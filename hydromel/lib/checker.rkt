@@ -285,7 +285,6 @@
        #:with else-body       (if (attribute s.else-body)
                                 (check #'s.else-body)
                                 #'(statement-block))
-       (displayln #'s)
        (for ([it (in-list (attribute condition))]
              #:unless (static? it))
          (raise-semantic-error "Non-static expression cannot be used as condition in if statement" #'s it))
