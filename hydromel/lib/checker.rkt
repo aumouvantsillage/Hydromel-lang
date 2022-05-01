@@ -303,7 +303,7 @@
 
       [s:stx/field-expr
        #:with expr (check #'s.expr)
-       (if (meta/design-unit? (check-field-expr #'expr #'s.field-name))
+       (if (meta/design-unit? (check-field-expr this-syntax #'expr #'s.field-name))
          (s/l (field-expr expr s.field-name))
          ; We use s.expr here because check fails if we
          ; check an already checked call-expr.
@@ -440,6 +440,9 @@
       [s:stx/call-expr         (andmap static? (attribute s.arg))]
       [_                       #f]))
 
+  (define (raise-port-error kind intf-name expr subexpr)
+    (raise-semantic-error (format "Port not found in ~a ~a" kind (syntax-e intf-name)) expr subexpr))
+
   ; Find the metadata of the given expression result.
   (define (resolve stx)
     (syntax-parse stx
@@ -449,19 +452,20 @@
 
       [s:stx/field-expr
        ; Resolve a field expression that refers to a port in a composite port
-       ; or an instance. Access to record fields are converted to call expressions
+       ; or an instance. check-field-expr has already been called at this point.
+       ; Access to record fields have been converted to call expressions
        ; and will not reach this point.
        ; Resolve the left-hand side first.
        (match (resolve #'s.expr)
          [(meta/composite-port intf-name _ _)
           ; If the lhs maps to a composite port, look up the given field name
           ; in the target interface.
-          (meta/design-unit-ref (lookup intf-name meta/interface?) #'s.field-name)]
+          (meta/design-unit-ref (lookup intf-name) #'s.field-name)]
 
          [(meta/instance comp-name)
           ; If the lhs maps to an instance, look up the given field name
           ; in the target component.
-          (meta/design-unit-ref (lookup comp-name meta/component?) #'s.field-name)]
+          (meta/design-unit-ref (lookup comp-name) #'s.field-name)]
 
          [_
           ; This should not happen.
@@ -585,19 +589,22 @@
          ; and the current argument.
          (values b-lst (cons a a-lst))])))
 
-  (define (check-field-expr expr field-name)
+  (define (check-field-expr parent-expr expr field-name)
     (match (resolve expr)
         [(meta/composite-port intf-name _ _)
          ; Check that a port with that name exists in the interface.
          (define intf (lookup intf-name meta/interface?))
-         (meta/design-unit-ref intf field-name)
+         (meta/design-unit-ref intf field-name
+           (thunk (raise-port-error "interface" intf-name parent-expr field-name)))
          ; Return the interface name.
          intf]
 
         [(meta/instance comp-name)
          ; Check that a port with that name exists in the component.
          (define comp (lookup comp-name meta/component?))
-         (meta/design-unit-ref comp field-name)
+         (meta/design-unit-ref comp field-name
+           (thunk (raise-port-error "component" comp-name parent-expr field-name)))
+
          ; Return the component name.
          comp]
 

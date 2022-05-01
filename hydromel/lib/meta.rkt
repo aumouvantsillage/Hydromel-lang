@@ -14,7 +14,7 @@
 ; fields is a hash map whose keys are symbols and values are port and constant metadata.
 (struct design-unit (fields))
 
-(define (design-unit-ref unit name [strict? #t])
+(define (design-unit-ref unit name [failure-thunk #f])
   (define fields (design-unit-fields unit))
   ; Attempt to find a port with the given name in the current unit.
   (dict-ref fields (syntax-e name)
@@ -29,16 +29,12 @@
                      (define q (~> p
                                  composite-port-intf-name
                                  (lookup interface?)
-                                 (design-unit-ref name #f)))
+                                 (design-unit-ref name)))
                      ; If a port was found and p is flipped, then flip q.
                      (if (and q (composite-port-flip? p))
                        (flip-port q)
                        q)))
-      ; In strict mode, raise an error if no port was found at this point.
-      (when (and strict? (not port))
-        (raise-syntax-error #f "No port with this name" name))
-      ; Return the port found.
-      port)))
+      (or port (and failure-thunk (failure-thunk))))))
 
 (struct interface design-unit ())
 (struct component design-unit ())
