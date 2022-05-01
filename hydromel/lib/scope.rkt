@@ -7,7 +7,8 @@
 (require
   racket/syntax
   syntax/parse/define
-  syntax/id-table)
+  syntax/id-table
+  "errors.rkt")
 
 (provide
   with-scope
@@ -37,7 +38,5 @@
   (if sc
     (dict-ref (scope-table sc) name
       (thunk (lookup name pred #:scope (scope-parent sc))))
-    (let ([res (syntax-local-value (internal-name name))])
-      (unless res
-        (raise-syntax-error #f "No declaration found for this identifier" name))
-      res)))
+    (syntax-local-value (internal-name name)
+      (thunk (raise-semantic-error "No declaration found for identifier" name)))))
