@@ -269,10 +269,10 @@
          ; generate an assignment for each data port.
          (let ([expr-port (resolve #'expr)])
            (unless (meta/composite-port? expr-port)
-             (raise-syntax-error #f "Right-hand side of assignment is not a composite port" #'expr))
+             (raise-semantic-error "Right-hand side of assignment is not a composite port" #'s #'expr))
            (unless (equal? (syntax-e (meta/composite-port-intf-name target-port))
                            (syntax-e (meta/composite-port-intf-name expr-port)))
-             (raise-syntax-error #f "Right-hand side and left-hand side of assignment have different interfaces" stx))
+             (raise-semantic-error "Right-hand side and left-hand side of assignment have different interfaces" #'s))
            ; Here we pass s.target and s.expr because they will be checked again.
            (check-composite-assignment stx #'s.target #'s.expr target-port))
          ; If the left-hand side is a signal, generate an assignment statement.
@@ -282,10 +282,13 @@
        #:with name            (or (attribute s.name) (generate-temporary #'if))
        #:with (condition ...) (map check (attribute s.condition))
        #:with (then-body ...) (map check (attribute s.then-body))
-       #:with else-body       (check #'s.else-body)
+       #:with else-body       (if (attribute s.else-body)
+                                (check #'s.else-body)
+                                #'(statement-block))
+       (displayln #'s)
        (for ([it (in-list (attribute condition))]
              #:unless (static? it))
-         (raise-syntax-error #f "Non-static expression cannot be used in range" it))
+         (raise-semantic-error "Non-static expression cannot be used as condition in if statement" #'s it))
        (s/l (if-statement name (~@ condition then-body) ... else-body))]
 
       [s:stx/for-statement

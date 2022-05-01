@@ -14,8 +14,12 @@
       (read-string (sub1 (syntax-position stx)))
       (string-trim (read-string (syntax-span stx))))))
 
-(define (raise-semantic-error msg expr subexpr)
-  (raise-user-error 'ERROR "~a\n  at: ~a\n  in: ~a\n  location: ~a" msg
-                    (syntax-read-from-source subexpr)
-                    (syntax-read-from-source expr)
-                    (srcloc->string (syntax-srcloc subexpr))))
+(define (raise-semantic-error msg expr [subexpr #f])
+  (if subexpr
+    (raise-user-error 'ERROR "~a\n  at: ~a\n  in: ~a\n  location: ~a" msg
+                      (syntax-read-from-source subexpr)
+                      (syntax-read-from-source expr)
+                      (srcloc->string (syntax-srcloc subexpr)))
+    (raise-user-error 'ERROR "~a\n  at: ~a\n  location: ~a" msg
+                      (syntax-read-from-source expr)
+                      (srcloc->string (syntax-srcloc expr)))))

@@ -5,9 +5,11 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 component C
-end
-
-component D
-    port x : in unsigned(32)
-    instance i<x> = C
+    port x : in bit
+    port y : out unsigned(32)
+    if 0 then
+        y = 1
+    elseif x then
+        y = 2
+    end
 end

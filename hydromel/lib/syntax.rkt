@@ -73,7 +73,7 @@
 
   (define-syntax-class if-statement
     #:literals [if-statement]
-    (pattern (if-statement (~optional name) (~seq condition then-body) ... else-body)))
+    (pattern (if-statement (~optional name) (~seq condition then-body:statement-block) ...+ (~optional else-body))))
 
   (define-syntax-class for-statement
     #:literals [for-statement]

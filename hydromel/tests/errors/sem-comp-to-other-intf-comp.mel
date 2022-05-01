@@ -4,10 +4,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-component C
+interface I
 end
 
-component D
-    port x : in unsigned(32)
-    instance i<x> = C
+interface J
+end
+
+component C
+    port x : I
+    port y : J
+    y = x
 end
