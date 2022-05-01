@@ -9,5 +9,6 @@ end
 
 component C
     port x : in unsigned(32)
+    # ERROR: Non-static expression cannot be used as port multiplicity
     port y<x> : I
 end

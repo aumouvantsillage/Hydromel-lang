@@ -5,7 +5,9 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 component C
+    port w : in unsigned(32)
     port x : in unsigned(32)
-    # ERROR: Non-static expression cannot be assigned to constant
-    constant k = x + 1
+    port y : out unsigned(32)
+    # ERROR: Non-static expression cannot be used as an initial register value
+    y = register(w, x)
 end

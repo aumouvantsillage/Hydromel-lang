@@ -222,7 +222,7 @@
        #:with expr (check #'s.expr)
        ; Check that the expression has a static value.
        (unless (static? #'expr)
-         (raise-semantic-error "Non-static expression cannot be assigned to constant" #'s #'s.expr))
+         (raise-semantic-error "Non-static expression cannot be assigned to constant" this-syntax #'s.expr))
        (s/l (constant s.name expr))]
 
       [s:stx/data-port
@@ -235,7 +235,7 @@
        ; Check that the multiplicity has a static value.
        (for ([m (in-list (attribute mult))])
          (unless (static? m)
-           (raise-semantic-error "Non-static expression cannot be used as port multiplicity" #'s m)))
+           (raise-semantic-error "Non-static expression cannot be used as port multiplicity" this-syntax m)))
        ; Check that intf-name refers to an existing interface
        (lookup #'s.intf-name meta/interface?)
        ; Check arguments
@@ -247,7 +247,7 @@
        ; Check that the multiplicity has a static value.
        (for ([m (in-list (attribute mult))])
          (unless (static? m)
-           (raise-semantic-error "Non-static expression cannot be used as instance multiplicity" #'s m)))
+           (raise-semantic-error "Non-static expression cannot be used as instance multiplicity" this-syntax m)))
        ; Check that comp-name refers to an existing component
        (lookup #'s.comp-name meta/component?)
        (s/l (instance s.name (mult ...) s.comp-name arg ...))]
@@ -263,13 +263,13 @@
        ; TODO check circular dependencies.
        #:with target (check #'s.target)
        #:with expr   (check #'s.expr)
-       (define target-port (check-assignment-target #'target))
+       (define target-port (check-assignment-target this-syntax #'target))
        (if (meta/composite-port? target-port)
          ; If the left-hand side is a composite port,
          ; generate an assignment for each data port.
          (let ([expr-port (resolve #'expr)])
            (unless (meta/composite-port? expr-port)
-             (raise-semantic-error "Right-hand side of assignment is not a composite port" #'s #'expr))
+             (raise-semantic-error "Right-hand side of assignment is not a composite port" this-syntax #'expr))
            (unless (equal? (syntax-e (meta/composite-port-intf-name target-port))
                            (syntax-e (meta/composite-port-intf-name expr-port)))
              (raise-semantic-error "Right-hand side and left-hand side of assignment have different interfaces" #'s))
@@ -287,14 +287,14 @@
                                 #'(statement-block))
        (for ([it (in-list (attribute condition))]
              #:unless (static? it))
-         (raise-semantic-error "Non-static expression cannot be used as condition in if statement" #'s it))
+         (raise-semantic-error "Non-static expression cannot be used as condition in if statement" this-syntax it))
        (s/l (if-statement name (~@ condition then-body) ... else-body))]
 
       [s:stx/for-statement
        #:with iter-expr (check #'s.iter-expr)
        #:with body (check #'s.body)
        (unless (static? #'iter-expr)
-         (raise-syntax-error #f "Non-static expression cannot be used as loop range" #'iter-expr))
+         (raise-semantic-error "Non-static expression cannot be used as loop range" this-syntax #'iter-expr))
        (q/l (for-statement s.name s.iter-name iter-expr body))]
 
       [s:stx/statement-block
@@ -314,7 +314,8 @@
        #:with (index ...) (map check (attribute s.index))
        (define r (resolve #'expr))
        (unless (or (meta/composite-port? r) (meta/instance? r))
-         (raise-syntax-error #f "Expression not suitable for indexing" #'s.expr))
+         (raise-semantic-error "Expression is neither a composite port nor an instance" this-syntax #'s.expr))
+       ; TODO Report semantic error if r doesn't have a multiplicity.
        (s/l (indexed-port-expr expr index ...))]
 
       [s:stx/register-expr
@@ -326,7 +327,7 @@
                             (check-assigned-expr (check #'s.update-expr))
                             (and (attribute s.update-cond) (check #'s.update-cond))))
        (unless (static? #'init-expr)
-         (raise-syntax-error #f "Non-static expression cannot be used as an initial register value" #'s.init-expr))
+         (raise-semantic-error "Non-static expression cannot be used as an initial register value" this-syntax #'s.init-expr))
        (s/l (register-expr arg ...))]
 
       [s:stx/when-clause
@@ -370,14 +371,14 @@
        #:with body (check #'s.body)
        (for ([it (in-list (attribute iter-expr))])
          (unless (static? it)
-           (raise-syntax-error #f "Non-static expression cannot be used as comprehension range" it)))
+           (raise-semantic-error "Non-static expression cannot be used as comprehension range" this-syntax it)))
        (s/l (s.mode body (~@ s.iter-name iter-expr) ...))]
 
       [s:stx/choices
        #:with (expr ...) (map check (attribute s.expr))
        (for ([it (in-list (attribute expr))])
          (unless (static? it)
-           (raise-syntax-error #f "Non-static expression cannot be used as choice" it)))
+           (raise-semantic-error "Non-static expression cannot be used as choice" this-syntax it)))
        (s/l (choices expr ...))]
 
       [_ this-syntax]))
@@ -462,7 +463,9 @@
           ; in the target component.
           (meta/design-unit-ref (lookup comp-name meta/component?) #'s.field-name)]
 
-         [_ (raise-syntax-error #f "Expression not suitable for field access" stx)])]
+         [_
+          ; This should not happen.
+          (raise-semantic-error "Expression is neither a composite port nor an instance" this-syntax #'s.expr)])]
 
       [s:stx/indexed-port-expr
        ; For an indexed port expression, the metadata are those of the left-hand side.
@@ -480,19 +483,20 @@
       [_ res]))
 
   ; Check an expression that appears in the left-hand side of an assignment.
-  (define (check-assignment-target stx)
+  (define (check-assignment-target parent-stx stx)
     (define target (resolve stx))
     (match target
       ; If the left-hand side of an assignment resolves to a data port,
       ; check the mode of this port.
       [(meta/data-port mode)
        (unless (equal? mode (if (flip? stx) 'in 'out))
-         (raise-syntax-error #f "Port cannot be assigned" stx))]
+         (raise-semantic-error "Port cannot be assigned" parent-stx stx))]
 
       [(meta/composite-port intf-name flip? splice?)
        (void)]
 
-      [_ (raise-syntax-error #f "Expression not suitable as assignment target" stx)])
+      [_
+       (raise-semantic-error "Expression not suitable as assignment target" parent-stx stx)])
     target)
 
   ; Check an expression that constitutes the right-hand side of an assignment.

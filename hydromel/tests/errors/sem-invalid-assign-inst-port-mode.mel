@@ -6,6 +6,13 @@
 
 component C
     port x : in unsigned(32)
-    # ERROR: Non-static expression cannot be assigned to constant
-    constant k = x + 1
+    port y : out unsigned(32)
+    y = x
+end
+
+component D
+    port x : in unsigned(32)
+    instance c = C
+    # ERROR: Port cannot be assigned
+    c.y = x
 end

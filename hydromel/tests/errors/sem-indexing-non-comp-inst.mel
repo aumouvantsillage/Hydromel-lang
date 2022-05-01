@@ -6,6 +6,7 @@
 
 component C
     port x : in unsigned(32)
-    # ERROR: Non-static expression cannot be assigned to constant
-    constant k = x + 1
+    port y : out unsigned(32)
+    # ERROR: Expression is neither a composite port nor an instance
+    y<0> = x
 end

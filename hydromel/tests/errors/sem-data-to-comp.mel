@@ -10,5 +10,6 @@ end
 component C
     port x : in unsigned(32)
     port y : I
+    # ERROR: Right-hand side of assignment is not a composite port
     y = x
 end

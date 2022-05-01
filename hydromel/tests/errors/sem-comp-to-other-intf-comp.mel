@@ -13,5 +13,6 @@ end
 component C
     port x : I
     port y : J
+    # ERROR: Right-hand side and left-hand side of assignment have different interfaces
     y = x
 end

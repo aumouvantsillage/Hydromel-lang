@@ -6,6 +6,7 @@
 
 component C
     port x : in unsigned(32)
-    # ERROR: Non-static expression cannot be assigned to constant
-    constant k = x + 1
+    port y : out array(4, unsigned(32))
+    # ERROR: Non-static expression cannot be used as comprehension range
+    y = [n for n in x .. x + 3]
 end
