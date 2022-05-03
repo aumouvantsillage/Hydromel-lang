@@ -30,7 +30,7 @@
 
 (define-syntax-parser call
   [(_ name arg ...)
-   (match-define (struct meta/function (fn-name cast?)) (lookup #'name))
+   (match-define (meta/function _ fn-name cast?) (lookup #'name))
    (if cast?
      #`(let ([rt (call:return-type name (make-const-type arg) ...)])
          (rt (#,fn-name arg ...)))

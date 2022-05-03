@@ -6,15 +6,18 @@
 
 (require
   threading
-  "scope.rkt")
+  "scope.rkt"
+  "errors.rkt")
 
 (provide (all-defined-out))
 
+(struct metadata (stx))
+
 ; Common parent struct for all design units.
 ; fields is a hash map whose keys are symbols and values are port and constant metadata.
-(struct design-unit (fields))
+(struct design-unit metadata (fields))
 
-(define (design-unit-ref unit name [failure-thunk #f])
+(define (design-unit-ref unit name [failure-thunk (const #f)])
   (define fields (design-unit-fields unit))
   ; Attempt to find a port with the given name in the current unit.
   (dict-ref fields (syntax-e name)
@@ -27,56 +30,73 @@
                      ; Find a port with the given name in the interface
                      ; of composite port p.
                      (define q (~> p
-                                 composite-port-intf-name
-                                 (lookup interface?)
-                                 (design-unit-ref name)))
+                                   composite-port-interface
+                                   (design-unit-ref name)))
                      ; If a port was found and p is flipped, then flip q.
                      (if (and q (composite-port-flip? p))
                        (flip-port q)
                        q)))
-      (or port (and failure-thunk (failure-thunk))))))
+      (or port (failure-thunk)))))
 
 (struct interface design-unit ())
 (struct component design-unit ())
 
-(define (make-interface fields)
-  (interface (make-hash fields)))
+(define (make-interface stx . fields)
+  (interface stx (make-hash fields)))
 
-(define (make-component fields)
-  (component (make-hash fields)))
+(define (make-component stx . fields)
+  (component stx (make-hash fields)))
 
-(struct port ())
-(struct data-port      port (mode))
-(struct composite-port port (intf-name flip? splice?))
+(struct port           metadata ())
+(struct data-port      port     (mode))
+(struct composite-port port     (intf-name flip? splice?))
+
+(define (lookup-interface stx name)
+  (define res (lookup name))
+  (if (interface? res)
+    res
+    (raise-semantic-error "Expected an interface name" stx name)))
+
+(define (composite-port-interface port)
+  (match-define (composite-port stx name _ _) port)
+  (lookup-interface stx name))
 
 ; Returns a port with the same properties as p, but with flipped mode.
 ; If p is not a port, it is returned unchanged.
 (define (flip-port p)
   (match p
-    [(data-port      mode)
-     (data-port      (if (eq? 'in mode) 'out 'in))]
-    [(composite-port intf-name flip?       splice?)
-     (composite-port intf-name (not flip?) splice?)]
+    [(data-port      stx mode)
+     (data-port      stx (if (eq? 'in mode) 'out 'in))]
+    [(composite-port stx intf-name flip?       splice?)
+     (composite-port stx intf-name (not flip?) splice?)]
     [_ p]))
 
-(struct constant (global?))
+(struct constant metadata (global?))
 
-(struct parameter ())
+(struct parameter metadata ())
 
-(struct local-signal ())
+(struct local-signal metadata ())
 
-(struct instance (comp-name))
+(struct instance metadata (comp-name))
+
+(define (lookup-component stx name)
+  (define res (lookup name))
+  (if (component? res)
+    res
+    (raise-semantic-error "Expected a component name" stx name)))
+
+(define (instance-component inst)
+  (match-define (instance stx name) inst)
+  (lookup-component stx name))
 
 (define (signal? item)
   (or (data-port?    item)
       (local-signal? item)))
 
-(struct record-type ())
+(struct function metadata (name cast?))
 
-(struct function (name cast?))
+(define (make-function stx name)
+  (function stx name #f))
 
-(define (make-function name)
-  (function name #f))
-
-(define (make-function/cast name)
-  (function name #t))
+(define (make-function/cast stx name)
+  (function stx name #t))
