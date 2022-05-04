@@ -16,7 +16,7 @@
     racket/syntax
     syntax/parse
     syntax/parse/define
-    "errors.rkt"
+    (only-in "errors.rkt" raise-semantic-error)
     "scope.rkt"
     (prefix-in meta/ "meta.rkt")))
 

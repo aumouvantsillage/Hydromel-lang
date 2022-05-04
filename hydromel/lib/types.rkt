@@ -5,7 +5,6 @@
 #lang racket
 
 (require
-  syntax/parse/define
   racket/hash
   (only-in data/collection length)
   data/pvector
@@ -204,9 +203,11 @@
     [(any-type)          "any"]
     [(signed-type   #f)  "integer"]
     [(unsigned-type #f)  "natural"]
+    [(unsigned-type 1)   "bit"]
     [(signed-type   n)   (format "signed(~a)" n)]
     [(unsigned-type n)   (format "unsigned(~a)" n)]
     [(array-type    n v) (format "array(~a, ~a)" n (type->string v))]
+    ; TODO Print union of symbols as enumeration
     [(union-type    ts)  (format "union(~a)" (for/fold ([acc ""])
                                                        ([it (in-list ts)])
                                                (define s (type->string it))

@@ -4,9 +4,15 @@
 
 #lang racket
 
-(require racket/syntax-srcloc)
+(require
+  "types.rkt"
+  racket/syntax-srcloc
+  syntax/stx
+  (only-in data/collection nth))
 
-(provide raise-semantic-error)
+(provide
+  raise-semantic-error
+  raise-type-error)
 
 (define (syntax-read-from-source stx)
   (with-input-from-file (syntax-source stx)
@@ -23,3 +29,12 @@
     (raise-user-error 'ERROR "~a\n  at: ~a\n  location: ~a" msg
                       (syntax-read-from-source expr)
                       (srcloc->string (syntax-srcloc expr)))))
+
+(define (raise-type-error expr pos actual-type expected-type)
+  (define subexpr (nth (stx->list expr) (+ 2 pos)))
+  (raise-user-error 'ERROR "Incompatible type\n  expected: ~a\n  found: ~a\n  at: ~a\n  in: ~a\n  location: ~a"
+                    (type->string expected-type)
+                    (type->string actual-type)
+                    (syntax-read-from-source subexpr)
+                    (syntax-read-from-source expr)
+                    (srcloc->string (syntax-srcloc subexpr))))

@@ -75,6 +75,8 @@
 ; or whether it appears at the module level.
 (define-syntax-parameter in-design-unit #f)
 
+(define-syntax-parameter current-call-expr #f)
+
 ; An interface or a component expands to a constructor function
 ; that returns a hash-map with public or debug data.
 ; Interfaces and components differ by the element types they are allowed
@@ -477,8 +479,7 @@
 
   [(_ (~and ((~or* call-expr call-expr/cast) name arg ...) expr))
    #:with rt (format-id #'name "~a:return-type" #'name)
-   #:with (tv ...) (generate-temporaries (attribute arg))
-   #'(rt (expression-type arg) ...)]
+   #'(rt #'expr (expression-type arg) ...)]
 
   [_ #'(any-type)])
 

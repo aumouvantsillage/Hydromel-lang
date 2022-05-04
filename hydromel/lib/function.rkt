@@ -14,7 +14,8 @@
 
 (provide
   declare-function      define-function
-  declare-function/cast define-function/cast)
+  declare-function/cast define-function/cast
+  current-call-expr)
 
 (begin-for-syntax
   (define (function-return-type-name name)
@@ -58,31 +59,39 @@
   [(_ cast? name fn)
    #'(define-function* cast? name fn (const (union-type empty)))])
 
+(define current-call-expr (make-parameter #f))
+
 (define-syntax-parser return-type-function
   #:literals [λ const]
   #:datum-literals [cast no-cast]
   [(_ no-cast name (λ (arg:id ...) body ...))
-   #'(λ (arg ...)
+   #'(λ (stx arg ...)
+       (define t (parameterize ([current-call-expr stx])
+                   body ...))
        (if (and (const-type? arg) ...)
          (make-const-type (name (const-type-value arg) ...))
-         (let () body ...)))]
+         t))]
 
   [(_ cast name (λ (arg:id ...) body ...))
-   #'(λ (arg ...)
-       (define t (let () body ...))
+   #'(λ (stx arg ...)
+       (define t (parameterize ([current-call-expr stx])
+                   body ...))
        (if (and (const-type? arg) ...)
          (make-const-type (t (name (const-type-value arg) ...)))
          t))]
 
   [(_ no-cast name (λ args:id body ...))
-   #'(λ args
+   #'(λ (stx . args)
+       (define t (parameterize ([current-call-expr stx])
+                   body ...))
        (if (andmap const-type? args)
          (make-const-type (apply name (map const-type-value args)))
-         (let () body ...)))]
+         t))]
 
   [(_ cast name (λ args:id body ...))
-   #'(λ args
-       (define t (let () body ...))
+   #'(λ (stx . args)
+       (define t (parameterize ([current-call-expr stx])
+                   body ...))
        (if (andmap const-type? args)
          (make-const-type (t (apply name (map const-type-value args))))
          t))]

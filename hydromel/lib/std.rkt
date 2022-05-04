@@ -7,6 +7,7 @@
 (require
   "function.rkt"
   "types.rkt"
+  "errors.rkt"
   (only-in "numeric.rkt"
     min-unsigned-width min-signed-width
     min-signed-value   max-signed-value
@@ -21,7 +22,7 @@
 
 (define (assert-<: name pos t u)
   (unless (<: t u)
-    (raise-argument-error name (type->string u) pos (type->string t))))
+    (raise-type-error (current-call-expr) pos t u)))
 
 (define (assert-const name pos t)
   (unless (const-type? t)
