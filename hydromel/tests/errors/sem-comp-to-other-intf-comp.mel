@@ -1,0 +1,18 @@
+#lang hydromel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+interface I
+end
+
+interface J
+end
+
+component C
+    port x : I
+    port y : J
+    # ERROR: Right-hand side and left-hand side of assignment have different interfaces
+    y = x
+end

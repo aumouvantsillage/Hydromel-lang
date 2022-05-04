@@ -7,7 +7,8 @@
 (require
   racket/syntax
   syntax/parse/define
-  syntax/id-table)
+  syntax/id-table
+  "errors.rkt")
 
 (provide
   with-scope
@@ -33,11 +34,9 @@
 (define (internal-name name)
   (format-id name "~a$hydromel" name))
 
-(define (lookup name [pred (const #t)] #:scope [sc (syntax-property name 'scope)])
+(define (lookup name #:scope [sc (syntax-property name 'scope)])
   (if sc
     (dict-ref (scope-table sc) name
-      (thunk (lookup name pred #:scope (scope-parent sc))))
-    (let ([res (syntax-local-value (internal-name name))])
-      (unless res
-        (raise-syntax-error #f "No declaration found for this identifier" name))
-      res)))
+      (thunk (lookup name #:scope (scope-parent sc))))
+    (syntax-local-value (internal-name name)
+      (thunk (raise-semantic-error "No declaration found for identifier" name)))))

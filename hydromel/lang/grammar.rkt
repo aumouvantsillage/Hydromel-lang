@@ -66,6 +66,7 @@ assignment:
 instance:
   /"instance" ID multiplicity /"=" ID argument-list?
 
+; TODO when label is missing, location refers to previous comment lines
 if-statement:
   (ID /":")?
   /"if" expression /"then" statement-block
@@ -73,6 +74,7 @@ if-statement:
   (/"else" statement-block)?
   /"end"
 
+; TODO when label is missing, location refers to previous comment lines
 for-statement:
   (ID /":")?
   /"for" iterator /"loop"

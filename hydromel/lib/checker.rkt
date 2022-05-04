@@ -16,6 +16,7 @@
     racket/syntax
     syntax/parse
     syntax/parse/define
+    "errors.rkt"
     "scope.rkt"
     (prefix-in meta/ "meta.rkt")))
 
@@ -38,27 +39,27 @@
    #:with lookup-name (internal-name #'s.name)
    #'(begin
        (provide lookup-name)
-       (define-syntax lookup-name (meta/make-function #'s.name)))]
+       (define-syntax lookup-name (meta/make-function #'s #'s.name)))]
 
   [(_ s:stx/constant)
    #:with lookup-name (internal-name #'s.name)
    #'(begin
        (provide lookup-name)
-       (define-syntax lookup-name (meta/constant #t)))]
+       (define-syntax lookup-name (meta/constant #'s #t)))]
 
   [(_ s:stx/interface)
    #:with lookup-name (internal-name #'s.name)
    #:with (p ...) (design-unit-field-metadata (attribute s.body))
    #'(begin
        (provide lookup-name)
-       (define-syntax lookup-name (meta/make-interface (list p ...))))]
+       (define-syntax lookup-name (meta/make-interface #'s p ...)))]
 
   [(_ s:stx/component)
    #:with lookup-name (internal-name #'s.name)
    #:with (p ...) (design-unit-field-metadata (attribute s.body))
    #'(begin
        (provide lookup-name)
-       (define-syntax lookup-name (meta/make-component (list p ...))))]
+       (define-syntax lookup-name (meta/make-component #'s p ...)))]
 
   [_
    #'(begin)])
@@ -89,15 +90,15 @@
       (for/list ([stx (in-list lst)])
         (syntax-parse stx
           [s:stx/data-port
-           (s/l (cons 's.name (meta/data-port 's.mode)))]
+           (s/l (cons 's.name (meta/data-port #'s 's.mode)))]
 
           [s:stx/composite-port
            #:with flip   (boolean->syntax (attribute s.flip?))
            #:with splice (boolean->syntax (attribute s.splice?))
-           (s/l (cons 's.name (meta/composite-port #'s.intf-name flip splice)))]
+           (s/l (cons 's.name (meta/composite-port #'s #'s.intf-name flip splice)))]
 
           [s:stx/constant
-           (s/l (cons 's.name (meta/constant #f)))]
+           (s/l (cons 's.name (meta/constant #'s #f)))]
 
           [_ #f]))))
 
@@ -119,12 +120,12 @@
        (s/l (unit-type s.name body ...))]
 
       [s:stx/parameter
-       (bind! #'s.name (meta/parameter))
+       (bind! #'s.name (meta/parameter this-syntax))
        (add-scopes* this-syntax)]
 
       [s:stx/typedef
        (when (current-design-unit)
-         (bind! #'s.name (meta/make-function #'s.name)))
+         (bind! #'s.name (meta/make-function this-syntax #'s.name)))
        (with-scope (add-scopes* this-syntax))]
 
       [s:stx/constant #:when (current-design-unit)
@@ -140,11 +141,11 @@
        (add-scopes* this-syntax)]
 
       [s:stx/instance
-       (bind! #'s.name (meta/instance #'s.comp-name))
+       (bind! #'s.name (meta/instance this-syntax #'s.comp-name))
        (add-scopes* this-syntax)]
 
       [s:stx/local-signal
-       (bind! #'s.name (meta/local-signal))
+       (bind! #'s.name (meta/local-signal this-syntax))
        (add-scopes* this-syntax)]
 
       [s:stx/for-statement
@@ -153,7 +154,7 @@
        ; The loop counter is bound as a constant inside a new scope
        ; so that only the loop body can use it.
        #:with body (with-scope
-                     (bind! #'s.iter-name (meta/constant #f))
+                     (bind! #'s.iter-name (meta/constant this-syntax #f))
                      (add-scopes #'s.body))
        (s/l (for-statement name s.iter-name iter-expr body))]
 
@@ -167,7 +168,7 @@
        ; Range expressions are allowed to depend on other loop counters.
        #:with (body iter-expr ...) (with-scope
                                      (for ([name (in-list (attribute s.iter-name))])
-                                       (bind! name (meta/constant #f)))
+                                       (bind! name (meta/constant this-syntax #f)))
                                      (map add-scopes (cons #'s.body (attribute s.iter-expr))))
        (s/l (s.mode body (~@ s.iter-name iter-expr) ...))]
 
@@ -221,7 +222,7 @@
        #:with expr (check #'s.expr)
        ; Check that the expression has a static value.
        (unless (static? #'expr)
-         (raise-syntax-error #f "Non-static expression cannot be assigned to constant" #'s.expr))
+         (raise-semantic-error "Non-static expression cannot be assigned to constant" this-syntax #'s.expr))
        (s/l (constant s.name expr))]
 
       [s:stx/data-port
@@ -234,9 +235,9 @@
        ; Check that the multiplicity has a static value.
        (for ([m (in-list (attribute mult))])
          (unless (static? m)
-           (raise-syntax-error #f "Non-static expression cannot be used as port multiplicity" m)))
+           (raise-semantic-error "Non-static expression cannot be used as port multiplicity" this-syntax m)))
        ; Check that intf-name refers to an existing interface
-       (lookup #'s.intf-name meta/interface?)
+       (meta/lookup-interface this-syntax #'s.intf-name)
        ; Check arguments
        (s/l (composite-port s.name (mult ...) s.mode ... s.intf-name arg ...))]
 
@@ -246,9 +247,9 @@
        ; Check that the multiplicity has a static value.
        (for ([m (in-list (attribute mult))])
          (unless (static? m)
-           (raise-syntax-error #f "Non-static expression cannot be used as instance multiplicity" m)))
+           (raise-semantic-error "Non-static expression cannot be used as instance multiplicity" this-syntax m)))
        ; Check that comp-name refers to an existing component
-       (lookup #'s.comp-name meta/component?)
+       (meta/lookup-component this-syntax #'s.comp-name)
        (s/l (instance s.name (mult ...) s.comp-name arg ...))]
 
       [s:stx/local-signal
@@ -262,16 +263,16 @@
        ; TODO check circular dependencies.
        #:with target (check #'s.target)
        #:with expr   (check #'s.expr)
-       (define target-port (check-assignment-target #'target))
+       (define target-port (check-assignment-target this-syntax #'target))
        (if (meta/composite-port? target-port)
          ; If the left-hand side is a composite port,
          ; generate an assignment for each data port.
          (let ([expr-port (resolve #'expr)])
            (unless (meta/composite-port? expr-port)
-             (raise-syntax-error #f "Right-hand side of assignment is not a composite port" #'expr))
+             (raise-semantic-error "Right-hand side of assignment is not a composite port" this-syntax #'expr))
            (unless (equal? (syntax-e (meta/composite-port-intf-name target-port))
                            (syntax-e (meta/composite-port-intf-name expr-port)))
-             (raise-syntax-error #f "Right-hand side and left-hand side of assignment have different interfaces" stx))
+             (raise-semantic-error "Right-hand side and left-hand side of assignment have different interfaces" #'s))
            ; Here we pass s.target and s.expr because they will be checked again.
            (check-composite-assignment stx #'s.target #'s.expr target-port))
          ; If the left-hand side is a signal, generate an assignment statement.
@@ -281,17 +282,19 @@
        #:with name            (or (attribute s.name) (generate-temporary #'if))
        #:with (condition ...) (map check (attribute s.condition))
        #:with (then-body ...) (map check (attribute s.then-body))
-       #:with else-body       (check #'s.else-body)
+       #:with else-body       (if (attribute s.else-body)
+                                (check #'s.else-body)
+                                #'(statement-block))
        (for ([it (in-list (attribute condition))]
              #:unless (static? it))
-         (raise-syntax-error #f "Non-static expression cannot be used in range" it))
+         (raise-semantic-error "Non-static expression cannot be used as condition in if statement" this-syntax it))
        (s/l (if-statement name (~@ condition then-body) ... else-body))]
 
       [s:stx/for-statement
        #:with iter-expr (check #'s.iter-expr)
        #:with body (check #'s.body)
        (unless (static? #'iter-expr)
-         (raise-syntax-error #f "Non-static expression cannot be used as loop range" #'iter-expr))
+         (raise-semantic-error "Non-static expression cannot be used as loop range" this-syntax #'iter-expr))
        (q/l (for-statement s.name s.iter-name iter-expr body))]
 
       [s:stx/statement-block
@@ -300,7 +303,7 @@
 
       [s:stx/field-expr
        #:with expr (check #'s.expr)
-       (if (meta/design-unit? (check-field-expr #'expr #'s.field-name))
+       (if (meta/design-unit? (check-field-expr this-syntax #'expr #'s.field-name))
          (s/l (field-expr expr s.field-name))
          ; We use s.expr here because check fails if we
          ; check an already checked call-expr.
@@ -311,7 +314,8 @@
        #:with (index ...) (map check (attribute s.index))
        (define r (resolve #'expr))
        (unless (or (meta/composite-port? r) (meta/instance? r))
-         (raise-syntax-error #f "Expression not suitable for indexing" #'s.expr))
+         (raise-semantic-error "Expression is neither a composite port nor an instance" this-syntax #'s.expr))
+       ; TODO Report semantic error if r doesn't have a multiplicity.
        (s/l (indexed-port-expr expr index ...))]
 
       [s:stx/register-expr
@@ -323,7 +327,7 @@
                             (check-assigned-expr (check #'s.update-expr))
                             (and (attribute s.update-cond) (check #'s.update-cond))))
        (unless (static? #'init-expr)
-         (raise-syntax-error #f "Non-static expression cannot be used as an initial register value" #'s.init-expr))
+         (raise-semantic-error "Non-static expression cannot be used as an initial register value" this-syntax #'s.init-expr))
        (s/l (register-expr arg ...))]
 
       [s:stx/when-clause
@@ -353,11 +357,11 @@
           (q/l (call-expr s.name))]
 
          ; A function name is converted to a function call with no argument.
-         [(meta/function fn-name _)
+         [(meta/function _ fn-name _)
           (q/l (call-expr #,fn-name))]
 
          ; For a global constant name, append a suffix to access the constant slot.
-         [(meta/constant #t)
+         [(meta/constant _ #t)
           (s/l (name-expr s.name $constant))]
 
          [else stx])]
@@ -367,14 +371,14 @@
        #:with body (check #'s.body)
        (for ([it (in-list (attribute iter-expr))])
          (unless (static? it)
-           (raise-syntax-error #f "Non-static expression cannot be used as comprehension range" it)))
+           (raise-semantic-error "Non-static expression cannot be used as comprehension range" this-syntax it)))
        (s/l (s.mode body (~@ s.iter-name iter-expr) ...))]
 
       [s:stx/choices
        #:with (expr ...) (map check (attribute s.expr))
        (for ([it (in-list (attribute expr))])
          (unless (static? it)
-           (raise-syntax-error #f "Non-static expression cannot be used as choice" it)))
+           (raise-semantic-error "Non-static expression cannot be used as choice" this-syntax it)))
        (s/l (choices expr ...))]
 
       [_ this-syntax]))
@@ -396,8 +400,7 @@
           (cons field-name (if flip? (meta/flip-port field) field))
           (if (and (meta/composite-port? field) (meta/composite-port-splice? field))
             (~> field
-                meta/composite-port-intf-name
-                (lookup meta/interface?)
+                meta/composite-port-interface
                 (splice-interface (xor flip? (meta/composite-port-flip? field))))
             empty)))))
 
@@ -408,7 +411,7 @@
         (cons stx
               (syntax-parse stx
                 [s:stx/composite-port #:when (attribute s.splice?)
-                 (define intf (lookup #'s.intf-name meta/interface?))
+                 (define intf (meta/lookup-interface this-syntax #'s.intf-name))
                  (for/list ([(name port) (in-dict (splice-interface intf (attribute s.flip?)))])
                    (define/syntax-parse port-name (datum->syntax stx name))
                    (bind! #'port-name port)
@@ -445,21 +448,14 @@
 
       [s:stx/field-expr
        ; Resolve a field expression that refers to a port in a composite port
-       ; or an instance. Access to record fields are converted to call expressions
+       ; or to an instance. check-field-expr has already been called at this point.
+       ; Accesses to record fields have already been converted to call expressions
        ; and will not reach this point.
-       ; Resolve the left-hand side first.
-       (match (resolve #'s.expr)
-         [(meta/composite-port intf-name _ _)
-          ; If the lhs maps to a composite port, look up the given field name
-          ; in the target interface.
-          (meta/design-unit-ref (lookup intf-name meta/interface?) #'s.field-name)]
-
-         [(meta/instance comp-name)
-          ; If the lhs maps to an instance, look up the given field name
-          ; in the target component.
-          (meta/design-unit-ref (lookup comp-name meta/component?) #'s.field-name)]
-
-         [_ (raise-syntax-error #f "Expression not suitable for field access" stx)])]
+       (define target (resolve #'s.expr))
+       (define unit (match target
+                      [(? meta/composite-port?) (meta/composite-port-interface target)]
+                      [(? meta/instance?)       (meta/instance-component       target)]))
+       (meta/design-unit-ref unit #'s.field-name)]
 
       [s:stx/indexed-port-expr
        ; For an indexed port expression, the metadata are those of the left-hand side.
@@ -472,24 +468,25 @@
       [s:stx/field-expr
        (define res^ (flip? #'s.expr res))
        (match (resolve #'s.expr)
-         [(meta/composite-port _ f? _) (xor f? res^)]
-         [(meta/instance _) (not res^)])]
+         [(meta/composite-port _ _ f? _) (xor f? res^)]
+         [(meta/instance       _ _)      (not res^)])]
       [_ res]))
 
   ; Check an expression that appears in the left-hand side of an assignment.
-  (define (check-assignment-target stx)
+  (define (check-assignment-target parent-stx stx)
     (define target (resolve stx))
     (match target
       ; If the left-hand side of an assignment resolves to a data port,
       ; check the mode of this port.
-      [(meta/data-port mode)
+      [(meta/data-port _ mode)
        (unless (equal? mode (if (flip? stx) 'in 'out))
-         (raise-syntax-error #f "Port cannot be assigned" stx))]
+         (raise-semantic-error "Port cannot be assigned" parent-stx stx))]
 
-      [(meta/composite-port intf-name flip? splice?)
+      [(meta/composite-port _ intf-name flip? splice?)
        (void)]
 
-      [_ (raise-syntax-error #f "Expression not suitable as assignment target" stx)])
+      [_
+       (raise-semantic-error "Expression not suitable as assignment target" parent-stx stx)])
     target)
 
   ; Check an expression that constitutes the right-hand side of an assignment.
@@ -578,23 +575,30 @@
          ; and the current argument.
          (values b-lst (cons a a-lst))])))
 
-  (define (check-field-expr expr field-name)
-    (match (resolve expr)
-        [(meta/composite-port intf-name _ _)
-         ; Check that a port with that name exists in the interface.
-         (define intf (lookup intf-name meta/interface?))
-         (meta/design-unit-ref intf field-name)
-         ; Return the interface name.
-         intf]
+  (define (check-field-expr parent-expr expr field-name)
+    (define target (resolve expr))
+    (match target
+      [(meta/composite-port _ intf-name _ _)
+       ; We first need to check that intf-name refers to an interface, in case
+       ; it has not been checked already (for instance if the port is declared later).
+       (define intf (meta/composite-port-interface target)) ; TODO get syntax object of composite port
+       ; Check that a port with that name exists in the interface.
+       (meta/design-unit-ref intf field-name
+         (thunk (raise-semantic-error (format "Port not found in interface ~a" (syntax-e intf-name)) parent-expr field-name)))
+       ; Return the interface.
+       intf]
 
-        [(meta/instance comp-name)
-         ; Check that a port with that name exists in the component.
-         (define comp (lookup comp-name meta/component?))
-         (meta/design-unit-ref comp field-name)
-         ; Return the component name.
-         comp]
+      [(meta/instance _ comp-name)
+       ; We first need to check that comp-name refers to a component, in case it
+       ; has not been checked already (for instance if the instance is declared later).
+       (define comp (meta/instance-component target))
+       ; Check that a port with that name exists in the component.
+       (meta/design-unit-ref comp field-name
+         (thunk (raise-semantic-error (format "Port not found in component ~a" (syntax-e comp-name)) parent-expr field-name)))
+       ; Return the component.
+       comp]
 
-        [other other]))
+      [other other]))
 
   ; TODO allow to connect ports with multiplicity
   (define (check-composite-assignment stx target expr port)
@@ -604,11 +608,11 @@
         (define/syntax-parse target^ (quasisyntax/loc stx (field-expr #,target #,name)))
         (define/syntax-parse expr^   (quasisyntax/loc stx (field-expr #,expr   #,name)))
         (match intf-port
-          [(meta/data-port mode)
+          [(meta/data-port _ mode)
            (check
              (if (equal? mode (if (flip? #'target^) 'in 'out))
                (syntax/loc stx (assignment target^ expr^))
                (syntax/loc stx (assignment expr^   target^))))]
-          [(meta/composite-port intf-name _ _)
+          [(meta/composite-port _ intf-name _ _)
            (check-composite-assignment stx #'target^ #'expr^ intf-port)])))
     (syntax/loc stx (begin stmt ...))))

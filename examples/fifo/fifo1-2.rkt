@@ -6,10 +6,7 @@
 
 (require
   racket/runtime-path
-  hydromel
-  hydromel/lib/signal
-  hydromel/lib/instance
-  hydromel/lib/vcd
+  hydromel/sim
   "../common.rkt"
   "fifo1-2.mel"
   "fifo1-tests.rkt")

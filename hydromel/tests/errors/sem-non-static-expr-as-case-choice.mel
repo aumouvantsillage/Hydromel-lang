@@ -1,0 +1,15 @@
+#lang hydromel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+component C
+    port w : in unsigned(32)
+    port x : in unsigned(32)
+    port y : unsigned(32)
+    y = case w of
+        0     => 1
+        # ERROR: Non-static expression cannot be used as choice
+        x + 1 => 1
+end

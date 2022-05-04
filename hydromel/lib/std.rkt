@@ -12,14 +12,12 @@
     min-signed-value   max-signed-value
     min-unsigned-value max-unsigned-value
     unsigned-slice     set-slice
-    unsigned-concat)
+    unsigned-concat*)
   syntax/parse/define
   threading
   (only-in data/collection
     nth set-nth)
   data/pvector)
-
-(provide (all-from-out "numeric.rkt"))
 
 (define (assert-<: name pos t u)
   (unless (<: t u)
@@ -302,7 +300,7 @@
 ; their types are inserted by the checker.
 (define-function/cast _concat_
   (λ vs
-    (apply unsigned-concat
+    (apply unsigned-concat*
       (let loop ([res empty] [lst vs])
         (match lst
           [(list h ... v t)

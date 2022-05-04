@@ -1,0 +1,12 @@
+#lang hydromel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+component C
+    port x : in unsigned(32)
+    port y : out array(4, unsigned(32))
+    # ERROR: Non-static expression cannot be used as comprehension range
+    y = [n for n in x .. x + 3]
+end

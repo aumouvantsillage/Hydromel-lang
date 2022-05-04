@@ -5,8 +5,7 @@
 #lang racket
 
 (require
-  hydromel/lib/signal
-  hydromel/lib/instance
+  hydromel/sim
   "half_adder.mel")
 
 (define inst (half_adder))

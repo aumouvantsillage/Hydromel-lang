@@ -39,13 +39,13 @@
    #:with rt-name     (function-return-type-name #'name)
    #'(begin
        (provide name lookup-name rt-name)
-       (define-syntax lookup-name (meta/make-function #'name)))]
+       (define-syntax lookup-name (meta/make-function #f #'name)))]
   [(_ cast name)
    #:with lookup-name (internal-name #'name)
    #:with rt-name     (function-return-type-name #'name)
    #'(begin
        (provide name lookup-name rt-name)
-       (define-syntax lookup-name (meta/make-function/cast #'name)))])
+       (define-syntax lookup-name (meta/make-function/cast #f #'name)))])
 
 (define-syntax-parser define-function*
   [(_ cast? name fn rt-fn)
