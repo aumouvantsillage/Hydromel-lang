@@ -5,7 +5,7 @@
 #lang racket
 
 (require
-  hydromel/sim
+  hydromel/support
   "counter.mel")
 
 (define inst (counter 3))

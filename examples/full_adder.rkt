@@ -5,7 +5,7 @@
 #lang racket
 
 (require
-  hydromel/sim
+  hydromel/support
   "full_adder.mel")
 
 (define inst (full_adder))

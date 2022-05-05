@@ -5,7 +5,7 @@
 #lang racket
 
 (require
-  hydromel/sim
+  hydromel/support
   "adders.mel")
 
 ; (define inst (ripple_carry_adder_rec 4))
