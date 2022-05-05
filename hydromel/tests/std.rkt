@@ -39,7 +39,8 @@
 (define-syntax-parse-rule (call:return-type name arg ...)
    #:with fn-name (meta/function-name (lookup #'name))
    #:with rt-name (format-id #'fn-name "~a:return-type" #'fn-name)
-   (rt-name arg ...))
+   #:with stx this-syntax
+   (rt-name #'stx arg ...))
 
 ; Test that literal-type(f(x ...)) <: f:return-type(literal-type(x) ...)
 ; This does not test that f:return-type has the minimal width.
@@ -700,10 +701,10 @@
 ; _set_nth_
 ; ------------------------------------------------------------------------------
 
-(test-function (_set_nth_ (_array_ 10 20 30) 0 55) (_array_ 55 20 30))
-(test-function (_set_nth_ (_array_ 10 20 30) 1 55) (_array_ 10 55 30))
-(test-function (_set_nth_ (_array_ 10 20 30) 2 55) (_array_ 10 20 55))
-(test-function (_set_nth_ (_array_ 10 20 30) 0 55 2 66) (_array_ 55 20 66))
+(test-function (_set_nth_ (_array_ 10 20 30) 0 25)      (_array_ 25 20 30))
+(test-function (_set_nth_ (_array_ 10 20 30) 1 25)      (_array_ 10 25 30))
+(test-function (_set_nth_ (_array_ 10 20 30) 2 25)      (_array_ 10 20 25))
+(test-function (_set_nth_ (_array_ 10 20 30) 0 25 2 15) (_array_ 25 20 15))
 
 (test-function (_set_nth_ (_array_
                             (_array_ 10 20 30)
@@ -728,9 +729,9 @@
                  (_array_ 70 18 90)))
 
 
-(test-function/exn (_set_nth_ (_array_ 10 20 30) -1 55))
-(test-function/exn (_set_nth_ (_array_ 10 20 30)  3 55))
-(test-function/exn (_set_nth_ (_array_ 10 20 30) 'x 55))
+(test-function/exn (_set_nth_ (_array_ 10 20 30) -1 25))
+(test-function/exn (_set_nth_ (_array_ 10 20 30)  3 25))
+(test-function/exn (_set_nth_ (_array_ 10 20 30) 'x 25))
 
 (test-return-type (_set_nth_ (array 3 (unsigned 4)) (unsigned 2) (unsigned 3))
                   (array 3 (unsigned 4)))
@@ -762,12 +763,12 @@
 ; _set_field_
 ; ------------------------------------------------------------------------------
 
-(test-function (_set_field_ (_record_ 'x 10 'y 20) 'x 55)
-               (_record_ 'x 55 'y 20))
-(test-function (_set_field_ (_record_ 'x 10 'y 20) 'y 55)
-               (_record_ 'x 10 'y 55))
-(test-function (_set_field_ (_record_ 'x 10 'y 20 'z 30) 'x 55 'z 66)
-               (_record_ 'x 55 'y 20 'z 66))
+(test-function (_set_field_ (_record_ 'x 10 'y 20) 'x 5)
+               (_record_ 'x 5 'y 20))
+(test-function (_set_field_ (_record_ 'x 10 'y 20) 'y 15)
+               (_record_ 'x 10 'y 15))
+(test-function (_set_field_ (_record_ 'x 10 'y 20 'z 30) 'x 5 'z 25)
+               (_record_ 'x 5 'y 20 'z 25))
 
 (test-return-type (_set_field_ (record 'x (unsigned 4) 'y (unsigned 8))
                                (make-const-type 'x) (unsigned 3))

@@ -315,10 +315,10 @@
 ; Array assignment: x <- [=>]
 ; ------------------------------------------------------------------------------)
 
-(test-constant snth1 (pvector 55 20 30))
-(test-constant snth2 (pvector 10 55 30))
-(test-constant snth3 (pvector 10 20 55))
-(test-constant snth4 (pvector 55 20 66))
+(test-constant snth1 (pvector 25 20 30))
+(test-constant snth2 (pvector 10 25 30))
+(test-constant snth3 (pvector 10 20 25))
+(test-constant snth4 (pvector 25 20 15))
 (test-constant snth5 (pvector
                        (pvector 10 20 30)
                        (pvector 14 15 16)
@@ -346,9 +346,9 @@
 ; Record field assignment: <- (=>)
 ; ------------------------------------------------------------------------------
 
-(test-constant sfield1 #hash((x . 55) (y . 20)))
-(test-constant sfield2 #hash((x . 10) (y . 55)))
-(test-constant sfield3 #hash((x . 55) (y . 20) (z . 66)))
+(test-constant sfield1 #hash((x .  5) (y . 20)))
+(test-constant sfield2 #hash((x . 10) (y . 15)))
+(test-constant sfield3 #hash((x .  5) (y . 20) (z . 25)))
 
 ; ------------------------------------------------------------------------------
 ; Cast: as

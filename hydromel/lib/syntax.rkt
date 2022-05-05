@@ -127,7 +127,7 @@
   (define-syntax-class array-assoc
     #:literals [array-assoc]
     (pattern (array-assoc index ... expr)
-      #:attr (arg 1) (list #'(tuple-expr index ...) #'expr)))
+      #:attr (arg 1) (list (quasisyntax/loc this-syntax (tuple-expr index ...)) #'expr)))
 
   (define-syntax-class slice-assoc
     #:literals [slice-assoc range-expr]

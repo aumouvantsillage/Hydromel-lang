@@ -15,10 +15,11 @@
   raise-type-error)
 
 (define (syntax-read-from-source stx)
-  (with-input-from-file (syntax-source stx)
-    (thunk
-      (read-string (sub1 (syntax-position stx)))
-      (string-trim (read-string (syntax-span stx))))))
+  (with-handlers ([exn:fail:filesystem? (const "(No source)")])
+    (with-input-from-file (syntax-source stx)
+      (thunk
+        (read-string (sub1 (syntax-position stx)))
+        (string-trim (read-string (syntax-span stx)))))))
 
 (define (raise-semantic-error msg expr [subexpr #f])
   (if subexpr

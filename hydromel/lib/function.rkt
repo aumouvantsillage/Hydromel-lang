@@ -104,7 +104,7 @@
    #'(return-type-function cast? name (λ (arg ...) (fn-name arg ...)))])
 
 (define-syntax-parse-rule (define-return-type name fn)
-  #:with rt-name (format-id #'name "~a:return-type" #'name)
+  #:with rt-name (function-return-type-name #'name)
   (define rt-name (λ (stx . args)
                     (parameterize ([current-call-expr stx])
                       (apply fn args)))))

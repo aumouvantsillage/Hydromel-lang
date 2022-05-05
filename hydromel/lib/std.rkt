@@ -50,7 +50,10 @@
         ...
         [else els]))
 
-(define-return-type _if_ _if_:return-type*)
+; (define-return-type _if_ _if_:return-type*)
+
+(define (_if_:return-type stx . ts)
+  (apply _if_:return-type* ts))
 
 (define (_if_:return-type* . ts)
   (match ts
@@ -371,7 +374,7 @@
     (let loop ([ts (rest ts)] [n 1])
       (unless (empty? ts)
         (match-define (list tn tv txs ...) ts)
-        (define te (match tn
+        (define te (match (minimize tn)
                      [(tuple-type (list tns ...))
                       (for/fold ([te ta])
                                 ([t (in-list tns)])
@@ -380,8 +383,8 @@
                      [t
                       (assert-<: 'set_nth n t (integer))
                       (array-type-elt-type ta)]))
-        (assert-<: 'set_nth n tv te)
-        (loop txs (add1 n))))
+        (assert-<: 'set_nth (add1 n) tv te)
+        (loop txs (+ 2 n))))
     ta))
 
 (define-function _field_ dict-ref
@@ -517,7 +520,7 @@
     (define last-n (sub1 (length ts)))
     (for ([(t n) (in-indexed ts)])
       (assert-const 'array n t)
-      (assert-<:    'array n t (if (= n last-n) (integer) (type))))
+      (assert-<:    'array n t (if (= n last-n) (type) (integer))))
     (type)))
 
 (define-function record
