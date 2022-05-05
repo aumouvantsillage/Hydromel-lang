@@ -15,6 +15,7 @@
 (provide
   declare-function      define-function
   declare-function/cast define-function/cast
+  define-return-type
   current-call-expr)
 
 (begin-for-syntax
@@ -101,3 +102,9 @@
 
   [(_ cast? name (fn-name:id arg ...))
    #'(return-type-function cast? name (λ (arg ...) (fn-name arg ...)))])
+
+(define-syntax-parse-rule (define-return-type name fn)
+  #:with rt-name (format-id #'name "~a:return-type" #'name)
+  (define rt-name (λ (stx . args)
+                    (parameterize ([current-call-expr stx])
+                      (apply fn args)))))

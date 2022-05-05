@@ -50,7 +50,9 @@
         ...
         [else els]))
 
-(define (_if_:return-type . ts)
+(define-return-type _if_ _if_:return-type*)
+
+(define (_if_:return-type* . ts)
   (match ts
     [(list tc tt te ...)
      (match tc
@@ -58,11 +60,11 @@
        [(const-type v _)
         (if (int->bool v)
           tt
-          (apply _if_:return-type te))]
+          (apply _if_:return-type* te))]
        ; If the first condition is not static, return a union of the type of the first "then" clause
        ; and the type of the rest.
        [_
-        (union-type (list tt (apply _if_:return-type te)))])]
+        (union-type (list tt (apply _if_:return-type* te)))])]
     [(list te) te]))
 
 ; The Hydromel case statement is expanded to a call-expr to _case_.
@@ -75,26 +77,27 @@
           ...
           [else els^])))
 
-(define (_case_:return-type tx . ts)
-  (match tx
-    ; If the expression is static and true, inspect the cases for static choices.
-    [(const-type v _)
-     (apply _case_:return-type/static v ts)]
-    ; If the expression is not static, return a union of all target clauses.
-    [_
-     (define last-n (sub1 (length ts)))
-     (union-type (for/list ([(it n) (in-indexed ts)]
-                            #:when (or (odd? n) (= n last-n)))
-                   it))]))
+(define-return-type _case_
+  (λ (tx . ts)
+    (match tx
+      ; If the expression is static and true, inspect the cases for static choices.
+      [(const-type v _)
+       (apply _case_:return-type* v ts)]
+      ; If the expression is not static, return a union of all target clauses.
+      [_
+       (define last-n (sub1 (length ts)))
+       (union-type (for/list ([(it n) (in-indexed ts)]
+                              #:when (or (odd? n) (= n last-n)))
+                     it))])))
 
-(define (_case_:return-type/static v . ts)
+(define (_case_:return-type* v . ts)
   (match ts
     [(list tc tt te ...)
      ; If the expression value matches a static choice, return the corresponding type.
      (define tc^ (filter const-type? (tuple-type-elt-types tc)))
      (if (member v (map const-type-value tc^))
        tt
-       (apply _case_:return-type/static v te))]
+       (apply _case_:return-type* v te))]
     [(list te) te]))
 
 ; ------------------------------------------------------------------------------
@@ -425,31 +428,32 @@
 
 (define-syntax-parse-rule (_cast_ a b) b)
 
-(define (_cast_:return-type ta tb)
-  (assert-<: 'cast 0 ta (type))
-  (define ta^ (minimize (const-type-value ta)))
-  (define tr (match ta^
-               [(signed-type #f)
-                (assert-<: 'cast 1 tb (integer))
-                (define tb^ (minimize tb))
-                (match tb^
-                  [(signed-type   _) tb^]
-                  [(unsigned-type n) (signed-type n)])]
+(define-return-type _cast_
+  (λ (ta tb)
+    (assert-<: 'cast 0 ta (type))
+    (define ta^ (minimize (const-type-value ta)))
+    (define tr (match ta^
+                 [(signed-type #f)
+                  (assert-<: 'cast 1 tb (integer))
+                  (define tb^ (minimize tb))
+                  (match tb^
+                    [(signed-type   _) tb^]
+                    [(unsigned-type n) (signed-type n)])]
 
-               [(unsigned-type #f)
-                (assert-<: 'cast 1 tb (integer))
-                (define tb^ (minimize tb))
-                (match tb^
-                  [(signed-type   n) (unsigned-type n)]
-                  [(unsigned-type _) tb^])]
+                 [(unsigned-type #f)
+                  (assert-<: 'cast 1 tb (integer))
+                  (define tb^ (minimize tb))
+                  (match tb^
+                    [(signed-type   n) (unsigned-type n)]
+                    [(unsigned-type _) tb^])]
 
-               [_
-                ; TODO Add checks here.
-                ta^]))
-  ; Enforce the type of the result, even if it is a static value.
-  (match tb
-    [(const-type v _) (const-type (tr v) tr)]
-    [_                tr]))
+                 [_
+                  ; TODO Add checks here.
+                  ta^]))
+    ; Enforce the type of the result, even if it is a static value.
+    (match tb
+      [(const-type v _) (const-type (tr v) tr)]
+      [_                tr])))
 
 (define-function zero
   (λ (t)
