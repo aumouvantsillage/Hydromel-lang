@@ -22,7 +22,7 @@
             "register" "when" "record"
             (char-set ".:,()[]{}=+-*/<>_|"))
        (token lexeme (string->symbol lexeme))]
-      [(:seq alphabetic (:* (:or alphabetic numeric (char-set "_") "::")))
+      [(:seq (:or alphabetic "_") (:* (:or alphabetic numeric "_" "::")))
        (token 'ID (string->symbol lexeme))]
       [(:seq "~" (:+ (:or alphabetic numeric (char-set "_"))))
        (token 'SYMBOL (string->symbol lexeme))]
