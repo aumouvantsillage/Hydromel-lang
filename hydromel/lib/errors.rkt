@@ -5,7 +5,6 @@
 #lang racket
 
 (require
-  "types.rkt"
   racket/syntax-srcloc
   syntax/stx
   (only-in data/collection nth))
@@ -34,8 +33,8 @@
 (define (raise-type-error expr pos actual-type expected-type)
   (define subexpr (nth (stx->list expr) (+ 2 pos)))
   (raise-user-error 'ERROR "Incompatible type\n  expected: ~a\n  found: ~a\n  at: ~a\n  in: ~a\n  location: ~a"
-                    (type->string expected-type)
-                    (type->string actual-type)
+                    expected-type
+                    actual-type
                     (syntax-read-from-source subexpr)
                     (syntax-read-from-source expr)
                     (srcloc->string (syntax-srcloc subexpr))))

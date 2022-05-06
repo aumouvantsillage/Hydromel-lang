@@ -13,11 +13,13 @@
   "slot.rkt"
   "std.rkt"
   "types.rkt"
+  "function.rkt"
   (for-syntax
     racket/match
     racket/syntax
     racket/function
     racket/dict
+    racket/list
     syntax/stx))
 
 (provide
@@ -75,8 +77,6 @@
 ; or whether it appears at the module level.
 (define-syntax-parameter in-design-unit #f)
 
-(define-syntax-parameter current-call-expr #f)
-
 ; An interface or a component expands to a constructor function
 ; that returns a hash-map with public or debug data.
 ; Interfaces and components differ by the element types they are allowed
@@ -117,17 +117,15 @@
     (type-check name)))
 
 (define-syntax-parse-rule (typedef name ((~literal parameter) param-name param-type) ... expr)
-  #:with (arg-name   ...) (generate-temporaries (attribute param-name))
-  #:with rtype-name (format-id #'name "~a:return-type" #'name)
   (begin
-    (provide name rtype-name)
-    (define (name arg-name ...)
-      (define-parameter-slot param-name arg-name param-type) ...
-      expr)
-    (define (rtype-name arg-name ...)
-      ; TODO Type checking should happen here.
-      ; TODO Is is relevant to return a const-type?
-      (make-const-type (name (const-type-value arg-name) ...)))))
+    (provide name)
+    (define (name param-name ...) expr)
+    (define-return-type name
+      (λ (param-name ...)
+        (assert-const 0 param-name) ...
+        (assert-<:    0 param-name param-type) ...
+        ; TODO Is is relevant to return a const-type?
+        (make-const-type (name (const-type-value param-name) ...))))))
 
 ; A constant infers its type immediately before computing its value.
 ; Here, we benefit from the fact that expression-type will return a

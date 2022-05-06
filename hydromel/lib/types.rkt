@@ -8,7 +8,8 @@
   racket/hash
   (only-in data/collection length)
   data/pvector
-  "numeric.rkt")
+  "numeric.rkt"
+  "errors.rkt")
 
 (provide
   (struct-out any-type)
@@ -17,7 +18,8 @@
   (struct-out range-type) (struct-out symbol-type) (struct-out boolean-type)
   (struct-out subtype-type) (struct-out const-type)
   minimize resize type->string <:
-  type-of make-const-type common-supertype)
+  type-of make-const-type common-supertype
+  current-call-expr assert-<: assert-const)
 
 ; A data type can be used as a conversion function.
 ; The default behavior is to return the given data unchanged.
@@ -228,3 +230,14 @@
                                                   s)))]
     [(symbol-type s)     (format "~~~a" s)]
     [_                   (format "~v" t^)]))
+
+
+(define current-call-expr (make-parameter #f))
+
+(define (assert-<: pos t u)
+  (unless (<: t u)
+    (raise-type-error (current-call-expr) pos (type->string t) (type->string u))))
+
+(define (assert-const pos t)
+  (unless (const-type? t)
+    (raise-argument-error 'ERROR "constant value" pos (type->string t))))

@@ -7,7 +7,6 @@
 (require
   "function.rkt"
   "types.rkt"
-  "errors.rkt"
   (only-in "numeric.rkt"
     min-unsigned-width min-signed-width
     min-signed-value   max-signed-value
@@ -20,14 +19,6 @@
     nth set-nth)
   data/pvector)
 
-(define (assert-<: name pos t u)
-  (unless (<: t u)
-    (raise-type-error (current-call-expr) pos t u)))
-
-(define (assert-const name pos t)
-  (unless (const-type? t)
-    (raise-argument-error name "constant value" pos (type->string t))))
-
 ; ------------------------------------------------------------------------------
 ; Conditionals.
 ; ------------------------------------------------------------------------------
@@ -39,7 +30,7 @@
   (λ (a)
     (not (zero? a)))
   (λ (ta)
-    (assert-<: 'int->bool 0 ta (integer))
+    (assert-<: 0 ta (integer))
     (boolean-type)))
 
 ; The Hydromel if statement is expanded to a call-expr to _if_.
@@ -111,13 +102,13 @@
 
 (define-function/cast _not_ bitwise-not
   (λ (t)
-    (assert-<: 'not 0 t (integer))
+    (assert-<: 0 t (integer))
     t))
 
 (define-function _and_ bitwise-and
   (λ (ta tb)
-    (assert-<: 'and 0 ta (integer))
-    (assert-<: 'and 1 tb (integer))
+    (assert-<: 0 ta (integer))
+    (assert-<: 1 tb (integer))
     (match (list (minimize ta) (minimize tb))
       [(list (signed-type            na) (signed-type           nb)) (signed-type   (max na nb))]
       [(list (unsigned-type          na) (abstract-integer-type nb)) (unsigned-type (max na nb))]
@@ -125,8 +116,8 @@
 
 (define-function _or_  bitwise-ior
   (λ (ta tb)
-    (assert-<: 'or 0 ta (integer))
-    (assert-<: 'or 1 tb (integer))
+    (assert-<: 0 ta (integer))
+    (assert-<: 1 tb (integer))
     (match (list (minimize ta) (minimize tb))
       [(list (unsigned-type         na) (unsigned-type          nb)) (unsigned-type (max na nb))]
       [(list (signed-type           na) (abstract-integer-type  nb)) (signed-type   (max na nb))]
@@ -134,8 +125,8 @@
 
 (define-function _xor_ bitwise-xor
   (λ (ta tb)
-    (assert-<: 'xor 0 ta (integer))
-    (assert-<: 'xor 1 tb (integer))
+    (assert-<: 0 ta (integer))
+    (assert-<: 1 tb (integer))
     (match (list (minimize ta) (minimize tb))
       [(list (unsigned-type na) (unsigned-type nb)) (unsigned-type (max na nb))]
       [(list (signed-type   na) (unsigned-type nb)) (signed-type   (max na (add1 nb)))]
@@ -150,7 +141,7 @@
 ; as an unsigned integer.
 (define-function unsigned_width min-unsigned-width
   (λ (t)
-    (assert-<: 'unsigned_width 0 t (integer))
+    (assert-<: 0 t (integer))
     (~>> t
          minimize
          abstract-integer-type-width
@@ -160,7 +151,7 @@
 ; as an signed integer.
 (define-function signed_width min-signed-width
   (λ (t)
-    (assert-<: 'signed_width 0 t (integer))
+    (assert-<: 0 t (integer))
     (match (minimize t)
       [(signed-type   n) (type-of n)]
       [(unsigned-type n) (type-of (add1 n))])))
@@ -176,42 +167,42 @@
 
 (define-function _>_
   (λ (a b) (if (> a b) 1 0))
-  (λ (ta tb) (comparison-return-type '> ta tb)))
+  (λ (ta tb) (comparison-return-type ta tb)))
 
 (define-function _<_
   (λ (a b) (if (< a b) 1 0))
-  (λ (ta tb) (comparison-return-type '< ta tb)))
+  (λ (ta tb) (comparison-return-type ta tb)))
 
 (define-function _>=_
   (λ (a b) (if (>= a b) 1 0))
-  (λ (ta tb) (comparison-return-type '>= ta tb)))
+  (λ (ta tb) (comparison-return-type ta tb)))
 
 (define-function _<=_
   (λ (a b) (if (<= a b) 1 0))
-  (λ (ta tb) (comparison-return-type '<= ta tb)))
+  (λ (ta tb) (comparison-return-type ta tb)))
 
-(define (comparison-return-type name ta tb)
-  (assert-<: name 0 ta (integer))
-  (assert-<: name 1 tb (integer))
+(define (comparison-return-type ta tb)
+  (assert-<: 0 ta (integer))
+  (assert-<: 1 tb (integer))
   (unsigned-type 1))
 
 ; Use the built-in arithmetic operators.
 (define-function _+_ +
-  (λ (ta tb) (add-sub-return-type '+ ta tb)))
+  (λ (ta tb) (add-sub-return-type ta tb)))
 
 (define-function _-_ -
-  (λ (ta tb) (add-sub-return-type '- ta tb)))
+  (λ (ta tb) (add-sub-return-type ta tb)))
 
-(define (add-sub-return-type name ta tb)
-  (assert-<: name 0 ta (integer))
-  (assert-<: name 1 tb (integer))
+(define (add-sub-return-type ta tb)
+  (assert-<: 0 ta (integer))
+  (assert-<: 1 tb (integer))
   (define tr (minimize (common-supertype ta tb)))
   (resize tr (add1 (abstract-integer-type-width tr))))
 
 (define-function _*_ *
   (λ (ta tb)
-    (assert-<: '* 0 ta (integer))
-    (assert-<: '* 1 tb (integer))
+    (assert-<: 0 ta (integer))
+    (assert-<: 1 tb (integer))
     (match (list (minimize ta) (minimize tb))
       [(list (unsigned-type         na) (unsigned-type         nb)) (unsigned-type (+ na nb))]
       [(list (abstract-integer-type na) (signed-type           nb)) (signed-type   (+ na nb))]
@@ -219,8 +210,8 @@
 
 (define-function _/_ quotient
   (λ (ta tb)
-    (assert-<: '/ 0 ta (integer))
-    (assert-<: '/ 1 tb (integer))
+    (assert-<: 0 ta (integer))
+    (assert-<: 1 tb (integer))
     (match (list (minimize ta) (minimize tb))
       [(list ta^                        (unsigned-type _)) ta^]
       [(list (abstract-integer-type na) (signed-type   _)) (signed-type (add1 na))])))
@@ -228,7 +219,7 @@
 (define-function _neg_
   (λ (a) (- a))
   (λ (ta)
-    (assert-<: '- 0 ta (integer))
+    (assert-<: 0 ta (integer))
     (~>> ta
          minimize
          abstract-integer-type-width
@@ -237,8 +228,8 @@
 
 (define-function _<<_ arithmetic-shift
   (λ (ta tb)
-    (assert-<: '<< 0 ta (integer))
-    (assert-<: '<< 1 tb (integer))
+    (assert-<: 0 ta (integer))
+    (assert-<: 1 tb (integer))
     (define ta^ (minimize ta))
     (define na (abstract-integer-type-width ta^))
     (match tb
@@ -250,8 +241,8 @@
   (λ (a b)
     (arithmetic-shift a (- b)))
   (λ (ta tb)
-    (assert-<: '>> 0 ta (integer))
-    (assert-<: '>> 1 tb (integer))
+    (assert-<: 0 ta (integer))
+    (assert-<: 1 tb (integer))
     (define ta^ (minimize ta))
     (define na (abstract-integer-type-width ta^))
     (match tb
@@ -267,8 +258,8 @@
       (range a (add1 b))
       (range a (sub1 b) -1)))
   (λ (ta tb)
-    (assert-<: 'range 0 ta (integer))
-    (assert-<: 'range 1 tb (integer))
+    (assert-<: 0 ta (integer))
+    (assert-<: 1 tb (integer))
     (range-type (common-supertype ta tb))))
 
 ; The slicing operation defaults to the unsigned version.
@@ -276,9 +267,9 @@
 ; a conversion to the type returned by the return-type.
 (define-function/cast _slice_ unsigned-slice
   (λ (ta tb tc)
-    (assert-<: 'slice 0 ta (integer))
-    (assert-<: 'slice 1 tb (integer))
-    (assert-<: 'slice 2 tc (integer))
+    (assert-<: 0 ta (integer))
+    (assert-<: 1 tb (integer))
+    (assert-<: 2 tc (integer))
     (define left (match tb
                    [(const-type n _) n]
                    [(unsigned-type   n) (max-unsigned-value n)]
@@ -297,7 +288,7 @@
         [_                   res])))
   (λ ts
     (for ([(t n) (in-indexed ts)])
-      (assert-<: 'set_slice n t (integer)))
+      (assert-<: n t (integer)))
     (first ts)))
 
 ; The binary concatenetion operation defaults to the unsigned version.
@@ -311,7 +302,7 @@
       (let loop ([res empty] [lst vs])
         (match lst
           [(list h ... v t)
-           (assert-<: 'concat (length res) t (integer))
+           (assert-<: (length res) t (integer))
            (define l (~>> t
                           minimize
                           abstract-integer-type-width
@@ -321,7 +312,7 @@
   (λ ts
     (define ts^ (for/list ([(t n) (in-indexed ts)] #:when (odd? n))
                   (define t^ (const-type-value t))
-                  (assert-<: 'concat (/ (sub1 n) 2) t^ (integer))
+                  (assert-<: (/ (sub1 n) 2) t^ (integer))
                   (minimize t^)))
     (define w (for/sum ([it (in-list ts^)])
                 (abstract-integer-type-width it)))
@@ -353,8 +344,8 @@
   (λ ts
     (for/fold ([res (first ts)])
               ([(t n) (in-indexed (rest ts))])
-      (assert-<: 'nth n res (array 0 (any)))
-      (assert-<: 'nth (add1 n) t (integer))
+      (assert-<: n res (array 0 (any)))
+      (assert-<: (add1 n) t (integer))
       (array-type-elt-type (minimize res)))))
 
 (define (set-nth/multi arr ns v)
@@ -369,7 +360,7 @@
         [(list n v xs ...) (loop (set-nth/multi res n v) xs)]
         [_                 res])))
   (λ ts
-    (assert-<: 'set_nth 0 (first ts) (array 0 (any)))
+    (assert-<: 0 (first ts) (array 0 (any)))
     (define ta (minimize (first ts)))
     (let loop ([ts (rest ts)] [n 1])
       (unless (empty? ts)
@@ -378,19 +369,19 @@
                      [(tuple-type (list tns ...))
                       (for/fold ([te ta])
                                 ([t (in-list tns)])
-                        (assert-<: 'set_nth n t (integer))
+                        (assert-<: n t (integer))
                         (array-type-elt-type te))]
                      [t
-                      (assert-<: 'set_nth n t (integer))
+                      (assert-<: n t (integer))
                       (array-type-elt-type ta)]))
-        (assert-<: 'set_nth (add1 n) tv te)
+        (assert-<: (add1 n) tv te)
         (loop txs (+ 2 n))))
     ta))
 
 (define-function _field_ dict-ref
   (λ (ta tb)
-    (assert-<: 'field 0 ta (record))
-    (assert-<: 'field 1 tb (symbol-type #f))
+    (assert-<: 0 ta (record))
+    (assert-<: 1 tb (symbol-type #f))
     (define ta^ (minimize ta))
     (define tb^ (minimize tb))
     (define field-name (symbol-type-value tb^))
@@ -404,16 +395,16 @@
         [(list k v r ...) (loop (dict-set res k v) r)]
         [_                res])))
   (λ ts
-    (assert-<: 'set_field 0 (first ts) (record))
+    (assert-<: 0 (first ts) (record))
     (define ta (minimize (first ts)))
     (let loop ([n 1] [kvs (rest ts)])
       (match kvs
         [(list tk tv tr ...)
-         (assert-<: 'set_field 1 tk (symbol-type #f))
+         (assert-<: 1 tk (symbol-type #f))
          (define field-name (symbol-type-value (minimize tk)))
          (define tf (dict-ref (record-type-fields ta) field-name
                       (thunk (error "Unknown field" field-name))))
-         (assert-<: 'set_field (add1 n) tv tf)
+         (assert-<: (add1 n) tv tf)
          (loop (+ 2 n) tr)]
         [_ ta]))))
 
@@ -433,18 +424,18 @@
 
 (define-return-type _cast_
   (λ (ta tb)
-    (assert-<: 'cast 0 ta (type))
+    (assert-<: 0 ta (type))
     (define ta^ (minimize (const-type-value ta)))
     (define tr (match ta^
                  [(signed-type #f)
-                  (assert-<: 'cast 1 tb (integer))
+                  (assert-<: 1 tb (integer))
                   (define tb^ (minimize tb))
                   (match tb^
                     [(signed-type   _) tb^]
                     [(unsigned-type n) (signed-type n)])]
 
                  [(unsigned-type #f)
-                  (assert-<: 'cast 1 tb (integer))
+                  (assert-<: 1 tb (integer))
                   (define tb^ (minimize tb))
                   (match tb^
                     [(signed-type   n) (unsigned-type n)]
@@ -470,7 +461,7 @@
       [(symbol-type s)           s]
       [_ (error "This type does not support a zero value" t)]))
   (λ (t)
-    (assert-<: 'zero 0 t (type))
+    (assert-<: 0 t (type))
     (const-type-value t)))
 
 ; ------------------------------------------------------------------------------
@@ -483,14 +474,14 @@
 
 (define-function signed signed-type
   (λ (t)
-    (assert-const 'signed 0 t)
-    (assert-<:    'signed 0 t (integer))
+    (assert-const 0 t)
+    (assert-<:    0 t (integer))
     (type)))
 
 (define-function unsigned unsigned-type
   (λ (t)
-    (assert-const 'unsigned 0 t)
-    (assert-<:    'signed   0 t (integer))
+    (assert-const 0 t)
+    (assert-<:    0 t (integer))
     (type)))
 
 (define-function tuple
@@ -498,8 +489,8 @@
     (tuple-type args))
   (λ ts
     (for ([(t n) (in-indexed ts)])
-      (assert-const 'tuple n t)
-      (assert-<:    'tuple n t (type)))
+      (assert-const n t)
+      (assert-<:    n t (type)))
     (type)))
 
 (define-function union
@@ -507,8 +498,8 @@
     (union-type args))
   (λ ts
     (for ([(t n) (in-indexed ts)])
-      (assert-const 'union n t)
-      (assert-<:    'union n t (type)))
+      (assert-const n t)
+      (assert-<:    n t (type)))
     (type)))
 
 (define-function array
@@ -519,8 +510,8 @@
   (λ ts
     (define last-n (sub1 (length ts)))
     (for ([(t n) (in-indexed ts)])
-      (assert-const 'array n t)
-      (assert-<:    'array n t (if (= n last-n) (type) (integer))))
+      (assert-const n t)
+      (assert-<:    n t (if (= n last-n) (type) (integer))))
     (type)))
 
 (define-function record
@@ -528,8 +519,8 @@
     (record-type (apply hash args)))
   (λ ts
     (for ([(t n) (in-indexed ts)])
-      (assert-const 'record n t)
-      (assert-<:    'record n t (if (even? n) (symbol-type #f) (type))))
+      (assert-const n t)
+      (assert-<:    n t (if (even? n) (symbol-type #f) (type))))
     (type)))
 
 (define-function type
@@ -556,6 +547,6 @@
     (union-type (map symbol-type args)))
   (λ ts
     (for ([(t n) (in-indexed ts)])
-      (assert-const 'enumeration n t)
-      (assert-<:    'enumeration n t (symbol-type #f)))
+      (assert-const n t)
+      (assert-<:    n t (symbol-type #f)))
     (type)))

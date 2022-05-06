@@ -49,18 +49,18 @@
   (check-equal? (slot-type (dict-ref c0-inst 'x)) (signed  30)))
 
 (interface I1
-  (data-port x in  (call-expr signed  (literal-expr 32)))
-  (data-port y out (call-expr signed  (literal-expr 32))))
+  (data-port x in  (call-expr signed (literal-expr 32)))
+  (data-port y out (call-expr signed (literal-expr 32))))
 
 (interface I2
-  (data-port z in (call-expr signed  (literal-expr 32)))
+  (data-port z in (call-expr signed (literal-expr 32)))
   (composite-port i () I1)
-  (data-port u out (call-expr signed  (literal-expr 32))))
+  (data-port u out (call-expr signed (literal-expr 32))))
 
 (interface I3
-  (data-port v in (call-expr signed  (literal-expr 32)))
+  (data-port v in (call-expr signed (literal-expr 32)))
   (composite-port j () I2)
-  (data-port w out (call-expr signed  (literal-expr 32))))
+  (data-port w out (call-expr signed (literal-expr 32))))
 
 (define i2-inst (I2))
 (define i3-inst (I3))
@@ -599,8 +599,8 @@
 (test-case "Can make an 2D array comprehension with index dependencies using an array composite port"
   (check-sig-equal? (instance-ref c29-inst 'y) (signal #(3 2 1 0 2 1 0 2 1 1) #(3 2 1 0 3 2 1 2 1 0) #(4 3 2 1 3 2 1 1 0 0)) 3))
 
-(typedef word (call-expr unsigned  (literal-expr 32)))
-(typedef utwice (parameter n (call-expr natural)) (call-expr unsigned  (call-expr _*_ (name-expr n) (literal-expr 2))))
+(typedef word (call-expr unsigned (literal-expr 32)))
+(typedef utwice (parameter n (call-expr natural)) (call-expr unsigned (call-expr _*_ (name-expr n) (literal-expr 2))))
 
 (component C30
   (data-port x in (call-expr word))
