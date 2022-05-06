@@ -209,10 +209,12 @@ end
 
 component test_any_is_not_subtype_integer
     port y : out rec_xTyU(any, unsigned(4))
-    constant K = rec_xTyU(any, unsigned(4)) # TODO remove this
 end
 
 component test_any_is_not_subtype_natural
     port y : out rec_xTyU(signed(4), any)
-    constant K = rec_xTyU(signed(4), any) # TODO remove this
+end
+
+component test_port_type_is_not_a_type
+    port y : out _xor_(5, 6)
 end

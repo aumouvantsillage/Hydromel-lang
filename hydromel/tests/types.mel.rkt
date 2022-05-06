@@ -8,40 +8,43 @@
   rackunit
   "types.mel")
 
-(test-not-exn "integer <: any"             test_integer_is_any)
-(test-exn     "any /<: integer"  exn:fail? test_any_is_not_integer)
+(define-syntax-rule (test-usr-exn arg ... fn)
+  (test-exn arg ... exn:fail:user? fn))
 
-(test-not-exn "natural <: integer"         test_natural_is_integer)
+(test-not-exn "integer <: any"  test_integer_is_any)
+(test-usr-exn "any /<: integer" test_any_is_not_integer)
 
-(test-not-exn "signed(32) <: integer"                test_signed32_is_integer)
-(test-not-exn "signed(31) <: signed(32)"             test_signed31_is_signed32)
-(test-exn     "signed(32) /<: signed(31)"  exn:fail? test_signed32_is_not_signed31)
+(test-not-exn "natural <: integer" test_natural_is_integer)
 
-(test-not-exn "unsigned(32) <: natural"                  test_unsigned32_is_natural)
-(test-not-exn "unsigned(31) <: unsigned(32)"             test_unsigned31_is_unsigned32)
-(test-exn     "unsigned(32) /<: unsigned(31)"  exn:fail? test_unsigned32_is_not_unsigned31)
+(test-not-exn "signed(32) <: integer"     test_signed32_is_integer)
+(test-not-exn "signed(31) <: signed(32)"  test_signed31_is_signed32)
+(test-usr-exn "signed(32) /<: signed(31)" test_signed32_is_not_signed31)
 
-(test-not-exn "unsigned(31) <: signed(32)"            test_unsigned31_is_signed32)
-(test-exn     "unsigned(32) /<: signed(32)" exn:fail? test_unsigned32_is_not_signed32)
-(test-exn     "signed(32) /<: unsigned(32)" exn:fail? test_signed32_is_not_unsigned32)
-(test-exn     "signed(1) /<: unsigned(32)"  exn:fail? test_signed1_is_not_unsigned32)
+(test-not-exn "unsigned(32) <: natural"       test_unsigned32_is_natural)
+(test-not-exn "unsigned(31) <: unsigned(32)"  test_unsigned31_is_unsigned32)
+(test-usr-exn "unsigned(32) /<: unsigned(31)" test_unsigned32_is_not_unsigned31)
 
-(test-not-exn "15 : unsigned(4)"            test_15_is_unsigned4)
-(test-not-exn "0 : unsigned(4)"             test_0_is_unsigned4)
-(test-exn     "-1 /: unsigned(4)" exn:fail? test_minus1_is_not_unsigned4)
-(test-exn     "16 /: unsigned(4)" exn:fail? test_16_is_not_unsigned4)
+(test-not-exn "unsigned(31) <: signed(32)"  test_unsigned31_is_signed32)
+(test-usr-exn "unsigned(32) /<: signed(32)" test_unsigned32_is_not_signed32)
+(test-usr-exn "signed(32) /<: unsigned(32)" test_signed32_is_not_unsigned32)
+(test-usr-exn "signed(1) /<: unsigned(32)"  test_signed1_is_not_unsigned32)
 
-(test-not-exn "-8 : signed(4)"            test_minus8_is_signed4)
-(test-not-exn "7 : signed(4)"             test_7_is_signed4)
-(test-exn     "8 /: signed(4)"  exn:fail? test_8_is_not_signed4)
-(test-exn     "-9 /: signed(4)" exn:fail? test_minus9_is_not_signed4)
+(test-not-exn "15 : unsigned(4)"  test_15_is_unsigned4)
+(test-not-exn "0 : unsigned(4)"   test_0_is_unsigned4)
+(test-usr-exn "-1 /: unsigned(4)" test_minus1_is_not_unsigned4)
+(test-usr-exn "16 /: unsigned(4)" test_16_is_not_unsigned4)
 
-(test-not-exn "array(4, unsigned(8)) <: array(3, unsigned(8))"            test_array4_is_array3)
-(test-exn     "array(4, unsigned(8)) /<: array(5, unsigned(8))" exn:fail? test_array4_is_not_array5)
-(test-not-exn "array(4, unsigned(8)) <: array(4, unsigned(9))"            test_array_of_unsigned8_is_array_of_unsigned9)
-(test-exn     "array(4, unsigned(8)) /<: array(4, unsigned(7))" exn:fail? test_array_of_unsigned8_is_not_array_of_unsigned7)
-(test-not-exn "array(4, unsigned(8)) <: array(3, unsigned(9))"            test_array4_of_unsigned8_is_array3_of_unsigned9)
-(test-exn     "array(4, unsigned(8)) /<: array(5, unsigned(7))" exn:fail? test_array4_of_unsigned8_is_not_array5_of_unsigned7)
+(test-not-exn "-8 : signed(4)"  test_minus8_is_signed4)
+(test-not-exn "7 : signed(4)"   test_7_is_signed4)
+(test-usr-exn "8 /: signed(4)"  test_8_is_not_signed4)
+(test-usr-exn "-9 /: signed(4)" test_minus9_is_not_signed4)
+
+(test-not-exn "array(4, unsigned(8)) <: array(3, unsigned(8))"  test_array4_is_array3)
+(test-usr-exn "array(4, unsigned(8)) /<: array(5, unsigned(8))" test_array4_is_not_array5)
+(test-not-exn "array(4, unsigned(8)) <: array(4, unsigned(9))"  test_array_of_unsigned8_is_array_of_unsigned9)
+(test-usr-exn "array(4, unsigned(8)) /<: array(4, unsigned(7))" test_array_of_unsigned8_is_not_array_of_unsigned7)
+(test-not-exn "array(4, unsigned(8)) <: array(3, unsigned(9))"  test_array4_of_unsigned8_is_array3_of_unsigned9)
+(test-usr-exn "array(4, unsigned(8)) /<: array(5, unsigned(7))" test_array4_of_unsigned8_is_not_array5_of_unsigned7)
 
 (test-not-exn "tuple(unsigned(16), array(4, unsigned(8))) <: tuple(unsigned(32), array(3, unsigned(9)))"
               test_tuple_u16_a4u8_is_tuple_u32_a3u9)
@@ -51,11 +54,13 @@
 ; TODO record
 
 (test-not-exn "union(signed(8), unsigned(16), unsigned(32)) <: signed(33)"    test_union_s8_u16_u32_is_signed33)
-(test-exn     "union(signed(8), unsigned(16), unsigned(32)) /<: unsigned(32)" exn:fail? test_union_s8_u16_u32_is_not_unsigned32)
+(test-usr-exn "union(signed(8), unsigned(16), unsigned(32)) /<: unsigned(32)" test_union_s8_u16_u32_is_not_unsigned32)
 (test-not-exn "unsigned(32) <: union(signed(8), unsigned(16), unsigned(32))"  test_unsigned32_is_union_s8_u16_u32)
 (test-not-exn "signed(8) <: union(signed(8), unsigned(16), unsigned(32))"     test_signed8_is_union_s8_u16_u32)
 (test-not-exn "~b : enumeration(~a, ~b, ~c)"                                  test_sym_b_is_enum_a_b_c)
 
 (test-not-exn "signed(32) : subtype(integer)" test_signed32_is_subtype_integer)
-(test-exn     "any /: subtype(integer)" exn:fail? test_any_is_not_subtype_integer)
-(test-exn     "any /: subtype(natural)" exn:fail? test_any_is_not_subtype_natural)
+(test-usr-exn "any /: subtype(integer)"       test_any_is_not_subtype_integer)
+(test-usr-exn "any /: subtype(natural)"       test_any_is_not_subtype_natural)
+
+(test-usr-exn "(5 xor 6) /: type" test_port_type_is_not_a_type)
