@@ -159,8 +159,15 @@
 ; The slot is relevant for input ports because they are assigned from outside
 ; the current component instance.
 ; We use a slot for output ports as well to keep a simple port access mechanism.
-(define-syntax-parse-rule (data-port name _ type)
-  (define name (make-slot #f type)))
+(define-syntax-parse-rule (data-port name _ type-expr)
+  #:with stx this-syntax
+  (begin
+    (typing-functions type-expr)
+    (splicing-let ([t (expression-type type-expr)])
+      (parameterize ([current-call-expr #'stx])
+        (assert-const 1 t)
+        (assert-<:    1 t (type)))
+      (define name (make-slot #f (const-type-value t))))))
 
 (define-syntax-parser local-signal-slot
   [(_ expr)
