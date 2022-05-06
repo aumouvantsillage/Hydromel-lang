@@ -7,6 +7,7 @@
 (require
   racket/syntax-srcloc
   syntax/stx
+  syntax/parse
   (only-in data/collection nth))
 
 (provide
@@ -19,6 +20,17 @@
       (thunk
         (read-string (sub1 (syntax-position stx)))
         (string-trim (read-string (syntax-span stx)))))))
+
+; TODO Offset can be wrong when checking a type instead of an expression
+(define (offset stx)
+  (syntax-parse stx
+    #:datum-literals [call-expr data-port parameter constant local-signal]
+    [(call-expr    _ ...) 2]
+    [(data-port    _ ...) 3]
+    [(parameter    _ ...) 1]
+    [(constant     _ ...) 2]
+    [(local-signal _ _)   2]
+    [(local-signal _ _ _) 3]))
 
 (define (raise-semantic-error msg expr [subexpr #f])
   (if subexpr
@@ -34,7 +46,8 @@
                       (srcloc->string (syntax-srcloc expr)))))
 
 (define (raise-type-error expr pos actual-type expected-type)
-  (define subexpr (nth (stx->list expr) (+ 2 pos)))
+  (displayln expr)
+  (define subexpr (nth (stx->list expr) (+ pos (offset expr))))
   (raise-user-error 'ERROR "Incompatible type\n  expected: ~a\n  found: ~a\n  at: ~a\n  in: ~a\n  location: ~a"
                     expected-type
                     actual-type

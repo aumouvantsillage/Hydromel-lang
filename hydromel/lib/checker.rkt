@@ -256,7 +256,7 @@
        #:with expr (check-assigned-expr (check #'s.expr))
        (if (attribute s.type)
          (syntax-parse (check #'s.type)
-           [type (s/l (local-signal s.name type expr))])
+           [type (syntax/loc #'s (local-signal s.name type expr))])
          (s/l (local-signal s.name expr)))]
 
       [s:stx/assignment

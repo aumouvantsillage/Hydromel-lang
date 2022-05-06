@@ -108,12 +108,13 @@
 
 (define-syntax-parse-rule (define-parameter-slot param arg-name)
   #:with (_ param-name param-type) #'param
-  (begin
-    (define param-name (make-slot #'param arg-name (const-type arg-name param-type) (thunk (make-const-type arg-name))))
+  (assert-type t param param-type
+    (define param-name (make-slot #'param arg-name (const-type arg-name t) (thunk (make-const-type arg-name))))
     (type-check param-name)))
 
-(define-syntax-parse-rule (typedef name ((~literal parameter) param-name param-type) ... expr)
+(define-syntax-parse-rule (typedef name (~and param ((~literal parameter) param-name param-type)) ... expr)
   (begin
+    (assert-type t param param-type) ...
     (provide name)
     (define (name param-name ...) expr)
     (define-return-type name
@@ -153,30 +154,38 @@
 (define-syntax-parse-rule (alias name port-name)
   (define name (dict-ref port-name 'name)))
 
+(define-syntax-parse-rule (assert-type target stx type-expr body ...)
+  (begin
+    (typing-functions type-expr)
+    (splicing-let ([t (expression-type type-expr)])
+      (parameterize ([current-call-expr #'stx])
+        (assert-const 0 t)
+        (assert-<:    0 t (type)))
+      (splicing-let ([target (const-type-value t)])
+        body ...))))
+
 ; A data port expands to a variable containing an empty slot.
 ; The slot is relevant for input ports because they are assigned from outside
 ; the current component instance.
 ; We use a slot for output ports as well to keep a simple port access mechanism.
 (define-syntax-parse-rule (data-port name _ type-expr)
   #:with stx this-syntax
-  (begin
-    (typing-functions type-expr)
-    (splicing-let ([t (expression-type type-expr)])
-      (parameterize ([current-call-expr #'stx])
-        (assert-const 1 t)
-        (assert-<:    1 t (type)))
-      (define name (make-slot #'stx #f (const-type-value t))))))
+  (assert-type t stx type-expr
+    (define name (make-slot #'stx #f t))))
 
 ; A local signal expands to a variable containing the result of the given
 ; expression in a slot.
 ; Like output ports, local signals do not need to be wrapped in a slot, but
 ; it helps expanding expressions without managing several special cases.
-(define-syntax-parse-rule (local-signal name (~optional type) expr)
-  #:with stx this-syntax
-  #:with type^ (or (attribute type) #'#f)
-  (begin
-    (typing-functions expr)
-    (define name (make-slot #'stx expr type^ (typer-for expr)))))
+(define-syntax-parser local-signal
+  [(_ name expr)
+   #'(begin
+       (typing-functions expr)
+       (define name (make-slot #f expr #f (typer-for expr))))]
+  [(~and (_ name type-expr expr) sig)
+   #'(assert-type t sig type-expr
+       (typing-functions expr)
+       (define name (make-slot #'sig expr t (typer-for expr))))])
 
 ; A composite port expands to a variable that stores the result of a constructor
 ; call for the corresponding interface.
@@ -220,10 +229,9 @@
                      [else else-body])))
 
 (define-syntax-parse-rule (for-statement name iter-name iter-expr body ...)
-  #:with stx this-syntax
   #:with iter-name^ (generate-temporary #'iter-name)
   (define name (for/vector ([iter-name^ (in-list iter-expr)])
-                 (define iter-name (make-slot #'stx iter-name^ (make-const-type iter-name^)))
+                 (define iter-name (make-slot #f iter-name^ (make-const-type iter-name^)))
                  body ...)))
 
 ; A statement block executes statements and returns a hash map that exposes
@@ -498,10 +506,9 @@
 
 (define (type-check inst)
   (match inst
-    [(slot stx _ t _) #:when t
+    [(slot stx _ t _) #:when (and stx t)
      (define u (slot-type* inst))
      (unless (<: u t)
-       ; TODO Set correct pos
        (raise-type-error stx 0 (type->string u) (type->string t)))]
 
     [(hash-table ('* _) (_ vs) ...)
