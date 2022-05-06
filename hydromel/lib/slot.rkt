@@ -16,10 +16,10 @@
 
 ; A slot contains a value and a function that computes its type.
 ; In most cases, use make-slot to construct a slot instance.
-(struct slot (data declared-type typer) #:mutable #:transparent)
+(struct slot (stx data declared-type typer) #:mutable #:transparent)
 
-(define (make-slot data declared-type [actual-typer #f])
-  (slot data declared-type (make-slot-typer declared-type actual-typer)))
+(define (make-slot stx data declared-type [actual-typer #f])
+  (slot stx data declared-type (make-slot-typer declared-type actual-typer)))
 
 (define (make-slot-typer default-type actual-typer)
   (if actual-typer

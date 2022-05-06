@@ -249,4 +249,4 @@
 
 (define (assert-const pos . ts)
   (for ([(t n) (in-indexed ts)] #:unless (const-type? t))
-    (raise-argument-error 'ERROR "constant value" (+ pos n) (type->string t))))
+    (raise-semantic-error "Expected constant value" (current-call-expr) (+ pos n))))

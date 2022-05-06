@@ -14,6 +14,7 @@
   "std.rkt"
   "types.rkt"
   "function.rkt"
+  "errors.rkt"
   (for-syntax
     racket/match
     racket/syntax
@@ -50,14 +51,9 @@
   (define (design-unit-fields stx-lst)
     (stx-filter stx-lst '(constant data-port composite-port local-signal alias instance if-statement for-statement)))
 
-  ; Return the list of parameter names in the given syntax object.
-  (define (design-unit-parameter-names stx-lst)
-    (define/syntax-parse ((parameter name _) ...) (stx-filter stx-lst '(parameter)))
-    (attribute name))
-
-  (define (design-unit-parameter-types stx-lst)
-    (define/syntax-parse ((parameter _ type) ...) (stx-filter stx-lst '(parameter)))
-    (attribute type))
+  ; Return the list of parameters in the given syntax object.
+  (define (design-unit-parameters stx-lst)
+    (stx-filter stx-lst '(parameter)))
 
   ; Return the list of port and signal names in the given syntax object.
   (define (design-unit-field-names stx-lst)
@@ -82,15 +78,14 @@
 ; Interfaces and components differ by the element types they are allowed
 ; to contain, but the expansion rule is exactly the same.
 (define-syntax-parse-rule (design-unit name body ...)
-  #:with (param-name ...)   (design-unit-parameter-names (attribute body))
-  #:with (param-type ...)   (design-unit-parameter-types (attribute body))
-  #:with (arg-name   ...)   (generate-temporaries        (attribute param-name))
-  #:with (field-name ...)   (design-unit-field-names     (attribute body))
-  #:with (spliced-name ...) (design-unit-spliced-names   (attribute body))
+  #:with (param        ...) (design-unit-parameters    (attribute body))
+  #:with (arg-name     ...) (generate-temporaries      (attribute param))
+  #:with (field-name   ...) (design-unit-field-names   (attribute body))
+  #:with (spliced-name ...) (design-unit-spliced-names (attribute body))
   (begin
     (provide name)
     (define (name arg-name ...)
-      (define-parameter-slot param-name arg-name param-type) ...
+      (define-parameter-slot param arg-name) ...
       (splicing-syntax-parameterize ([in-design-unit #t])
         body ...)
       (define res (make-hash `((* . (spliced-name ...)) (field-name . ,field-name) ...)))
@@ -111,10 +106,11 @@
 (define-syntax-parse-rule (parameter _ ...)
   (begin))
 
-(define-syntax-parse-rule (define-parameter-slot name actual-name type)
+(define-syntax-parse-rule (define-parameter-slot param arg-name)
+  #:with (_ param-name param-type) #'param
   (begin
-    (define name (make-slot actual-name (const-type actual-name type) (thunk (make-const-type actual-name))))
-    (type-check name)))
+    (define param-name (make-slot #'param arg-name (const-type arg-name param-type) (thunk (make-const-type arg-name))))
+    (type-check param-name)))
 
 (define-syntax-parse-rule (typedef name ((~literal parameter) param-name param-type) ... expr)
   (begin
@@ -130,24 +126,26 @@
 ; A constant infers its type immediately before computing its value.
 ; Here, we benefit from the fact that expression-type will return a
 ; const-type where the expression has already been evaluated.
-(define-syntax-parse-rule (define-constant-slot name expr)
+(define-syntax-parse-rule (define-constant-slot cste)
+  #:with (_ name expr) #'cste
   (begin
     (typing-functions expr)
     (define name (let ([t (expression-type expr)])
-                   (make-slot (const-type-value t) t)))))
+                   (make-slot #'cste (const-type-value t) t)))))
 
 ; A constant expands to a slot assigned to a variable.
 (define-syntax-parser constant
   ; Local constant in an interface or component.
-  [(_ name expr)
-   #:when (syntax-parameter-value #'in-design-unit)
-   #'(define-constant-slot name expr)]
+  [cste #:when (syntax-parameter-value #'in-design-unit)
+   #'(define-constant-slot cste)]
   ; Module-level constant.
   [(_ name expr)
    #:with name^ (format-id #'name "~a$constant" #'name)
+   #:with cste this-syntax
+   #:with cste^ (quasisyntax/loc this-syntax (constant name^ expr))
    #'(begin
        (provide name name^)
-       (define-constant-slot name^ expr)
+       (define-constant-slot cste^)
        (define name (slot-data name^)))])
 
 ; An alias expands to a partial access to the target port.
@@ -167,23 +165,18 @@
       (parameterize ([current-call-expr #'stx])
         (assert-const 1 t)
         (assert-<:    1 t (type)))
-      (define name (make-slot #f (const-type-value t))))))
-
-(define-syntax-parser local-signal-slot
-  [(_ expr)
-   #'(make-slot expr #f (typer-for expr))]
-  [(_ type expr)
-   #'(make-slot expr type (typer-for expr))])
+      (define name (make-slot #'stx #f (const-type-value t))))))
 
 ; A local signal expands to a variable containing the result of the given
 ; expression in a slot.
 ; Like output ports, local signals do not need to be wrapped in a slot, but
 ; it helps expanding expressions without managing several special cases.
-(define-syntax-parse-rule (local-signal name opt ...)
-  #:with ((~optional type) expr) #'(opt ...)
+(define-syntax-parse-rule (local-signal name (~optional type) expr)
+  #:with stx this-syntax
+  #:with type^ (or (attribute type) #'#f)
   (begin
     (typing-functions expr)
-    (define name (local-signal-slot opt ...))))
+    (define name (make-slot #'stx expr type^ (typer-for expr)))))
 
 ; A composite port expands to a variable that stores the result of a constructor
 ; call for the corresponding interface.
@@ -227,9 +220,10 @@
                      [else else-body])))
 
 (define-syntax-parse-rule (for-statement name iter-name iter-expr body ...)
+  #:with stx this-syntax
   #:with iter-name^ (generate-temporary #'iter-name)
   (define name (for/vector ([iter-name^ (in-list iter-expr)])
-                 (define iter-name (make-slot iter-name^ (make-const-type iter-name^)))
+                 (define iter-name (make-slot #'stx iter-name^ (make-const-type iter-name^)))
                  body ...)))
 
 ; A statement block executes statements and returns a hash map that exposes
@@ -410,7 +404,7 @@
                                  (syntax-span stx)))))]))
 
 (define-syntax-parse-rule (comprehension-slot left right)
-  (make-slot #f (common-supertype (type-of left) (type-of right))))
+  (make-slot #f #f (common-supertype (type-of left) (type-of right))))
 
 (define-syntax-parser typing-functions
   #:literals [slot-expr signal-expr lift-expr array-for-expr concat-for-expr name-expr literal-expr]
@@ -422,7 +416,7 @@
    #:with this-type-label (type-label #'this-expr)
    #'(begin
        (typing-functions expr) ...
-       (splicing-let ([name (make-slot #f #f (typer-for expr))] ...)
+       (splicing-let ([name (make-slot #f #f #f (typer-for expr))] ...)
          (typing-functions body)
          (define this-type-label (typer-for body))))]
 
@@ -504,11 +498,11 @@
 
 (define (type-check inst)
   (match inst
-    [(slot _ t _) #:when t
+    [(slot stx _ t _) #:when t
      (define u (slot-type* inst))
      (unless (<: u t)
-       ; TODO show source code instead of generated code, or source location only.
-       (raise-result-error 'type-check (type->string t) (type->string u)))]
+       ; TODO Set correct pos
+       (raise-type-error stx 0 (type->string u) (type->string t)))]
 
     [(hash-table ('* _) (_ vs) ...)
      (for-each type-check vs)]

@@ -37,7 +37,7 @@
 
 (define (instance-dump-vcd-vars inst duration scope path out)
   (match inst
-    [(slot sig _ _) #:when sig
+    [(slot _ sig _ _) #:when sig
      (define samples (signal-take sig duration))
      (match (minimize (slot-type inst))
        [(abstract-integer-type w)
