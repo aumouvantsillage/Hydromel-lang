@@ -228,8 +228,10 @@
                                                 (if (> (length acc) 0)
                                                   (string-append acc ", " s)
                                                   s)))]
-    [(symbol-type s)     (format "~~~a" s)]
-    [_                   (format "~v" t^)]))
+    [(symbol-type s)           (format "~~~a" s)]
+    [(subtype-type (any-type)) "type"]
+    [(subtype-type t)          (format "subtype(~a)" (type->string t))]
+    [_                         (format "~v" t^)]))
 
 
 (define current-call-expr (make-parameter #f))
