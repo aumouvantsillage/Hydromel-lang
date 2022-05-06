@@ -201,12 +201,18 @@ component test_sym_b_is_enum_a_b_c
     y = ~b
 end
 
-type rec_xT(T : subtype(integer)) = record(x : T)
+type rec_xTyU(T : subtype(integer), U : subtype(natural)) = record(x : T, y : U)
 
 component test_signed32_is_subtype_integer
-    port y : out rec_xT(signed(4))
+    port y : out rec_xTyU(signed(4), unsigned(4))
 end
 
 component test_any_is_not_subtype_integer
-    port y : out rec_xT(any)
+    port y : out rec_xTyU(any, unsigned(4))
+    constant K = rec_xTyU(any, unsigned(4)) # TODO remove this
+end
+
+component test_any_is_not_subtype_natural
+    port y : out rec_xTyU(signed(4), any)
+    constant K = rec_xTyU(signed(4), any) # TODO remove this
 end

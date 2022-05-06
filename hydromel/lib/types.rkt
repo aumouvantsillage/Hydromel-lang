@@ -234,10 +234,17 @@
 
 (define current-call-expr (make-parameter #f))
 
-(define (assert-<: pos t u)
-  (unless (<: t u)
-    (raise-type-error (current-call-expr) pos (type->string t) (type->string u))))
+(define (assert-<: pos . ts)
+  (match ts
+    ['()
+     (void)]
+    [(list t u ts^ ...) #:when (<: t u)
+     (apply assert-<: (add1 pos) ts^)]
+    [(list t u _ ...)
+     (raise-type-error (current-call-expr) pos (type->string t) (type->string u))]
+    [_
+     (error "assert-<: expect an even number of arguments")]))
 
-(define (assert-const pos t)
-  (unless (const-type? t)
-    (raise-argument-error 'ERROR "constant value" pos (type->string t))))
+(define (assert-const pos . ts)
+  (for ([(t n) (in-indexed ts)] #:unless (const-type? t))
+    (raise-argument-error 'ERROR "constant value" (+ pos n) (type->string t))))

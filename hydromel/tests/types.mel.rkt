@@ -58,3 +58,4 @@
 
 (test-not-exn "signed(32) : subtype(integer)" test_signed32_is_subtype_integer)
 (test-exn     "any /: subtype(integer)" exn:fail? test_any_is_not_subtype_integer)
+(test-exn     "any /: subtype(natural)" exn:fail? test_any_is_not_subtype_natural)

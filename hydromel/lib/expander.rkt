@@ -122,8 +122,8 @@
     (define (name param-name ...) expr)
     (define-return-type name
       (λ (param-name ...)
-        (assert-const 0 param-name) ...
-        (assert-<:    0 param-name param-type) ...
+        (assert-const 0 param-name ...)
+        (assert-<:    0 (~@ param-name param-type) ...)
         ; TODO Is is relevant to return a const-type?
         (make-const-type (name (const-type-value param-name) ...))))))
 
