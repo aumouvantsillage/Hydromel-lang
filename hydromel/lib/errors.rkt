@@ -47,7 +47,6 @@
                       (srcloc->string (syntax-srcloc expr)))))
 
 (define (raise-type-error expr pos actual-type expected-type)
-  (displayln expr)
   (define subexpr (nth (stx->list expr) (apply-offset pos expr)))
   (raise-user-error 'ERROR "Incompatible type\n  expected: ~a\n  found: ~a\n  at: ~a\n  in: ~a\n  location: ~a"
                     expected-type
