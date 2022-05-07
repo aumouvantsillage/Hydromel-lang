@@ -19,7 +19,7 @@
   (struct-out subtype-type) (struct-out const-type)
   minimize resize type->string <:
   type-of make-const-type common-supertype
-  current-call-expr assert-<: assert-const)
+  current-typecheck-stx assert-<: assert-const)
 
 ; A data type can be used as a conversion function.
 ; The default behavior is to return the given data unchanged.
@@ -234,7 +234,7 @@
     [_                         (format "~v" t^)]))
 
 
-(define current-call-expr (make-parameter #f))
+(define current-typecheck-stx (make-parameter #f))
 
 (define (assert-<: pos . ts)
   (match ts
@@ -243,10 +243,10 @@
     [(list t u ts^ ...) #:when (<: t u)
      (apply assert-<: (and pos (add1 pos)) ts^)]
     [(list t u _ ...)
-     (raise-type-error (current-call-expr) pos (type->string t) (type->string u))]
+     (raise-type-error (current-typecheck-stx) pos (type->string t) (type->string u))]
     [_
      (error "assert-<: expect an even number of arguments")]))
 
 (define (assert-const pos . ts)
   (for ([(t n) (in-indexed ts)] #:unless (const-type? t))
-    (raise-semantic-error "Expected constant value" (current-call-expr) (+ pos n))))
+    (raise-semantic-error "Expected constant value" (current-typecheck-stx) (+ pos n))))

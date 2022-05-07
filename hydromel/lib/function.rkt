@@ -64,7 +64,7 @@
   #:datum-literals [cast no-cast]
   [(_ no-cast name (λ (arg:id ...) body ...))
    #'(λ (stx arg ...)
-       (define t (parameterize ([current-call-expr stx])
+       (define t (parameterize ([current-typecheck-stx stx])
                    body ...))
        (if (and (const-type? arg) ...)
          (make-const-type (name (const-type-value arg) ...))
@@ -72,7 +72,7 @@
 
   [(_ cast name (λ (arg:id ...) body ...))
    #'(λ (stx arg ...)
-       (define t (parameterize ([current-call-expr stx])
+       (define t (parameterize ([current-typecheck-stx stx])
                    body ...))
        (if (and (const-type? arg) ...)
          (make-const-type (t (name (const-type-value arg) ...)))
@@ -80,7 +80,7 @@
 
   [(_ no-cast name (λ args:id body ...))
    #'(λ (stx . args)
-       (define t (parameterize ([current-call-expr stx])
+       (define t (parameterize ([current-typecheck-stx stx])
                    body ...))
        (if (andmap const-type? args)
          (make-const-type (apply name (map const-type-value args)))
@@ -88,7 +88,7 @@
 
   [(_ cast name (λ args:id body ...))
    #'(λ (stx . args)
-       (define t (parameterize ([current-call-expr stx])
+       (define t (parameterize ([current-typecheck-stx stx])
                    body ...))
        (if (andmap const-type? args)
          (make-const-type (t (apply name (map const-type-value args))))
@@ -105,5 +105,5 @@
   (begin
     (provide rt-name)
     (define rt-name (λ (stx . args)
-                      (parameterize ([current-call-expr stx])
+                      (parameterize ([current-typecheck-stx stx])
                         (apply fn args))))))
