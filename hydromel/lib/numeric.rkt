@@ -25,7 +25,7 @@
         [else          (min-signed-width v)]))
 
 ; Returns the minimum bit width to store the integer `v`
-; as an signed integer value.
+; as a signed integer value.
 (define (min-signed-width v)
   (add1 (integer-length v)))
 
