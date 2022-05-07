@@ -17,6 +17,8 @@
   instance-set!
   instance-dump)
 
+; Get the content of the given instance at the given path.
+; `path` is a list of symbols and integers that represent port names and indices.
 (define (instance-ref* inst path)
   (match path
     ['()                      inst]
@@ -25,12 +27,20 @@
     [(? symbol?)              (dict-ref inst path)]
     [_                        (error "Invalid path" path)]))
 
+; Get the slot value in the given instance at the given path.
 (define (instance-ref inst path)
   (slot-data (instance-ref* inst path)))
 
+; Assign a new value to a slot in the given instance at the given path.
 (define (instance-set! inst path value)
   (set-slot-data! (instance-ref* inst path) value))
 
+; Flatten a hierarchy of instances into a dictionary that maps slot paths to slots.
+; The keys of the resulting dictionary are strings that concatenate port
+; names and indices (e.g. "a.b[0].c").
+; The table contains slots for ports, constants and local signals.
+; Spliced ports are omitted.
+; Only the non-empty slots are kept in the output.
 (define (instance-slot-table inst [parent #hash()] [path #f])
   (match inst
     [(slot _ sig _ _) #:when sig
@@ -63,6 +73,14 @@
     [_
      (error "Unsupported data type at" path inst)]))
 
+; Run the given instance for the given duration and print slot values.
+; Each line of the output is of the form: "path : type = value" where
+; `value` is either a single value (if the current slot contains a constant),
+; or a list (if the current slot contains a signal).
+; This function prints port values, constants and local signals across the
+; hierarchy of instances that starts with `inst`.
+; Spliced ports are omitted.
+; Only the non-empty slots are kept in the output.
 (define (instance-dump inst duration)
   (for ([(name slt) (in-dict (instance-slot-table inst))])
     (define data (slot-data slt))
