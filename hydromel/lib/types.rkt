@@ -241,7 +241,7 @@
     ['()
      (void)]
     [(list t u ts^ ...) #:when (<: t u)
-     (apply assert-<: (add1 pos) ts^)]
+     (apply assert-<: (and pos (add1 pos)) ts^)]
     [(list t u _ ...)
      (raise-type-error (current-call-expr) pos (type->string t) (type->string u))]
     [_

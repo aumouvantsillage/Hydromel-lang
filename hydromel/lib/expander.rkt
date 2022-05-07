@@ -159,8 +159,8 @@
     (typing-functions type-expr)
     (splicing-let ([t (expression-type type-expr)])
       (parameterize ([current-call-expr #'stx])
-        (assert-const 0 t)
-        (assert-<:    0 t (type)))
+        (assert-const #f t)
+        (assert-<:    #f t (type)))
       (splicing-let ([target (const-type-value t)])
         body ...))))
 

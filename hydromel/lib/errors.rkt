@@ -21,16 +21,17 @@
         (read-string (sub1 (syntax-position stx)))
         (string-trim (read-string (syntax-span stx)))))))
 
-; TODO Offset can be wrong when checking a type instead of an expression
-(define (offset stx)
+; pos = #f means that we are checking the type field of stx.
+(define (apply-offset pos stx)
   (syntax-parse stx
     #:datum-literals [call-expr data-port parameter constant local-signal]
-    [(call-expr    _ ...) 2]
-    [(data-port    _ ...) 3]
-    [(parameter    _ ...) 1]
-    [(constant     _ ...) 2]
-    [(local-signal _ _)   2]
-    [(local-signal _ _ _) 3]))
+                                             ; pos = number   #f
+    [(call-expr    name arg ...)   (+ pos 2)]      ; arg[pos] N/A
+    [(constant     name expr)      2]              ; expr     N/A
+    [(data-port    name mode type) 3]              ; N/A      type
+    [(parameter    name type)      (if pos 1 2)]   ; name     type
+    [(local-signal name expr)      2]              ; expr     N/A
+    [(local-signal name type expr) (if pos 3 2)])) ; expr     type
 
 (define (raise-semantic-error msg expr [subexpr #f])
   (if subexpr
@@ -47,7 +48,7 @@
 
 (define (raise-type-error expr pos actual-type expected-type)
   (displayln expr)
-  (define subexpr (nth (stx->list expr) (+ pos (offset expr))))
+  (define subexpr (nth (stx->list expr) (apply-offset pos expr)))
   (raise-user-error 'ERROR "Incompatible type\n  expected: ~a\n  found: ~a\n  at: ~a\n  in: ~a\n  location: ~a"
                     expected-type
                     actual-type
