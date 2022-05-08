@@ -52,7 +52,7 @@
       (raise-user-error 'ERROR "~a\n  at: ~a\n  in: ~a\n  location: ~a" msg
                         (syntax-read-from-source subexpr^)
                         (syntax-read-from-source expr)
-                        (srcloc->string (syntax-srcloc subexpr))))
+                        (srcloc->string (syntax-srcloc subexpr^))))
     (raise-user-error 'ERROR "~a\n  at: ~a\n  location: ~a" msg
                       (syntax-read-from-source expr)
                       (srcloc->string (syntax-srcloc expr)))))
