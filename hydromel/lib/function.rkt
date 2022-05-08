@@ -23,31 +23,24 @@
     (format-id name "~a$return-type" name)))
 
 (define-syntax-parse-rule (declare-function name)
-  (declare-function* no-cast name))
+  (declare-function* #f name))
 
 (define-syntax-parse-rule (declare-function/cast name)
-  (declare-function* cast name))
+  (declare-function* #t name))
 
 (define-syntax-parse-rule (define-function arg ...)
-  (define-function* no-cast arg ...))
+  (define-function* #f arg ...))
 
 (define-syntax-parse-rule (define-function/cast arg ...)
-  (define-function* cast arg ...))
+  (define-function* #t arg ...))
 
 (define-syntax-parser declare-function*
-  #:literals [cast no-cast]
-  [(_ no-cast name)
+  [(_ cast? name)
    #:with lookup-name (internal-name #'name)
    #:with rt-name     (function-return-type-name #'name)
    #'(begin
        (provide name lookup-name rt-name)
-       (define-syntax lookup-name (meta/make-function #f #'name)))]
-  [(_ cast name)
-   #:with lookup-name (internal-name #'name)
-   #:with rt-name     (function-return-type-name #'name)
-   #'(begin
-       (provide name lookup-name rt-name)
-       (define-syntax lookup-name (meta/make-function/cast #f #'name)))])
+       (define-syntax lookup-name (meta/function #f #'name cast?)))])
 
 (define-syntax-parser define-function*
   [(_ cast? name fn rt-fn)
@@ -61,8 +54,8 @@
    #'(define-function* cast? name fn (const (union-type empty)))])
 
 (define-syntax-parser return-type-function
-  #:literals [λ const cast no-cast]
-  [(_ no-cast name (λ (arg:id ...) body ...))
+  #:literals [λ const]
+  [(_ #f name (λ (arg:id ...) body ...))
    #'(λ (stx arg ...)
        (define t (parameterize ([current-typecheck-stx stx])
                    body ...))
@@ -70,7 +63,7 @@
          (make-const-type (name (const-type-value arg) ...))
          t))]
 
-  [(_ cast name (λ (arg:id ...) body ...))
+  [(_ #t name (λ (arg:id ...) body ...))
    #'(λ (stx arg ...)
        (define t (parameterize ([current-typecheck-stx stx])
                    body ...))
@@ -78,7 +71,7 @@
          (make-const-type (t (name (const-type-value arg) ...)))
          t))]
 
-  [(_ no-cast name (λ args:id body ...))
+  [(_ #f name (λ args:id body ...))
    #'(λ (stx . args)
        (define t (parameterize ([current-typecheck-stx stx])
                    body ...))
@@ -86,7 +79,7 @@
          (make-const-type (apply name (map const-type-value args)))
          t))]
 
-  [(_ cast name (λ args:id body ...))
+  [(_ #t name (λ args:id body ...))
    #'(λ (stx . args)
        (define t (parameterize ([current-typecheck-stx stx])
                    body ...))
@@ -107,9 +100,3 @@
     (define rt-name (λ (stx . args)
                       (parameterize ([current-typecheck-stx stx])
                         (apply fn args))))))
-
-(define-syntax (cast stx)
-  (raise-syntax-error #f "cast form is reserved for internal use" stx))
-
-(define-syntax (no-cast stx)
-  (raise-syntax-error #f "cast form is reserved for internal use" stx))
