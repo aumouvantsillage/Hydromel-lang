@@ -15,26 +15,14 @@
 
 (provide instance-dump-vcd)
 
+; A VCD waveform definition contains the "short" name of a signal,
+; its bit width, and a list of values.
 (struct waveform (short-name width values))
 
-(define (instance-dump-vcd-array samples len elt-type scope path out)
-  ; Open a new scope in the VCD file.
-  (fprintf out "$scope module ~a $end\n" scope)
-  (define res (for/list ([i (in-range len)])
-                (define lst (for/list ([s (in-list samples)])
-                              (nth s i)))
-                (define path^ (format "~a_~a" path i))
-                (match elt-type
-                  [(abstract-integer-type w)
-                   (fprintf out "$var wire ~a ~a ~a $end\n" w path^ i)
-                   (waveform path^ w lst)]
-                  [(array-type n te) (instance-dump-vcd-array lst n te i path^ out)]
-                  ; TODO support records
-                  [_ (error "Unsupported data type at" path)])))
-  ; Close the scope in the VCD file.
-  (fprintf out "$upscope $end\n")
-  (flatten res))
-
+; Dump the list of variable definitions of an instance.
+; This function will traverse the hierarchy of instances and create
+; a VCD scope statement for each inner instance.
+; It returns a list of waveforms.
 (define (instance-dump-vcd-vars inst duration scope path out)
   (match inst
     [(slot _ sig _ _) #:when sig
@@ -75,6 +63,30 @@
 
     [_ (error "Unsupported data type at" path)]))
 
+; Dump VCD variables for a signal of array type.
+; Due to limitations of the VCD format, we cannot dump an array as a single value.
+; This function will create a new VCD scope for an array and will dump one
+; variable for each element.
+; It returns a list of waveforms.
+(define (instance-dump-vcd-array samples len elt-type scope path out)
+  ; Open a new scope in the VCD file.
+  (fprintf out "$scope module ~a $end\n" scope)
+  (define res (for/list ([i (in-range len)])
+                (define lst (for/list ([s (in-list samples)])
+                              (nth s i)))
+                (define path^ (format "~a_~a" path i))
+                (match elt-type
+                  [(abstract-integer-type w)
+                   (fprintf out "$var wire ~a ~a ~a $end\n" w path^ i)
+                   (waveform path^ w lst)]
+                  [(array-type n te) (instance-dump-vcd-array lst n te i path^ out)]
+                  ; TODO support records
+                  [_ (error "Unsupported data type at" path)])))
+  ; Close the scope in the VCD file.
+  (fprintf out "$upscope $end\n")
+  (flatten res))
+
+; Dump the slots of an instance to an output port using the VCD format.
 (define (instance-dump-vcd inst duration ts [out (current-output-port)])
   ; VCD header.
   (fprintf out "$timescale ~a $end\n" ts)
