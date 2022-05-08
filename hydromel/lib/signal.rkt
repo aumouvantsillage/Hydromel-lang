@@ -35,41 +35,41 @@
   signal-bundle-vector
   >>)
 
+; A signal contains a thunk that should return a pair `(val sig)`
+; where `val` is the initial value of the current signal
+; and `sig` is another signal that consistutes the tail of the current signal.
+; The default constructor is kept private.
+; Calling a signal like a function will execute its body.
 (struct signal (body)
   #:name             private-signal
   #:constructor-name private-signal
   #:property         prop:procedure (struct-field-index body))
 
-; Wrap the given body in a promise.
-; body ... is supposed to evaluate to a truthy value.
-(define-syntax-parse-rule (signal-delay body ...)
+; Construct a signal with a given value, followed by the given signal.
+; This will create a `cons` cell with `val` and `sig`, and wrap it in a
+; thunk in a signal. The `cons` cell is memoized.
+; This is a macro because `sig` can be an expression that refers to
+; the current signal itself or a signal created later.
+(define-syntax-parse-rule (signal-cons val sig)
   (private-signal
-    (let ([res #f])                    ; Will store the value of the promise.
+    (let ([res #f])                  ; Will store the created cons cell.
       (thunk
-        (unless res                    ; If the promise has not been forced,
-          (set! res (begin body ...))) ; compute its value and store it.
-        res))))                        ; Return the stored value.
+        (unless res                  ; If the signal has never been evaluated,
+          (set! res (cons val sig))) ; compute its value and store it.
+        res))))                      ; Return the stored value.
 
-; Evaluate a signal.
-(define-syntax-parse-rule (signal-force sig)
-  (sig))                               ; Call the λ created by signal-delay.
-
-; Delay the evaluation of a signal.
+; Defer the evaluation of a signal.
 ; This can be used when we need to reference a signal that is constructed later.
 (define-syntax-parse-rule (signal-defer sig)
-  (private-signal (thunk (signal-force sig))))
-
-; Construct a signal with a given value, followed by the given signal.
-(define-syntax-parse-rule (signal-cons val sig)
-  (signal-delay (cons val sig)))
+  (private-signal (thunk (sig))))
 
 ; Evaluate the first sample of a signal.
 (define (signal-first sig)
-  (car (signal-force sig))) ; Returns the left element of the pair.
+  (car (sig))) ; Returns the left element of the pair.
 
 ; Get a signal that starts at the second sample of the given signal.
 (define (signal-rest sig)
-  (cdr (signal-force sig))) ; Returns the right element of the pair.
+  (cdr (sig))) ; Returns the right element of the pair.
 
 ; Returns a list of the first n samples of a signal.
 (define (signal-take sig n)
@@ -136,8 +136,8 @@
          (list ret ...)))]
   ; Lift a λ with the given list of arguments.
   [(signal-λ (sig:id ...) body ...)
-   ; TODO Compare these two solutions:
-   ; #'(signal-lift* (λ (sig ...) body ...) sig ...)
+   ; Using signal-lift* consume more memory.
+   ;#'(signal-lift* (λ (sig ...) body ...) sig ...)]
    #'(signal-lift (λ (sig ...) body ...))]
   ; Lift a λ that accepts any number of arguments.
   [(signal-λ sig-lst:id body ...)
