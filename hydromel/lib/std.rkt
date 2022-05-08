@@ -7,6 +7,7 @@
 (require
   "function.rkt"
   "types.rkt"
+  "errors.rkt"
   (only-in "numeric.rkt"
     min-unsigned-width min-signed-width
     min-signed-value   max-signed-value
@@ -18,6 +19,10 @@
   (only-in data/collection
     nth set-nth)
   data/pvector)
+
+; ------------------------------------------------------------------------------
+; Common types.
+; ------------------------------------------------------------------------------
 
 (define any*     (any-type))
 (define type*    (subtype-type any*))
@@ -44,7 +49,8 @@
     (assert-<: 0 ta integer*)
     boolean*))
 
-; The Hydromel if statement is expanded to a call-expr to _if_.
+; The Hydromel if statement is implemented as the _if_ macro
+; that expands to `cond`.
 (declare-function _if_)
 
 (define-syntax-parse-rule (_if_ (~seq cnd thn) ... els)
@@ -69,10 +75,12 @@
         (union-type (list tt (apply _if_/return-type te)))])]
     [(list te) te]))
 
-; The Hydromel case statement is expanded to a call-expr to _case_.
+; The Hydromel case statement is implemented as the _case_ macro
+; that expands to `cond`.
 (declare-function _case_)
 
 (define-syntax-parse-rule (_case_ expr (~seq ch thn) ... (~optional els))
+  ; TODO raise runtime error with source information
   #:with els^ (or (attribute els) #'(error "Value did not not match any choice"))
   (let ([v expr])
     (cond [(member v ch) thn]
@@ -82,25 +90,26 @@
 (define-function/return-type _case_
   (λ (tx . ts)
     (match tx
-      ; If the expression is static and true, inspect the cases for static choices.
+      ; If the expression is static, inspect the cases for static choices.
       [(const-type v _)
-       (apply _case_/return-type v ts)]
+       (_case_/return-type v ts)]
       ; If the expression is not static, return a union of all target clauses.
       [_
        (define last-n (sub1 (length ts)))
-       (union-type (for/list ([(it n) (in-indexed ts)]
+       (union-type (for/list ([(t n) (in-indexed ts)]
                               #:when (or (odd? n) (= n last-n)))
-                     it))])))
+                     t))])))
 
-(define (_case_/return-type v . ts)
+(define (_case_/return-type v ts)
   (match ts
     [(list tc tt te ...)
      ; If the expression value matches a static choice, return the corresponding type.
      (define tc^ (filter const-type? (tuple-type-elt-types tc)))
      (if (member v (map const-type-value tc^))
        tt
-       (apply _case_/return-type v te))]
-    [(list te) te]))
+       (_case_/return-type v te))]
+    [(list te) te]
+    ['() (raise-semantic-error "Value did not match any choice" (current-typecheck-stx) 0)]))
 
 ; ------------------------------------------------------------------------------
 ; Boolean and bitwise operations.
