@@ -41,12 +41,9 @@
         ...
         [else els]))
 
-; (define-return-type _if_ _if_:return-type*)
+(define-return-type _if_ _if_/return-type)
 
-(define (_if_:return-type stx . ts)
-  (apply _if_:return-type* ts))
-
-(define (_if_:return-type* . ts)
+(define (_if_/return-type . ts)
   (match ts
     [(list tc tt te ...)
      (match tc
@@ -54,11 +51,11 @@
        [(const-type v _)
         (if (int->bool v)
           tt
-          (apply _if_:return-type* te))]
+          (apply _if_/return-type te))]
        ; If the first condition is not static, return a union of the type of the first "then" clause
        ; and the type of the rest.
        [_
-        (union-type (list tt (apply _if_:return-type* te)))])]
+        (union-type (list tt (apply _if_/return-type te)))])]
     [(list te) te]))
 
 ; The Hydromel case statement is expanded to a call-expr to _case_.
@@ -76,7 +73,7 @@
     (match tx
       ; If the expression is static and true, inspect the cases for static choices.
       [(const-type v _)
-       (apply _case_:return-type* v ts)]
+       (apply _case_/return-type v ts)]
       ; If the expression is not static, return a union of all target clauses.
       [_
        (define last-n (sub1 (length ts)))
@@ -84,14 +81,14 @@
                               #:when (or (odd? n) (= n last-n)))
                      it))])))
 
-(define (_case_:return-type* v . ts)
+(define (_case_/return-type v . ts)
   (match ts
     [(list tc tt te ...)
      ; If the expression value matches a static choice, return the corresponding type.
      (define tc^ (filter const-type? (tuple-type-elt-types tc)))
      (if (member v (map const-type-value tc^))
        tt
-       (apply _case_:return-type* v te))]
+       (apply _case_/return-type v te))]
     [(list te) te]))
 
 ; ------------------------------------------------------------------------------
@@ -281,7 +278,7 @@
 
 ; The binary concatenetion operation defaults to the unsigned version.
 ; The signed case is handled automatically because the expander inserts
-; a conversion to the type returned by concat:return-type.
+; a conversion to the type returned by return-type[concat].
 ; Since this function needs to know the width of its arguments,
 ; their types are inserted by the checker.
 (define-function/cast _concat_

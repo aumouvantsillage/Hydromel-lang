@@ -15,11 +15,12 @@
 (provide
   declare-function      define-function
   declare-function/cast define-function/cast
-  define-return-type)
+  define-return-type
+  (for-syntax function-return-type-name))
 
 (begin-for-syntax
   (define (function-return-type-name name)
-    (format-id name "~a:return-type" name)))
+    (format-id name "~a$return-type" name)))
 
 (define-syntax-parse-rule (declare-function name)
   (declare-function* no-cast name))
@@ -34,7 +35,7 @@
   (define-function* cast arg ...))
 
 (define-syntax-parser declare-function*
-  #:datum-literals [cast no-cast]
+  #:literals [cast no-cast]
   [(_ no-cast name)
    #:with lookup-name (internal-name #'name)
    #:with rt-name     (function-return-type-name #'name)
@@ -60,8 +61,7 @@
    #'(define-function* cast? name fn (const (union-type empty)))])
 
 (define-syntax-parser return-type-function
-  #:literals [λ const]
-  #:datum-literals [cast no-cast]
+  #:literals [λ const cast no-cast]
   [(_ no-cast name (λ (arg:id ...) body ...))
    #'(λ (stx arg ...)
        (define t (parameterize ([current-typecheck-stx stx])
@@ -107,3 +107,9 @@
     (define rt-name (λ (stx . args)
                       (parameterize ([current-typecheck-stx stx])
                         (apply fn args))))))
+
+(define-syntax (cast stx)
+  (raise-syntax-error #f "cast form is reserved for internal use" stx))
+
+(define-syntax (no-cast stx)
+  (raise-syntax-error #f "cast form is reserved for internal use" stx))

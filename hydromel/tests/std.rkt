@@ -10,49 +10,56 @@
   data/pvector
   "../lib/std.rkt"
   "../lib/types.rkt"
+  "../lib/function.rkt"
   (for-syntax
     racket/match
     racket/syntax
     (prefix-in meta/ "../lib/meta.rkt")
     "../lib/scope.rkt"))
 
+(define-syntax-parse-rule (rt-test-name name arg ...)
+  (format "return type: ~a~a" 'name '(arg ...)))
+
+(define-syntax-parse-rule (fn-test-name name arg ...)
+  (format "~a~a" 'name '(arg ...)))
+
 (define-syntax-parse-rule (test-function (name arg ...) res)
-  (test-equal? (format "~a~a" 'name '(arg ...)) (call name arg ...) res))
+  (test-equal? (fn-test-name name arg ...) (call name arg ...) res))
 
 (define-syntax-parse-rule (test-function/exn (name arg ...))
-  (test-exn (format "~a~a" 'name '(arg ...)) exn:fail? (thunk (call name arg ...))))
+  (test-exn (fn-test-name name arg ...) exn:fail? (thunk (call name arg ...))))
 
 (define-syntax-parse-rule (test-return-type (name arg ...) res)
-  (test-equal? (format "~a:return-type~a" 'name '(arg ...)) (call:return-type name arg ...) res))
+  (test-equal? (rt-test-name name arg ...) (call/return-type name arg ...) res))
 
 (define-syntax-parse-rule (test-return-type/exn (name arg ...))
-  (test-exn (format "~a:return-type~a" 'name '(arg ...)) exn:fail? (thunk (call:return-type name arg ...))))
+  (test-exn (rt-test-name name arg ...) exn:fail? (thunk (call/return-type name arg ...))))
 
 (define-syntax-parser call
   [(_ name arg ...)
    (match-define (meta/function _ fn-name cast?) (lookup #'name))
    (if cast?
-     #`(let ([rt (call:return-type name (make-const-type arg) ...)])
+     #`(let ([rt (call/return-type name (make-const-type arg) ...)])
          (rt (#,fn-name arg ...)))
      #`(#,fn-name arg ...))])
 
-(define-syntax-parse-rule (call:return-type name arg ...)
+(define-syntax-parse-rule (call/return-type name arg ...)
    #:with fn-name (meta/function-name (lookup #'name))
-   #:with rt-name (format-id #'fn-name "~a:return-type" #'fn-name)
+   #:with rt-name (function-return-type-name #'fn-name)
    #:with stx this-syntax
    (rt-name #'stx arg ...))
 
-; Test that literal-type(f(x ...)) <: f:return-type(literal-type(x) ...)
-; This does not test that f:return-type has the minimal width.
+; Test that literal-type(f(x ...)) <: return-type[f](literal-type(x) ...)
+; This does not test that return-type[f] has the minimal width.
 (define-syntax-rule (test-return-type/accept (name arg ...))
-  (test-true (format "~a:return-type~a" 'name '(arg ...))
+  (test-true (rt-test-name name arg ...)
              (<: (type-of (call name arg ...))
-                 (call:return-type name (make-const-type arg) ...))))
+                 (call/return-type name (make-const-type arg) ...))))
 
-; Test that literal-type(f(x ...)) = f:return-type(literal-type(x) ...)
+; Test that literal-type(f(x ...)) = return-type[f](literal-type(x) ...)
 (define-syntax-rule (test-return-type/strict (name arg ...))
-  (test-equal? (format "~a:return-type~a" 'name '(arg ...))
-               (minimize (call:return-type name (make-const-type arg) ...))
+  (test-equal? (rt-test-name name arg ...)
+               (minimize (call/return-type name (make-const-type arg) ...))
                (type-of (call name arg ...))))
 
 ; ------------------------------------------------------------------------------

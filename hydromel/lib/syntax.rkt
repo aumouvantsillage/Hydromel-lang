@@ -55,6 +55,8 @@
     #:literals [typedef]
     (pattern (typedef name param ... expr)))
 
+  ; TODO Add function definitions
+
   (define-syntax-class constant
     #:literals [constant]
     (pattern (constant name expr)))
@@ -140,7 +142,7 @@
     #:literals [call-expr or-expr and-expr rel-expr add-expr mult-expr shift-expr
                 if-expr case-expr prefix-expr range-expr slice-expr concat-expr
                 array-expr array-assoc-expr slice-assoc-expr indexed-array-expr
-                field-expr cast-expr assign-expr record-type-expr record-expr tuple-expr]
+                cast-expr assign-expr record-type-expr record-expr tuple-expr]
     #:attributes [fn-name (arg 1)]
     (pattern ((~or* or-expr and-expr rel-expr add-expr mult-expr shift-expr) left op right)
       #:attr (arg 1) (list #'left #'right)
@@ -199,5 +201,3 @@
   (define-syntax-class lift-expr
     #:literals [lift-expr]
     (pattern (lift-expr binding ...+ expr))))
-
-; TODO Add functions

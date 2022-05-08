@@ -485,7 +485,7 @@
    #'(slot-type (dict-ref (remove-dynamic-indices expr) 'field-name))]
 
   [(_ (~and ((~or* call-expr call-expr/cast) name arg ...) expr))
-   #:with rt (format-id #'name "~a:return-type" #'name)
+   #:with rt (function-return-type-name #'name)
    #'(rt #'expr (expression-type arg) ...)]
 
   [_ #'(any-type)])
