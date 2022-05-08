@@ -19,6 +19,7 @@
   (for-syntax function-return-type-name))
 
 (begin-for-syntax
+  ; Format an internal function name for a return-type function.
   (define (function-return-type-name name)
     (format-id name "~a$return-type" name)))
 
@@ -69,6 +70,10 @@
      (define name fn)
      (define rt-name (make-return-type-function cast? name rt-fn^))))
 
+; Wrap a return type function `fn` provided to `define-function`.
+; The resulting function will set the current syntax object for type-checking
+; errors. It will also convert the result of `fn` to a `const-type` if all
+; arguments are constants.
 (define (make-return-type-function cast? name fn)
   (λ (stx . args)
     (define t (parameterize ([current-typecheck-stx stx])
@@ -78,6 +83,10 @@
         (make-const-type (if cast? (t v) v)))
       t)))
 
+; Wrap a return type function `fn` for a function declared previously with
+; `declare-function`. The resulting function will set the current syntax object
+; for type-checking errors. It does NOT check whether its arguments are constants.
+; `fn` is responsible for wrapping its result in a `const-type` if appropriate.
 (define-syntax-parse-rule (define-function/return-type name fn)
   #:with rt-name (function-return-type-name #'name)
   (begin
