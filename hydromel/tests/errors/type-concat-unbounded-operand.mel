@@ -1,0 +1,11 @@
+#lang hydromel
+
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+component C
+    port x : in natural
+    port y : out unsigned(32)
+    y = {0, x}
+end

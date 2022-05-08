@@ -273,9 +273,9 @@ constant div7 =  -10 / 200
 # Arithmetic operation: unary -
 # ------------------------------------------------------------------------------
 
-constant neg1 = -   0
-constant neg2 = -  10
-constant neg3 = - -10
+constant neg1 = -(  0)
+constant neg2 = -( 10)
+constant neg3 = -(-10)
 
 # ------------------------------------------------------------------------------
 # Shift operation: <<

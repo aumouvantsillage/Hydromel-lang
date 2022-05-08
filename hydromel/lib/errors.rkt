@@ -30,14 +30,15 @@
 ; If `pos` is #f, we are checking the type field of the syntax object.
 (define (subexpr-at-offset stx pos)
   (define n (syntax-parse stx
-              #:datum-literals [call-expr data-port parameter constant local-signal]
-                                                       ; pos = number   #f
-              [(call-expr    name arg ...)   (+ pos 2)]      ; arg[pos] N/A
-              [(constant     name expr)      2]              ; expr     N/A
-              [(data-port    name mode type) 3]              ; N/A      type
-              [(parameter    name type)      (if pos 1 2)]   ; name     type
-              [(local-signal name expr)      2]              ; expr     N/A
-              [(local-signal name type expr) (if pos 3 2)])) ; expr     type
+              #:datum-literals [call-expr call-expr/cast data-port parameter constant local-signal]
+                                                         ; pos = number   #f
+              [(call-expr      name arg ...)   (+ pos 2)]      ; arg[pos] N/A
+              [(call-expr/cast name arg ...)   (+ pos 2)]      ; arg[pos] N/A
+              [(constant       name expr)      2]              ; expr     N/A
+              [(data-port      name mode type) 3]              ; N/A      type
+              [(parameter      name type)      (if pos 1 2)]   ; name     type
+              [(local-signal   name expr)      2]              ; expr     N/A
+              [(local-signal   name type expr) (if pos 3 2)])) ; expr     type
   (nth (stx->list stx) n))
 
 ; Raise a semantic error for a given expression.
