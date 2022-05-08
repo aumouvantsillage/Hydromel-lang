@@ -117,7 +117,7 @@
     (assert-type t param param-type) ...
     (provide name)
     (define (name param-name ...) expr)
-    (define-return-type name
+    (define-function/return-type name
       (λ (param-name ...)
         (assert-const 0 param-name ...)
         (assert-<:    0 (~@ param-name param-type) ...)
