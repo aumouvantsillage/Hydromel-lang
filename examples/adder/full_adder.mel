@@ -4,14 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-component half_adder
-    port a : in  bit
-    port b : in  bit
-    port s : out bit
-    port c : out bit
-    c = a and b
-    s = a xor b
-end
+import "half_adder.mel" as ha
 
 component full_adder
     port a  : in  bit
@@ -19,12 +12,15 @@ component full_adder
     port ci : in  bit
     port s  : out bit
     port co : out bit
-    instance h1 = half_adder
+
+    instance h1 = ha::half_adder
     h1.a = a
     h1.b = b
-    instance h2 = half_adder
+
+    instance h2 = ha::half_adder
     h2.a = h1.s
     h2.b = ci
+
     s = h2.s
     co = h1.c or h2.c
 end
