@@ -5,8 +5,6 @@
 #lang racket
 
 (require
-  syntax/parse/define
-  "std.rkt"
   "slot.rkt"
   "signal.rkt"
   "types.rkt")

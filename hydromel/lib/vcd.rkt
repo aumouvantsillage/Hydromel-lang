@@ -26,7 +26,9 @@
 (define (instance-dump-vcd-vars inst duration scope path out)
   (match inst
     [(slot _ sig _ _) #:when sig
-     (define samples (signal-take sig duration))
+     (define samples (if (signal? sig)
+                       (signal-take sig duration)
+                       (make-list duration sig)))
      (match (minimize (slot-type inst))
        [(abstract-integer-type w)
         (fprintf out "$var wire ~a ~a ~a $end\n" w path scope)

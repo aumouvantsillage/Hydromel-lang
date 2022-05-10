@@ -21,6 +21,14 @@ cd ..
 
 ## Run an example
 
+The following command simulates a counter circuit described in `examples/counter/counter.mel`. It checks the output waveforms, saves all waveforms to a VCD file, and prints them to the standard output.
+
 ```
-racket examples/counter.rkt
+racket examples/counter/counter.rkt
+```
+
+If you have installed GTKWave, you can view the waveforms using this command:
+
+```
+gtkwave -S examples/counter/counter.tcl examples/counter/counter.vcd
 ```
