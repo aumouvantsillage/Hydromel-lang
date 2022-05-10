@@ -623,31 +623,31 @@
 ; ------------------------------------------------------------------------------
 
 (test-function (_concat_) 0)
-(test-function (_concat_ #xA (unsigned 4) #xB (unsigned 8) #xFC (unsigned 8)) #xA0BFC)
-(test-function (_concat_ #xA (signed   4) #xB (unsigned 8) #xFC (unsigned 8)) #x-5F404)
-(test-function (_concat_ #xA (unsigned 4) #xB (signed   8) #xFC (signed 8))   #xA0BFC)
-(test-function (_concat_ #xA (signed   4) #xB (signed   8) #xFC (signed 8))   #x-5F404)
+(test-function (_concat_ #xA (unsigned 4) #x80  (unsigned 8) #x81 (unsigned 8)) #xA8081)
+(test-function (_concat_ -6  (signed   4) #x80  (unsigned 8) #x81 (unsigned 8)) #x-57F7F)
+(test-function (_concat_ #xA (unsigned 4) #x-80 (signed   8) #x-7E (signed 8))  #xA8082)
+(test-function (_concat_ -6  (signed   4) #x-80 (signed   8) #x-7E (signed 8))  #x-57F7E)
 
 (test-return-type (_concat_) (make-const-type 0))
 
-(test-return-type (_concat_ (unsigned 1) (make-const-type (unsigned 4))
-                            (unsigned 2) (make-const-type (unsigned 5))
-                            (unsigned 3) (make-const-type (unsigned 6)))
+(test-return-type (_concat_ (unsigned 4) (make-const-type (unsigned 4))
+                            (unsigned 5) (make-const-type (unsigned 5))
+                            (unsigned 6) (make-const-type (unsigned 6)))
                   (unsigned 15))
 
-(test-return-type (_concat_ (unsigned 1) (make-const-type (signed   4))
-                            (unsigned 2) (make-const-type (unsigned 5))
-                            (unsigned 3) (make-const-type (unsigned 6)))
+(test-return-type (_concat_ (signed   4) (make-const-type (signed   4))
+                            (unsigned 5) (make-const-type (unsigned 5))
+                            (unsigned 6) (make-const-type (unsigned 6)))
                   (signed 15))
 
-(test-return-type (_concat_ (unsigned 1) (make-const-type (unsigned 4))
-                            (unsigned 2) (make-const-type (signed   5))
-                            (unsigned 3) (make-const-type (signed   6)))
+(test-return-type (_concat_ (unsigned 4) (make-const-type (unsigned 4))
+                            (signed   5) (make-const-type (signed   5))
+                            (signed   6) (make-const-type (signed   6)))
                   (unsigned 15))
 
-(test-return-type (_concat_ (unsigned 1) (make-const-type (signed 4))
-                            (unsigned 2) (make-const-type (signed 5))
-                            (unsigned 3) (make-const-type (signed 6)))
+(test-return-type (_concat_ (signed 4) (make-const-type (signed 4))
+                            (signed 5) (make-const-type (signed 5))
+                            (signed 6) (make-const-type (signed 6)))
                   (signed 15))
 
 ; ------------------------------------------------------------------------------

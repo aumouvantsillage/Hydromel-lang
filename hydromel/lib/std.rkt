@@ -388,58 +388,68 @@
 ; Array and record operations.
 ; ------------------------------------------------------------------------------
 
-(define-function _array_ pvector
+; The array constructor creates a persistent vector.
+(define-function _array_
+  pvector
   (λ ts
     (array-type (length ts) (union-type ts))))
 
-(define-function _record_ hash
+; Array access maps to the `_nth_` function.
+; This function handles the case of multidimensional access.
+(define-function _nth_
+  (λ (a . ns)
+    (for/fold ([res a])
+              ([n (in-list ns)])
+      (nth res n)))
+  (λ (ta . tns)
+    (for/fold ([res ta])
+              ([(t pos) (in-indexed tns)])
+      (assert-<: pos res array* t integer*)
+      (array-type-elt-type (minimize res)))))
+
+; Array assignment maps to the `_set_nth_` function.
+; It handles setting one or more values to one or more indices.
+; It delegates to set-nth/multi to handle the multidimensional case.
+(define-function _set_nth_
+  (λ (a . nvs)
+    (let loop ([res a] [rst nvs])
+      (match rst
+        [(list n v rst^ ...) (loop (set-nth/multi res n v) rst^)]
+        [_                   res])))
+  (λ (ta . tnvs)
+    (assert-<: 0 ta array*)
+    (define ta^ (minimize ta))
+    (let loop ([rst tnvs] [pos 1])
+      (unless (empty? rst)
+        (match-define (list tn tv rst^ ...) rst)
+        (define te (match (minimize tn)
+                     [(tuple-type (list tns ...))
+                      (for/fold ([te ta^])
+                                ([t (in-list tns)])
+                        (assert-<: pos t integer*)
+                        (array-type-elt-type te))]
+                     [t
+                      (assert-<: pos t integer*)
+                      (array-type-elt-type ta^)]))
+        (assert-<: (add1 pos) tv te)
+        (loop rst^ (+ 2 pos))))
+    ta^))
+
+; Array assignment to
+(define (set-nth/multi arr ns v)
+  (match ns
+    [(or (? number? n) (list n)) (set-nth arr n v)]
+    [(list n m ...)              (set-nth arr n (set-nth/multi (nth arr n) m v))]))
+
+; The record constructor creates a hash table.
+(define-function _record_
+  hash
   (λ ts
     (define ts^ (for/list ([(it n) (in-indexed ts)])
                   (if (even? n)
                     (const-type-value it)
                     it)))
     (record-type (apply hash ts^))))
-
-(define-function _nth_
-  (λ (a . bs)
-    (for/fold ([res a])
-              ([n (in-list bs)])
-      (nth res n)))
-  (λ (ta . ts)
-    (for/fold ([res ta])
-              ([(t n) (in-indexed ts)])
-      (assert-<: n res array* t integer*)
-      (array-type-elt-type (minimize res)))))
-
-(define (set-nth/multi arr ns v)
-  (match ns
-    [(or (? number? n) (list n)) (set-nth arr n v)]
-    [(list n m ...)              (set-nth arr n (set-nth/multi (nth arr n) m v))]))
-
-(define-function _set_nth_
-  (λ (a . bs)
-    (let loop ([res a] [nvs bs])
-      (match nvs
-        [(list n v xs ...) (loop (set-nth/multi res n v) xs)]
-        [_                 res])))
-  (λ (ta . ts)
-    (assert-<: 0 ta array*)
-    (define ta^ (minimize ta))
-    (let loop ([nvs ts] [n 1])
-      (unless (empty? nvs)
-        (match-define (list tn tv txs ...) nvs)
-        (define te (match (minimize tn)
-                     [(tuple-type (list tns ...))
-                      (for/fold ([te ta^])
-                                ([t (in-list tns)])
-                        (assert-<: n t integer*)
-                        (array-type-elt-type te))]
-                     [t
-                      (assert-<: n t integer*)
-                      (array-type-elt-type ta^)]))
-        (assert-<: (add1 n) tv te)
-        (loop txs (+ 2 n))))
-    ta^))
 
 (define-function _field_ dict-ref
   (λ (ta tb)
