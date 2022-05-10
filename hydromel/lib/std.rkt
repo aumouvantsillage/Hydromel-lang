@@ -435,21 +435,26 @@
         (loop rst^ (+ 2 pos))))
     ta^))
 
-; Array assignment to
+; Assignment to a multidimensional array.
 (define (set-nth/multi arr ns v)
   (match ns
     [(or (? number? n) (list n)) (set-nth arr n v)]
     [(list n m ...)              (set-nth arr n (set-nth/multi (nth arr n) m v))]))
 
 ; The record constructor creates a hash table.
+; Even arguments are keys. Odd arguments are values.
 (define-function _record_
   hash
-  (λ ts
-    (define ts^ (for/list ([(it n) (in-indexed ts)])
-                  (if (even? n)
-                    (const-type-value it)
-                    it)))
-    (record-type (apply hash ts^))))
+  (λ kts
+    (~>> (for/list ([(kt pos) (in-indexed kts)])
+           (if (even? pos)
+             (begin
+               ; Check that even arguments are symbols and extract them.
+               (assert-<: pos kt symbol*)
+               (const-type-value kt))
+             kt))
+         (apply hash)
+         record-type)))
 
 (define-function _field_ dict-ref
   (λ (ta tb)
