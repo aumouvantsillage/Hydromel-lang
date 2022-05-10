@@ -5,7 +5,6 @@
 #lang racket
 
 (require
-  rackunit
   racket/runtime-path
   hydromel/support
   "../common.rkt"
@@ -21,11 +20,10 @@
 (test-signal   inst 'top    (list   0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 1 1 0))
 (test-signal   inst 'bottom (list   1 0 0 0 1 0 0 0 0 0 1 0 0 0 1 0 0 1))
 
-(define-runtime-path vcd-file "counter.vcd")
-
 (define duration 19)
 
 (instance-dump inst duration)
 
+(define-runtime-path vcd-file "counter.vcd")
 (instance-dump-vcd inst duration "10 ns"
   (open-output-file vcd-file #:exists 'replace))
