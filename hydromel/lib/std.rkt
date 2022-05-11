@@ -441,7 +441,9 @@
 (define (set-nth/multi arr ns v)
   (match ns
     [(or (? number? n) (list n)) (set-nth arr n v)]
-    [(list n m ...)              (set-nth arr n (set-nth/multi (nth arr n) m v))]))
+    [(list n ns^ ...)            (~> (nth arr n)
+                                     (set-nth/multi _ ns^ v)
+                                     (set-nth arr n _))]))
 
 ; The record constructor creates a hash table.
 ; Even arguments are keys. Odd arguments are values.
@@ -458,36 +460,38 @@
          (apply hash)
          record-type)))
 
-(define-function _field_ dict-ref
-  (λ (ta tb)
-    (assert-<: 0 ta record* tb symbol*)
-    (define ta^ (minimize ta))
-    (define tb^ (minimize tb))
-    (define field-name (symbol-type-value tb^))
-    (dict-ref (record-type-fields ta^) field-name
+(define-function _field_
+  dict-ref
+  (λ (tk tv)
+    (assert-<: 0 tk record* tv symbol*)
+    (define fields     (~> tk minimize record-type-fields))
+    (define field-name (~> tv minimize symbol-type-value))
+    (dict-ref fields field-name
       (thunk (error "Unknown field" field-name)))))
 
 (define-function _set_field_
-  (λ (a . bs)
-    (let loop ([res a] [kvs bs])
-      (match kvs
-        [(list k v r ...) (loop (dict-set res k v) r)]
-        [_                res])))
-  (λ (ta . tbs)
-    (assert-<: 0 ta record*)
-    (define ta^ (minimize ta))
-    (let loop ([n 1] [kvs tbs])
-      (match kvs
-        [(list tk tv tr ...)
-         (assert-<: n tk symbol*)
-         (define field-name (symbol-type-value (minimize tk)))
-         (define tf (dict-ref (record-type-fields ta^) field-name
+  (λ (r . kvs)
+    (let loop ([res r] [rst kvs])
+      (match rst
+        [(list k v rst^ ...) (loop (dict-set res k v) rst^)]
+        [_                   res])))
+  (λ (tr . tkvs)
+    (assert-<: 0 tr record*)
+    (define tr^ (minimize tr))
+    (define fields (~> tr^ minimize record-type-fields))
+    (let loop ([pos 1] [rst tkvs])
+      (match rst
+        [(list tk tv rst^ ...)
+         (assert-<: pos tk symbol*)
+         (define field-name (~> tk minimize symbol-type-value))
+         (define tf (dict-ref fields field-name
                       (thunk (error "Unknown field" field-name))))
-         (assert-<: (add1 n) tv tf)
-         (loop (+ 2 n) tr)]
-        [_ ta^]))))
+         (assert-<: (add1 pos) tv tf)
+         (loop (+ 2 pos) rst^)]
+        [_ tr^]))))
 
-(define-function _tuple_ list
+(define-function _tuple_
+  list
   (λ ts
     (tuple-type ts)))
 
