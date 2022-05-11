@@ -269,9 +269,9 @@
 ; The result is always signed and is one bit wider than the operand.
 (define-function _neg_
   -
-  (λ (ta)
-    (assert-<: 0 ta integer*)
-    (~>> ta
+  (λ (t)
+    (assert-<: 0 t integer*)
+    (~>> t
          minimize
          abstract-integer-type-width
          add1
@@ -328,29 +328,29 @@
 ; case automatically.
 (define-function/cast _slice_
   unsigned-slice
-  (λ (ta tb tc)
-    (assert-<: 0 ta integer* tb integer* tc integer*)
-    (define left (match tb
+  (λ (tx tl tr)
+    (assert-<: 0 tx integer* tl integer* tr integer*)
+    (define left (match tl
                    [(const-type    v _) v]
                    [(unsigned-type n)   (max-unsigned-value n)]
                    [(signed-type   n)   (max-signed-value   n)]))
-    (define right (match tc
+    (define right (match tr
                    [(const-type    v _) v]
                    [(unsigned-type n)   (min-unsigned-value n)]
                    [(signed-type   n)   (min-signed-value   n)]))
-    (resize (minimize ta) (max 0 (add1 (- left right))))))
+    (resize (minimize tx) (max 0 (add1 (- left right))))))
 
 ; The slice assignment operator is implemented using the `set-slice` function
 ; from numeric.rkt. Its return type is the type of the first operand.
 (define-function _set_slice_
-  (λ (a . bs)
-    (let loop ([res a] [lrvs bs])
-      (match lrvs
-        [(list l r v xs ...) (loop (set-slice res l r v) xs)]
-        [_                   res])))
+  (λ (x . lrvs)
+    (let loop ([res x] [rst lrvs])
+      (match rst
+        [(list l r v rst^ ...) (loop (set-slice res l r v) rst^)]
+        [_                      res])))
   (λ ts
-    (for ([(t n) (in-indexed ts)])
-      (assert-<: n t integer*))
+    (for ([(t pos) (in-indexed ts)])
+      (assert-<: pos t integer*))
     (first ts)))
 
 ; The binary concatenetion operation is based on the function `unsigned-concat*`
@@ -359,26 +359,28 @@
 ; Since this function needs to know the width of its arguments,
 ; their types are inserted by the checker.
 (define-function/cast _concat_
-  (λ vs
+  (λ vts
     (apply unsigned-concat*
-      (let loop ([res empty] [lst vs])
-        (match lst
-          [(list h ... v t)
+      (let loop ([res empty] [rst vts])
+        (match rst
+          [(list rst^ ... v t)
            (define l (~>> t
                           minimize
                           abstract-integer-type-width
                           sub1))
-           (loop (cons (list v l 0) res) h)]
+           (loop (cons (list v l 0) res) rst^)]
           [_ res]))))
   (λ ts
     ; Check that arguments at even positions have integer types.
-    (define ts^ (for/list ([(t n) (in-indexed ts)] #:when (even? n))
-                  (assert-<: (/ n 2) t integer*)
+    (define ts^ (for/list ([(t pos) (in-indexed ts)] #:when (even? pos))
+                  (assert-<: pos t integer*)
                   (minimize t)))
     ; Compute the total width of the result.
-    (define w (for/sum ([(t n) (in-indexed ts^)])
+    (define w (for/sum ([(t pos) (in-indexed ts^)])
                 (or (abstract-integer-type-width t)
-                    (raise-semantic-error "Operand width could not be determined" (current-typecheck-stx) (* 2 n)))))
+                    (raise-semantic-error "Operand width could not be determined" (current-typecheck-stx) (* 2 pos)))))
+    ; The result has the same signedness as the first argument.
+    ; If there is no argument, `_concat_` retuns bit 0.
     (match ts^
       [(list (signed-type   _) _ ...) (signed-type   w)]
       [(list (unsigned-type _) _ ...) (unsigned-type w)]

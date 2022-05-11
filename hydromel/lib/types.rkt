@@ -272,7 +272,7 @@
                                                       (if (> (length acc) 0)
                                                         (string-append acc ", " s)
                                                         s)))]
-    [(symbol-type s)           (format "~~~a" s)]
+    [(symbol-type s)           (format "symbol(~a)" s)]
     [(subtype-type (any-type)) "type"]
     [(subtype-type u)          (format "subtype(~a)" (type->string u))]
     [u                         (format "~v" u)]))
