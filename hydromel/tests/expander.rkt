@@ -36,7 +36,7 @@
   (assignment (name-expr y) (slot-expr (name-expr x))))
 
 (define c0-inst (C0 30))
-(instance-set! c0-inst 'x (signal 23))
+(instance-set! c0-inst 'x (make-signal 23))
 
 (test-case "Can construct a channel for a component with simple ports"
   (check-pred slot? (dict-ref c0-inst 'x))
@@ -138,7 +138,7 @@
               (slot-expr (field-expr (name-expr i) x))))
 
 (define c2-inst (C2))
-(instance-set! c2-inst '(i x) (signal 23))
+(instance-set! c2-inst '(i x) (make-signal 23))
 
 (test-case "Can access simple ports in a composite port"
   (check-sig-equal? (instance-ref c2-inst '(i y)) (instance-ref c2-inst '(i x)) 5))
@@ -153,9 +153,9 @@
               (slot-expr (field-expr (indexed-port-expr (name-expr i) (literal-expr 2)) x))))
 
 (define c3-inst (C3))
-(instance-set! c3-inst '(i 0 x) (signal 10))
-(instance-set! c3-inst '(i 1 x) (signal 20))
-(instance-set! c3-inst '(i 2 x) (signal 30))
+(instance-set! c3-inst '(i 0 x) (make-signal 10))
+(instance-set! c3-inst '(i 1 x) (make-signal 20))
+(instance-set! c3-inst '(i 2 x) (make-signal 30))
 
 (test-case "Can access simple ports in a vector composite port with static indices"
   (check-sig-equal? (instance-ref c3-inst '(i 0 y)) (instance-ref c3-inst '(i 0 x)) 5)
@@ -174,13 +174,13 @@
                          (slot-expr (field-expr (indexed-port-expr (name-expr i) (name-expr y^)) x)))))
 
 (define c4-inst (C4))
-(instance-set! c4-inst '(i 0 x) (signal 10))
-(instance-set! c4-inst '(i 1 x) (signal 20))
-(instance-set! c4-inst '(i 2 x) (signal 30))
-(instance-set! c4-inst 'y       (signal 0 1 2 1 0 2))
+(instance-set! c4-inst '(i 0 x) (make-signal 10))
+(instance-set! c4-inst '(i 1 x) (make-signal 20))
+(instance-set! c4-inst '(i 2 x) (make-signal 30))
+(instance-set! c4-inst 'y       (make-signal 0 1 2 1 0 2))
 
 (test-case "Can access simple ports in a vector composite port with dynamic indices"
-  (check-sig-equal? (instance-ref c4-inst 'z) (signal 10 20 30 20 10 30) 6))
+  (check-sig-equal? (instance-ref c4-inst 'z) (make-signal 10 20 30 20 10 30) 6))
 
 (component C5
   (data-port x in (call-expr signed  (literal-expr 32)))
@@ -194,11 +194,11 @@
         (call-expr _+_ (name-expr x^) (name-expr y^))))))
 
 (define c5-inst (C5))
-(instance-set! c5-inst 'x (signal 1  2  3  4  5))
-(instance-set! c5-inst 'y (signal 10 20 30 40 50))
+(instance-set! c5-inst 'x (make-signal 1  2  3  4  5))
+(instance-set! c5-inst 'y (make-signal 10 20 30 40 50))
 
 (test-case "Can perform an operation between signals"
-  (check-sig-equal? (instance-ref c5-inst 'z) (signal 11 22 33 44 55) 5))
+  (check-sig-equal? (instance-ref c5-inst 'z) (make-signal 11 22 33 44 55) 5))
 
 (component C6
   (data-port x in (call-expr signed  (literal-expr 32)))
@@ -220,13 +220,13 @@
         (call-expr _+_ (name-expr xy^) (name-expr zu^))))))
 
 (define c6-inst (C6))
-(instance-set! c6-inst 'x (signal 10 20 30 40 50))
-(instance-set! c6-inst 'y (signal 2))
-(instance-set! c6-inst 'z (signal 1 2 3 4 5))
-(instance-set! c6-inst 'u (signal 3))
+(instance-set! c6-inst 'x (make-signal 10 20 30 40 50))
+(instance-set! c6-inst 'y (make-signal 2))
+(instance-set! c6-inst 'z (make-signal 1 2 3 4 5))
+(instance-set! c6-inst 'u (make-signal 3))
 
 (test-case "Can use local signals"
-  (check-sig-equal? (instance-ref c6-inst 'v) (signal 23 46 69 92 115) 5))
+  (check-sig-equal? (instance-ref c6-inst 'v) (make-signal 23 46 69 92 115) 5))
 
 (component C7
   (parameter N (call-expr unsigned  (literal-expr 32)))
@@ -246,10 +246,10 @@
   (assignment (name-expr y) (slot-expr (field-expr (name-expr c) y))))
 
 (define c8-inst (C8))
-(instance-set! c8-inst 'x (signal 10 20 30 40 50))
+(instance-set! c8-inst 'x (make-signal 10 20 30 40 50))
 
 (test-case "Can instantiate a component"
-  (check-sig-equal? (instance-ref c8-inst 'y) (signal 100 200 300 400 500) 5))
+  (check-sig-equal? (instance-ref c8-inst 'y) (make-signal 100 200 300 400 500) 5))
 
 (component C9
   (data-port x0 in (call-expr signed  (literal-expr 32)))
@@ -266,11 +266,11 @@
         (call-expr _+_ (name-expr y0) (name-expr y1))))))
 
 (define c9-inst (C9))
-(instance-set! c9-inst 'x0 (signal 10 20 30 40 50))
-(instance-set! c9-inst 'x1 (signal 1 2 3 4 5))
+(instance-set! c9-inst 'x0 (make-signal 10 20 30 40 50))
+(instance-set! c9-inst 'x1 (make-signal 1 2 3 4 5))
 
 (test-case "Can instantiate a multiple component"
-  (check-sig-equal? (instance-ref c9-inst 'y) (signal 110 220 330 440 550) 5))
+  (check-sig-equal? (instance-ref c9-inst 'y) (make-signal 110 220 330 440 550) 5))
 
 (component C10
   (data-port x in (call-expr signed  (literal-expr 32)))
@@ -278,10 +278,10 @@
   (assignment (name-expr y) (register-expr (literal-expr 0) (slot-expr (name-expr x)))))
 
 (define c10-inst (C10))
-(instance-set! c10-inst 'x (signal 10 20 30 40 50))
+(instance-set! c10-inst 'x (make-signal 10 20 30 40 50))
 
 (test-case "Can register a signal"
-  (check-sig-equal? (instance-ref c10-inst 'y) (signal 0  10 20 30 40 50) 6))
+  (check-sig-equal? (instance-ref c10-inst 'y) (make-signal 0  10 20 30 40 50) 6))
 
 (component C11
   (data-port x in (call-expr signed  (literal-expr 32)))
@@ -291,11 +291,11 @@
                                            (slot-expr (name-expr y)))))
 
 (define c11-inst (C11))
-(instance-set! c11-inst 'x (signal #f #f #f #t #f))
-(instance-set! c11-inst 'y (signal 10 20 30 40 50))
+(instance-set! c11-inst 'x (make-signal #f #f #f #t #f))
+(instance-set! c11-inst 'y (make-signal 10 20 30 40 50))
 
 (test-case "Can register a signal with reset"
-  (check-sig-equal? (instance-ref c11-inst 'z) (signal 0  10 20 30 0  50) 6))
+  (check-sig-equal? (instance-ref c11-inst 'z) (make-signal 0  10 20 30 0  50) 6))
 
 (component C12
   (data-port x in (call-expr signed  (literal-expr 32)))
@@ -305,11 +305,11 @@
                                            (slot-expr (name-expr y)) (when-clause (slot-expr (name-expr x))))))
 
 (define c12-inst (C12))
-(instance-set! c12-inst 'x (signal #f #t #f #t #f))
-(instance-set! c12-inst 'y (signal 10 20 30 40 50))
+(instance-set! c12-inst 'x (make-signal #f #t #f #t #f))
+(instance-set! c12-inst 'y (make-signal 10 20 30 40 50))
 
 (test-case "Can register a signal with enable"
-  (check-sig-equal? (instance-ref c12-inst 'z) (signal 0  0  20 20 40) 6))
+  (check-sig-equal? (instance-ref c12-inst 'z) (make-signal 0  0  20 20 40) 6))
 
 (component C13
   (data-port x in (call-expr signed  (literal-expr 32)))
@@ -321,12 +321,12 @@
                    (slot-expr (name-expr z)) (when-clause (slot-expr (name-expr y))))))
 
 (define c13-inst (C13))
-(instance-set! c13-inst 'x (signal #f #f #t #f #f))
-(instance-set! c13-inst 'y (signal #f #t #f #t #f))
-(instance-set! c13-inst 'z (signal 10 20 30 40 50))
+(instance-set! c13-inst 'x (make-signal #f #f #t #f #f))
+(instance-set! c13-inst 'y (make-signal #f #t #f #t #f))
+(instance-set! c13-inst 'z (make-signal 10 20 30 40 50))
 
 (test-case "Can register a signal with reset and enable"
-  (check-sig-equal? (instance-ref c13-inst 'u) (signal 0  0  20 0  40) 6))
+  (check-sig-equal? (instance-ref c13-inst 'u) (make-signal 0  0  20 0  40) 6))
 
 (component C14
   (constant N (literal-expr 56))
@@ -336,7 +336,7 @@
 (define c14-inst (C14))
 
 (test-case "Can read a local constant"
-  (check-sig-equal? (instance-ref c14-inst 'y) (signal 56) 1))
+  (check-sig-equal? (instance-ref c14-inst 'y) (make-signal 56) 1))
 
 (test-case "Can read a constant as a channel field"
   (check-equal? (instance-ref c14-inst 'N) 56))
@@ -352,7 +352,7 @@
 (define c15-inst (C15))
 
 (test-case "Can read a constant from a port"
-  (check-sig-equal? (instance-ref c15-inst '(p y)) (signal 56) 1))
+  (check-sig-equal? (instance-ref c15-inst '(p y)) (make-signal 56) 1))
 
 (component C16
   (data-port y out (call-expr signed  (literal-expr 32)))
@@ -362,7 +362,7 @@
 (define c16-inst (C16))
 
 (test-case "Can read a constant from an instance"
-  (check-sig-equal? (instance-ref c16-inst 'y) (signal 56) 1))
+  (check-sig-equal? (instance-ref c16-inst 'y) (make-signal 56) 1))
 
 (component C17
   (data-port y out (call-expr signed  (literal-expr 32)))
@@ -372,7 +372,7 @@
 (define c17-inst (C17))
 
 (test-case "Can read a constant from an instance port"
-  (check-sig-equal? (instance-ref c17-inst 'y) (signal 56) 1))
+  (check-sig-equal? (instance-ref c17-inst 'y) (make-signal 56) 1))
 
 (constant K0 (literal-expr 44))
 
@@ -383,7 +383,7 @@
 (define c18-inst (C18))
 
 (test-case "Can read a global constant"
-  (check-sig-equal? (instance-ref c18-inst 'y) (signal 44) 1))
+  (check-sig-equal? (instance-ref c18-inst 'y) (make-signal 44) 1))
 
 (component C19
   (constant N (literal-expr 255))
@@ -411,11 +411,11 @@
                                (name-expr y^) (call-expr signed  (literal-expr 4))))))
 
 (define c20-inst (C20))
-(instance-set! c20-inst 'x (signal 0 5 -2))
-(instance-set! c20-inst 'y (signal 0 3 -4))
+(instance-set! c20-inst 'x (make-signal 0 5 -2))
+(instance-set! c20-inst 'y (make-signal 0 3 -4))
 
 (test-case "Can concatenate two integers"
-  (check-sig-equal? (instance-ref c20-inst 'z) (signal 0 83 -20) 3))
+  (check-sig-equal? (instance-ref c20-inst 'z) (make-signal 0 83 -20) 3))
 
 (component C21
   (data-port x in  (call-expr unsigned  (literal-expr 8)))
@@ -439,11 +439,11 @@
                               (call-expr _nth_ (name-expr x^) (name-expr i^)))))
 
 (define c22-inst (C22))
-(instance-set! c22-inst 'x (signal (pvector 10 20 30 40)))
-(instance-set! c22-inst 'i (signal 0 1 2 3))
+(instance-set! c22-inst 'x (make-signal (pvector 10 20 30 40)))
+(instance-set! c22-inst 'i (make-signal 0 1 2 3))
 
 (test-case "Can read an array"
-  (check-sig-equal? (instance-ref c22-inst 'y) (signal 10 20 30 40) 4))
+  (check-sig-equal? (instance-ref c22-inst 'y) (make-signal 10 20 30 40) 4))
 
 (component C23
   (data-port y out (call-expr array (literal-expr 3) (call-expr unsigned  (literal-expr 8))))
@@ -452,7 +452,7 @@
 (define c23-inst (C23))
 
 (test-case "Can make a vector"
-  (check-sig-equal? (instance-ref c23-inst 'y) (signal (pvector 10 20 30)) 1))
+  (check-sig-equal? (instance-ref c23-inst 'y) (make-signal (pvector 10 20 30)) 1))
 
 (component C24
   (data-port x in (call-expr unsigned  (literal-expr 8)))
@@ -464,10 +464,10 @@
         i (call-expr _range_ (literal-expr 1) (literal-expr 3))))))
 
 (define c24-inst (C24))
-(instance-set! c24-inst 'x (signal 10 20 30))
+(instance-set! c24-inst 'x (make-signal 10 20 30))
 
 (test-case "Can make a vector comprehension"
-  (check-sig-equal? (instance-ref c24-inst 'y) (signal (pvector 11 12 13) (pvector 21 22 23) (pvector 31 32 33)) 3))
+  (check-sig-equal? (instance-ref c24-inst 'y) (make-signal (pvector 11 12 13) (pvector 21 22 23) (pvector 31 32 33)) 3))
 
 (component C25
   (data-port x in  (call-expr unsigned  (literal-expr 4)))
@@ -479,10 +479,10 @@
         i (call-expr _range_ (literal-expr 0) (literal-expr 3))))))
 
 (define c25-inst (C25))
-(instance-set! c25-inst 'x (signal 10 11 12))
+(instance-set! c25-inst 'x (make-signal 10 11 12))
 
 (test-case "Can make a slice comprehension"
-  (check-sig-equal? (instance-ref c25-inst 'y) (signal 5 13 3) 3))
+  (check-sig-equal? (instance-ref c25-inst 'y) (make-signal 5 13 3) 3))
 
 (interface I9
   (data-port z in (call-expr unsigned  (literal-expr 1))))
@@ -497,13 +497,13 @@
       i (call-expr _range_ (literal-expr 3) (literal-expr 0)))))
 
 (define c26-inst (C26))
-(instance-set! c26-inst '(x 0 z) (signal 1 0 0))
-(instance-set! c26-inst '(x 1 z) (signal 1 1 0))
-(instance-set! c26-inst '(x 2 z) (signal 0 1 1))
-(instance-set! c26-inst '(x 3 z) (signal 0 0 1))
+(instance-set! c26-inst '(x 0 z) (make-signal 1 0 0))
+(instance-set! c26-inst '(x 1 z) (make-signal 1 1 0))
+(instance-set! c26-inst '(x 2 z) (make-signal 0 1 1))
+(instance-set! c26-inst '(x 3 z) (make-signal 0 0 1))
 
 (test-case "Can make a slice comprehension using an array composite port"
-  (check-sig-equal? (instance-ref c26-inst 'y) (signal 3 6 12) 3))
+  (check-sig-equal? (instance-ref c26-inst 'y) (make-signal 3 6 12) 3))
 
 (component C31
   (composite-port x ((literal-expr 4)) I9)
@@ -516,13 +516,13 @@
       i (call-expr _range_ (literal-expr 3) (literal-expr 0)))))
 
 (define c31-inst (C31))
-(instance-set! c31-inst '(x 0 z) (signal 1 0 0))
-(instance-set! c31-inst '(x 1 z) (signal 1 1 0))
-(instance-set! c31-inst '(x 2 z) (signal 0 1 1))
-(instance-set! c31-inst '(x 3 z) (signal 0 0 1))
+(instance-set! c31-inst '(x 0 z) (make-signal 1 0 0))
+(instance-set! c31-inst '(x 1 z) (make-signal 1 1 0))
+(instance-set! c31-inst '(x 2 z) (make-signal 0 1 1))
+(instance-set! c31-inst '(x 3 z) (make-signal 0 0 1))
 
 (test-case "Can make a 2D slice comprehension using an array composite port"
-  (check-sig-equal? (instance-ref c31-inst 'y) (signal #xC3 #x96 #x3C) 3))
+  (check-sig-equal? (instance-ref c31-inst 'y) (make-signal #xC3 #x96 #x3C) 3))
 
 (component C32
   (composite-port x ((literal-expr 4)) I9)
@@ -535,13 +535,13 @@
       i (call-expr _range_ (name-expr j) (literal-expr 0)))))
 
 (define c32-inst (C32))
-(instance-set! c32-inst '(x 0 z) (signal 1 0 0))
-(instance-set! c32-inst '(x 1 z) (signal 1 1 0))
-(instance-set! c32-inst '(x 2 z) (signal 0 1 1))
-(instance-set! c32-inst '(x 3 z) (signal 0 0 1))
+(instance-set! c32-inst '(x 0 z) (make-signal 1 0 0))
+(instance-set! c32-inst '(x 1 z) (make-signal 1 1 0))
+(instance-set! c32-inst '(x 2 z) (make-signal 0 1 1))
+(instance-set! c32-inst '(x 3 z) (make-signal 0 0 1))
 
 (test-case "Can make a 2D slice comprehension with index dependencies using an array composite port"
-  (check-sig-equal? (instance-ref c32-inst 'y) (signal #x319 #x272 #x0E6) 3))
+  (check-sig-equal? (instance-ref c32-inst 'y) (make-signal #x319 #x272 #x0E6) 3))
 
 (component C27
   (composite-port x ((literal-expr 4)) I9)
@@ -553,13 +553,13 @@
       i (call-expr _range_ (literal-expr 3) (literal-expr 0)))))
 
 (define c27-inst (C27))
-(instance-set! c27-inst '(x 0 z) (signal 1 0 0))
-(instance-set! c27-inst '(x 1 z) (signal 1 1 0))
-(instance-set! c27-inst '(x 2 z) (signal 0 1 1))
-(instance-set! c27-inst '(x 3 z) (signal 0 0 1))
+(instance-set! c27-inst '(x 0 z) (make-signal 1 0 0))
+(instance-set! c27-inst '(x 1 z) (make-signal 1 1 0))
+(instance-set! c27-inst '(x 2 z) (make-signal 0 1 1))
+(instance-set! c27-inst '(x 3 z) (make-signal 0 0 1))
 
 (test-case "Can make an array comprehension using an array composite port"
-  (check-sig-equal? (instance-ref c27-inst 'y) (signal #(0 0 1 1) #(0 1 1 0) #(1 1 0 0)) 3))
+  (check-sig-equal? (instance-ref c27-inst 'y) (make-signal #(0 0 1 1) #(0 1 1 0) #(1 1 0 0)) 3))
 
 (component C28
   (composite-port x ((literal-expr 4)) I9)
@@ -572,13 +572,13 @@
       j (call-expr _range_ (literal-expr 2) (literal-expr 0)))))
 
 (define c28-inst (C28))
-(instance-set! c28-inst '(x 0 z) (signal 1 0 0))
-(instance-set! c28-inst '(x 1 z) (signal 1 1 0))
-(instance-set! c28-inst '(x 2 z) (signal 0 1 1))
-(instance-set! c28-inst '(x 3 z) (signal 0 0 1))
+(instance-set! c28-inst '(x 0 z) (make-signal 1 0 0))
+(instance-set! c28-inst '(x 1 z) (make-signal 1 1 0))
+(instance-set! c28-inst '(x 2 z) (make-signal 0 1 1))
+(instance-set! c28-inst '(x 3 z) (make-signal 0 0 1))
 
 (test-case "Can make an 2D array comprehension using an array composite port"
-  (check-sig-equal? (instance-ref c28-inst 'y) (signal #(2 1 0 2 1 0 3 2 1 3 2 1) #(2 1 0 3 2 1 3 2 1 2 1 0) #(3 2 1 3 2 1 2 1 0 2 1 0)) 3))
+  (check-sig-equal? (instance-ref c28-inst 'y) (make-signal #(2 1 0 2 1 0 3 2 1 3 2 1) #(2 1 0 3 2 1 3 2 1 2 1 0) #(3 2 1 3 2 1 2 1 0 2 1 0)) 3))
 
 (component C29
   (composite-port x ((literal-expr 4)) I9)
@@ -591,13 +591,13 @@
       j (call-expr _range_ (name-expr i) (literal-expr 0)))))
 
 (define c29-inst (C29))
-(instance-set! c29-inst '(x 0 z) (signal 1 0 0))
-(instance-set! c29-inst '(x 1 z) (signal 1 1 0))
-(instance-set! c29-inst '(x 2 z) (signal 0 1 1))
-(instance-set! c29-inst '(x 3 z) (signal 0 0 1))
+(instance-set! c29-inst '(x 0 z) (make-signal 1 0 0))
+(instance-set! c29-inst '(x 1 z) (make-signal 1 1 0))
+(instance-set! c29-inst '(x 2 z) (make-signal 0 1 1))
+(instance-set! c29-inst '(x 3 z) (make-signal 0 0 1))
 
 (test-case "Can make an 2D array comprehension with index dependencies using an array composite port"
-  (check-sig-equal? (instance-ref c29-inst 'y) (signal #(3 2 1 0 2 1 0 2 1 1) #(3 2 1 0 3 2 1 2 1 0) #(4 3 2 1 3 2 1 1 0 0)) 3))
+  (check-sig-equal? (instance-ref c29-inst 'y) (make-signal #(3 2 1 0 2 1 0 2 1 1) #(3 2 1 0 3 2 1 2 1 0) #(4 3 2 1 3 2 1 1 0 0)) 3))
 
 (typedef word (call-expr unsigned (literal-expr 32)))
 (typedef utwice (parameter n (call-expr natural)) (call-expr unsigned (call-expr _*_ (name-expr n) (literal-expr 2))))
@@ -626,17 +626,17 @@
 
 (define c33-inst (C33))
 
-(instance-set! c33-inst '(x 0 0 z) (signal 1 0 0))
-(instance-set! c33-inst '(x 0 1 z) (signal 1 1 0))
-(instance-set! c33-inst '(x 0 2 z) (signal 0 1 1))
-(instance-set! c33-inst '(x 1 0 z) (signal 0 0 1))
-(instance-set! c33-inst '(x 1 1 z) (signal 1 0 1))
-(instance-set! c33-inst '(x 1 2 z) (signal 1 1 1))
+(instance-set! c33-inst '(x 0 0 z) (make-signal 1 0 0))
+(instance-set! c33-inst '(x 0 1 z) (make-signal 1 1 0))
+(instance-set! c33-inst '(x 0 2 z) (make-signal 0 1 1))
+(instance-set! c33-inst '(x 1 0 z) (make-signal 0 0 1))
+(instance-set! c33-inst '(x 1 1 z) (make-signal 1 0 1))
+(instance-set! c33-inst '(x 1 2 z) (make-signal 1 1 1))
 
 (test-case "Can use multidimensional composite ports"
-  (check-sig-equal? (instance-ref c33-inst '(y 0 0 z)) (signal 0 1 1) 3)
-  (check-sig-equal? (instance-ref c33-inst '(y 0 1 z)) (signal 0 0 1) 3)
-  (check-sig-equal? (instance-ref c33-inst '(y 0 2 z)) (signal 1 0 0) 3)
-  (check-sig-equal? (instance-ref c33-inst '(y 1 0 z)) (signal 1 1 0) 3)
-  (check-sig-equal? (instance-ref c33-inst '(y 1 1 z)) (signal 0 1 0) 3)
-  (check-sig-equal? (instance-ref c33-inst '(y 1 2 z)) (signal 0 0 0) 3))
+  (check-sig-equal? (instance-ref c33-inst '(y 0 0 z)) (make-signal 0 1 1) 3)
+  (check-sig-equal? (instance-ref c33-inst '(y 0 1 z)) (make-signal 0 0 1) 3)
+  (check-sig-equal? (instance-ref c33-inst '(y 0 2 z)) (make-signal 1 0 0) 3)
+  (check-sig-equal? (instance-ref c33-inst '(y 1 0 z)) (make-signal 1 1 0) 3)
+  (check-sig-equal? (instance-ref c33-inst '(y 1 1 z)) (make-signal 0 1 0) 3)
+  (check-sig-equal? (instance-ref c33-inst '(y 1 2 z)) (make-signal 0 0 0) 3))

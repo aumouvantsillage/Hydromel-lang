@@ -305,7 +305,7 @@
 ; A static signal expression is a wrapper element added by the semantic checker
 ; when an expression has a constant value, but is assigned to a signal.
 (define-syntax-parse-rule (signal-expr expr)
-  (signal (unwrap-slot expr)))
+  (make-signal (unwrap-slot expr)))
 
 (define-syntax-parser unwrap-slot
   #:literals [name-expr field-expr]

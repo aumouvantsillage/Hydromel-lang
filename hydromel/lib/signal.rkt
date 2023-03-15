@@ -18,7 +18,7 @@
   signal-rest
   signal-take
   list->signal
-  signal
+  make-signal
   signal-lift
   signal-lift*
   signal-λ
@@ -92,7 +92,7 @@
 
 ; Create a signal with the given values.
 ; The last value is repeated indefinitely.
-(define-syntax-parse-rule (signal val ...)
+(define-syntax-parse-rule (make-signal val ...)
   (list->signal (list val ...))) ; Pass the arguments as a list to list->signal.
 
 
@@ -151,7 +151,7 @@
 (define-syntax-parser define-signal
   ; Define a variable that contains a signal.
   [(define-signal name:id val ...)
-   #'(define name (signal val ...))]
+   #'(define name (make-signal val ...))]
   ; Define a function with the given list of arguments.
   [(define-signal (name:id sig:id ...) body ...)
    #'(define name (signal-λ (sig ...) body ...))]

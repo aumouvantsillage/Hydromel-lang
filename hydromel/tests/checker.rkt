@@ -25,7 +25,7 @@
     (assignment (name-expr y) (name-expr x))))
 
 (define c0-inst (C0))
-(instance-set! c0-inst 'x (signal 10))
+(instance-set! c0-inst 'x (make-signal 10))
 
 (test-case "Can label a simple signal expressions"
   (check-sig-equal? (instance-ref c0-inst 'y) (instance-ref c0-inst 'x) 5))
@@ -40,7 +40,7 @@
     (assignment (field-expr (name-expr i) y) (field-expr (name-expr i) x))))
 
 (define c1-inst (C1))
-(instance-set! c1-inst '(i x) (signal 10))
+(instance-set! c1-inst '(i x) (make-signal 10))
 
 (test-case "Can resolve ports in field expressions"
   (check-sig-equal? (instance-ref c1-inst '(i y)) (instance-ref c1-inst '(i x)) 5))
@@ -54,8 +54,8 @@
                 (field-expr (indexed-port-expr (name-expr i) (literal-expr 1)) x))))
 
 (define c2-inst (C2))
-(instance-set! c2-inst '(i 0 x) (signal 10))
-(instance-set! c2-inst '(i 1 x) (signal 20))
+(instance-set! c2-inst '(i 0 x) (make-signal 10))
+(instance-set! c2-inst '(i 1 x) (make-signal 20))
 
 (test-case "Can resolve ports in indexed expressions"
   (check-sig-equal? (instance-ref c2-inst '(i 0 y)) (instance-ref c2-inst '(i 0 x)) 5)
@@ -77,10 +77,10 @@
                 (field-expr (indexed-port-expr (field-expr (indexed-port-expr (name-expr j) (literal-expr 1)) i) (literal-expr 1)) x))))
 
 (define c3-inst (C3))
-(instance-set! c3-inst '(j 0 i 0 x) (signal 10))
-(instance-set! c3-inst '(j 0 i 1 x) (signal 20))
-(instance-set! c3-inst '(j 1 i 0 x) (signal 30))
-(instance-set! c3-inst '(j 1 i 1 x) (signal 40))
+(instance-set! c3-inst '(j 0 i 0 x) (make-signal 10))
+(instance-set! c3-inst '(j 0 i 1 x) (make-signal 20))
+(instance-set! c3-inst '(j 1 i 0 x) (make-signal 30))
+(instance-set! c3-inst '(j 1 i 1 x) (make-signal 40))
 
 (test-case "Can resolve ports in a hierarchy of expressions"
   (check-sig-equal? (instance-ref c3-inst '(j 0 i 0 y)) (instance-ref c3-inst '(j 0 i 0 x)) 5)
@@ -96,7 +96,7 @@
 (define c4-inst (C4))
 
 (test-case "Can assign a literal to a signal"
-  (check-sig-equal? (instance-ref c4-inst 'x) (signal 10) 5))
+  (check-sig-equal? (instance-ref c4-inst 'x) (make-signal 10) 5))
 
 (begin-hydromel
   (component C5
@@ -107,7 +107,7 @@
 (define c5-inst (C5))
 
 (test-case "Can assign a constant to a signal"
-  (check-sig-equal? (instance-ref c5-inst 'x) (signal 10) 5))
+  (check-sig-equal? (instance-ref c5-inst 'x) (make-signal 10) 5))
 
 (begin-hydromel
   (component C6
@@ -118,7 +118,7 @@
 (define c6-inst (C6))
 
 (test-case "Can assign a static expression to a signal"
-  (check-sig-equal? (instance-ref c6-inst 'x) (signal 11) 5))
+  (check-sig-equal? (instance-ref c6-inst 'x) (make-signal 11) 5))
 
 (begin-hydromel
   (component C7
@@ -131,11 +131,11 @@
         (add-expr (name-expr x) + (name-expr y))))))
 
 (define c7-inst (C7))
-(instance-set! c7-inst 'x (signal 10 20 30))
-(instance-set! c7-inst 'y (signal 40 50 60))
+(instance-set! c7-inst 'x (make-signal 10 20 30))
+(instance-set! c7-inst 'y (make-signal 40 50 60))
 
 (test-case "Can lift an operation"
-  (check-sig-equal? (instance-ref c7-inst 'z) (signal 50 70 90) 5))
+  (check-sig-equal? (instance-ref c7-inst 'z) (make-signal 50 70 90) 5))
 
 (begin-hydromel
   (component C8
@@ -151,13 +151,13 @@
                 + (mult-expr (name-expr z) * (name-expr u)))))))
 
 (define c8-inst (C8))
-(instance-set! c8-inst 'x (signal 10 20 30 40 50))
-(instance-set! c8-inst 'y (signal 2))
-(instance-set! c8-inst 'z (signal 1 2 3 4 5))
-(instance-set! c8-inst 'u (signal 3))
+(instance-set! c8-inst 'x (make-signal 10 20 30 40 50))
+(instance-set! c8-inst 'y (make-signal 2))
+(instance-set! c8-inst 'z (make-signal 1 2 3 4 5))
+(instance-set! c8-inst 'u (make-signal 3))
 
 (test-case "Can lift nested calls"
-  (check-sig-equal? (instance-ref c8-inst 'v) (signal 23 46 69 92 115) 5))
+  (check-sig-equal? (instance-ref c8-inst 'v) (make-signal 23 46 69 92 115) 5))
 
 (begin-hydromel
   (component C9
@@ -174,13 +174,13 @@
         (add-expr (name-expr xy) + (name-expr zu))))))
 
 (define c9-inst (C9))
-(instance-set! c9-inst 'x (signal 10 20 30 40 50))
-(instance-set! c9-inst 'y (signal 2))
-(instance-set! c9-inst 'z (signal 1 2 3 4 5))
-(instance-set! c9-inst 'u (signal 3))
+(instance-set! c9-inst 'x (make-signal 10 20 30 40 50))
+(instance-set! c9-inst 'y (make-signal 2))
+(instance-set! c9-inst 'z (make-signal 1 2 3 4 5))
+(instance-set! c9-inst 'u (make-signal 3))
 
 (test-case "Can use local signals"
-  (check-sig-equal? (instance-ref c9-inst 'v) (signal 23 46 69 92 115) 5))
+  (check-sig-equal? (instance-ref c9-inst 'v) (make-signal 23 46 69 92 115) 5))
 
 (begin-hydromel
   (interface I2
@@ -194,13 +194,13 @@
                 (field-expr (indexed-port-expr (name-expr i) (name-expr y)) x))))
 
 (define c10-inst (C10))
-(instance-set! c10-inst '(i 0 x) (signal 10))
-(instance-set! c10-inst '(i 1 x) (signal 20))
-(instance-set! c10-inst '(i 2 x) (signal 30))
-(instance-set! c10-inst 'y     (signal 0 1 2 1 0 2))
+(instance-set! c10-inst '(i 0 x) (make-signal 10))
+(instance-set! c10-inst '(i 1 x) (make-signal 20))
+(instance-set! c10-inst '(i 2 x) (make-signal 30))
+(instance-set! c10-inst 'y     (make-signal 0 1 2 1 0 2))
 
 (test-case "Can access simple ports in a vector composite port with dynamic indices"
-  (check-sig-equal? (instance-ref c10-inst 'z) (signal 10 20 30 20 10 30) 5))
+  (check-sig-equal? (instance-ref c10-inst 'z) (make-signal 10 20 30 20 10 30) 5))
 
 (begin-hydromel
   (component C11
@@ -220,10 +220,10 @@
     (assignment (name-expr y) (field-expr (name-expr c) y))))
 
 (define c12-inst (C12))
-(instance-set! c12-inst 'x (signal 10 20 30 40 50))
+(instance-set! c12-inst 'x (make-signal 10 20 30 40 50))
 
 (test-case "Can instantiate a component"
-  (check-sig-equal? (instance-ref c12-inst 'y) (signal 100 200 300 400 500) 5))
+  (check-sig-equal? (instance-ref c12-inst 'y) (make-signal 100 200 300 400 500) 5))
 
 (begin-hydromel
   (component C13
@@ -240,11 +240,11 @@
                 + (field-expr (indexed-port-expr (name-expr c) (literal-expr 1)) y))))))
 
 (define c13-inst (C13))
-(instance-set! c13-inst 'x0 (signal 10 20 30 40 50))
-(instance-set! c13-inst 'x1 (signal 1  2  3  4  5))
+(instance-set! c13-inst 'x0 (make-signal 10 20 30 40 50))
+(instance-set! c13-inst 'x1 (make-signal 1  2  3  4  5))
 
 (test-case "Can instantiate a multiple component"
-  (check-sig-equal? (instance-ref c13-inst 'y) (signal 110 220 330 440 550) 5))
+  (check-sig-equal? (instance-ref c13-inst 'y) (make-signal 110 220 330 440 550) 5))
 
 (begin-hydromel
   (component C14
@@ -252,7 +252,7 @@
     (assignment (name-expr y) (name-expr x))))
 
 (define c14-inst (C14))
-(instance-set! c14-inst 'x (signal 10))
+(instance-set! c14-inst 'x (make-signal 10))
 
 (test-case "Can resolve ports in a spliced interface"
   (check-sig-equal? (instance-ref c14-inst 'y) (instance-ref c14-inst 'x) 5))
@@ -263,7 +263,7 @@
     (assignment (name-expr x) (name-expr y))))
 
 (define c15-inst (C15))
-(instance-set! c15-inst 'y (signal 10))
+(instance-set! c15-inst 'y (make-signal 10))
 
 (test-case "Can resolve ports in a spliced flipped interface"
   (check-sig-equal? (instance-ref c15-inst 'x) (instance-ref c15-inst 'y) 5))
@@ -277,8 +277,8 @@
                 (field-expr (indexed-port-expr (name-expr i) (literal-expr 1)) x))))
 
 (define c16-inst (C16))
-(instance-set! c16-inst '(i 0 x) (signal 10))
-(instance-set! c16-inst '(i 1 x) (signal 20))
+(instance-set! c16-inst '(i 0 x) (make-signal 10))
+(instance-set! c16-inst '(i 1 x) (make-signal 20))
 
 (test-case "Can resolve ports in a hierarchy from a spliced interface"
   (check-sig-equal? (instance-ref c16-inst '(i 0 y)) (instance-ref c16-inst '(i 0 x)) 5)
@@ -293,7 +293,7 @@
     (assignment (name-expr y) (name-expr x))))
 
 (define c17-inst (C17))
-(instance-set! c17-inst '(j x) (signal 10))
+(instance-set! c17-inst '(j x) (make-signal 10))
 
 (test-case "Can resolve ports in an interface with a spliced composite port"
   (check-sig-equal? (instance-ref c17-inst '(j y)) (instance-ref c17-inst '(j x)) 5))
@@ -307,7 +307,7 @@
     (assignment (name-expr x) (name-expr y))))
 
 (define c18-inst (C18))
-(instance-set! c18-inst 'y (signal 10))
+(instance-set! c18-inst 'y (make-signal 10))
 
 (test-case "Can resolve ports in a doubly spliced flipped-last composite port"
   (check-sig-equal? (instance-ref c18-inst 'x) (instance-ref c18-inst 'y) 5))
@@ -321,7 +321,7 @@
     (assignment (name-expr x) (name-expr y))))
 
 (define c19-inst (C19))
-(instance-set! c19-inst 'y (signal 10))
+(instance-set! c19-inst 'y (make-signal 10))
 
 (test-case "Can resolve ports in a doubly spliced flipped-first composite port"
   (check-sig-equal? (instance-ref c19-inst 'x) (instance-ref c19-inst 'y) 5))
@@ -332,7 +332,7 @@
     (assignment (name-expr y) (name-expr x))))
 
 (define c20-inst (C20))
-(instance-set! c20-inst 'x (signal 10))
+(instance-set! c20-inst 'x (make-signal 10))
 
 (test-case "Can resolve ports in a doubly spliced doubly-flipped composite port"
   (check-sig-equal? (instance-ref c20-inst 'y) (instance-ref c20-inst 'x) 5))
@@ -347,11 +347,11 @@
                                 (name-expr y)))))
 
 (define c21-inst (C21))
-(instance-set! c21-inst 'x (signal 10 20  30  40 50))
-(instance-set! c21-inst 'y (signal 1  200 300 4  5))
+(instance-set! c21-inst 'x (make-signal 10 20  30  40 50))
+(instance-set! c21-inst 'y (make-signal 1  200 300 4  5))
 
 (test-case "Can compute a conditional signal"
-  (check-sig-equal? (instance-ref c21-inst 'z) (signal 10 200 300 40 50) 5))
+  (check-sig-equal? (instance-ref c21-inst 'z) (make-signal 10 200 300 40 50) 5))
 
 (begin-hydromel
   (component C22
@@ -360,10 +360,10 @@
     (assignment (name-expr y) (register-expr (literal-expr 0) (name-expr x)))))
 
 (define c22-inst (C22))
-(instance-set! c22-inst 'x (signal 10 20  30 40 50))
+(instance-set! c22-inst 'x (make-signal 10 20  30 40 50))
 
 (test-case "Can register a signal"
-  (check-sig-equal? (instance-ref c22-inst 'y) (signal 0  10 20 30 40 50) 6))
+  (check-sig-equal? (instance-ref c22-inst 'y) (make-signal 0  10 20 30 40 50) 6))
 
 (begin-hydromel
   (component C23
@@ -374,11 +374,11 @@
                                              (name-expr y)))))
 
 (define c23-inst (C23))
-(instance-set! c23-inst 'x (signal 0  0  0  1  0))
-(instance-set! c23-inst 'y (signal 10 20 30 40 50))
+(instance-set! c23-inst 'x (make-signal 0  0  0  1  0))
+(instance-set! c23-inst 'y (make-signal 10 20 30 40 50))
 
 (test-case "Can register a signal with reset"
-  (check-sig-equal? (instance-ref c23-inst 'z) (signal 0  10 20 30 0  50) 6))
+  (check-sig-equal? (instance-ref c23-inst 'z) (make-signal 0  10 20 30 0  50) 6))
 
 (begin-hydromel
   (component C24
@@ -389,11 +389,11 @@
                                              (name-expr y) (when-clause (name-expr x))))))
 
 (define c24-inst (C24))
-(instance-set! c24-inst 'x (signal 0  1  0  1  0))
-(instance-set! c24-inst 'y (signal 10 20 30 40 50))
+(instance-set! c24-inst 'x (make-signal 0  1  0  1  0))
+(instance-set! c24-inst 'y (make-signal 10 20 30 40 50))
 
 (test-case "Can register a signal with enable"
-  (check-sig-equal? (instance-ref c24-inst 'z) (signal 0  0  20 20 40) 6))
+  (check-sig-equal? (instance-ref c24-inst 'z) (make-signal 0  0  20 20 40) 6))
 
 (begin-hydromel
   (component C25
@@ -405,12 +405,12 @@
                                              (name-expr z) (when-clause (name-expr y))))))
 
 (define c25-inst (C25))
-(instance-set! c25-inst 'x (signal 0  0   1  0  0))
-(instance-set! c25-inst 'y (signal 0  1   0  1  0))
-(instance-set! c25-inst 'z (signal 10 20  30 40 50))
+(instance-set! c25-inst 'x (make-signal 0  0   1  0  0))
+(instance-set! c25-inst 'y (make-signal 0  1   0  1  0))
+(instance-set! c25-inst 'z (make-signal 10 20  30 40 50))
 
 (test-case "Can register a signal with reset and enable"
-  (check-sig-equal? (instance-ref c25-inst 'u) (signal 0  0  20 0  40) 6))
+  (check-sig-equal? (instance-ref c25-inst 'u) (make-signal 0  0  20 0  40) 6))
 
 (begin-hydromel
   (component C26
@@ -421,7 +421,7 @@
 (define c26-inst (C26))
 
 (test-case "Can read a local constant"
-  (check-sig-equal? (instance-ref c26-inst 'y) (signal 56) 1))
+  (check-sig-equal? (instance-ref c26-inst 'y) (make-signal 56) 1))
 
 (test-case "Can read a constant as a channel field"
   (check-equal? (instance-ref c26-inst 'N) 56))
@@ -438,7 +438,7 @@
 (define c27-inst (C27))
 
 (test-case "Can read a constant from a port"
-  (check-sig-equal? (instance-ref c27-inst '(p y)) (signal 56) 1))
+  (check-sig-equal? (instance-ref c27-inst '(p y)) (make-signal 56) 1))
 
 (begin-hydromel
   (component C28
@@ -449,7 +449,7 @@
 (define c28-inst (C28))
 
 (test-case "Can read a constant from an instance"
-  (check-sig-equal? (instance-ref c28-inst 'y) (signal 56) 1))
+  (check-sig-equal? (instance-ref c28-inst 'y) (make-signal 56) 1))
 
 (begin-hydromel
   (component C29
@@ -460,7 +460,7 @@
 (define c29-inst (C29))
 
 (test-case "Can read a constant from an instance port"
-  (check-sig-equal? (instance-ref c29-inst 'y) (signal 56) 1))
+  (check-sig-equal? (instance-ref c29-inst 'y) (make-signal 56) 1))
 
 (begin-hydromel
   (constant K0 (literal-expr 44))
@@ -472,7 +472,7 @@
 (define c30-inst (C30))
 
 (test-case "Can read a global constant"
-  (check-sig-equal? (instance-ref c30-inst 'y) (signal 44) 1))
+  (check-sig-equal? (instance-ref c30-inst 'y) (make-signal 44) 1))
 
 (begin-hydromel
   (component C31
@@ -490,14 +490,14 @@
 (define c31-inst (C31))
 
 (test-case "Can read a bit in an integer value"
-  (check-sig-equal? (instance-ref c31-inst 'y) (signal 0) 1)
-  (check-sig-equal? (instance-ref c31-inst 'z) (signal 1) 1))
+  (check-sig-equal? (instance-ref c31-inst 'y) (make-signal 0) 1)
+  (check-sig-equal? (instance-ref c31-inst 'z) (make-signal 1) 1))
 
 (test-case "Can read an unsigned slice in an integer value"
-  (check-sig-equal? (instance-ref c31-inst 't) (signal 12) 1))
+  (check-sig-equal? (instance-ref c31-inst 't) (make-signal 12) 1))
 
 (test-case "Can read a signed slice in an integer value"
-  (check-sig-equal? (instance-ref c31-inst 'u) (signal -4) 2))
+  (check-sig-equal? (instance-ref c31-inst 'u) (make-signal -4) 2))
 
 (begin-hydromel
   (component C32
@@ -507,11 +507,11 @@
     (assignment (name-expr z) (concat-expr (name-expr x) (name-expr y)))))
 
 (define c32-inst (C32))
-(instance-set! c32-inst 'x (signal 0 5 -2))
-(instance-set! c32-inst 'y (signal 0 3 -4))
+(instance-set! c32-inst 'x (make-signal 0 5 -2))
+(instance-set! c32-inst 'y (make-signal 0 3 -4))
 
 (test-case "Can concatenate two integers"
-  (check-sig-equal? (instance-ref c32-inst 'z) (signal 0 83 -20) 3))
+  (check-sig-equal? (instance-ref c32-inst 'z) (make-signal 0 83 -20) 3))
 
 (begin-hydromel
   (component C33
@@ -535,11 +535,11 @@
     (assignment (name-expr y) (indexed-array-expr (name-expr x) (name-expr i)))))
 
 (define c34-inst (C34))
-(instance-set! c34-inst 'x (signal (pvector 10 20 30 40)))
-(instance-set! c34-inst 'i (signal 0 1 2 3))
+(instance-set! c34-inst 'x (make-signal (pvector 10 20 30 40)))
+(instance-set! c34-inst 'i (make-signal 0 1 2 3))
 
 (test-case "Can read an array"
-  (check-sig-equal? (instance-ref c34-inst 'y) (signal 10 20 30 40) 4))
+  (check-sig-equal? (instance-ref c34-inst 'y) (make-signal 10 20 30 40) 4))
 
 (begin-hydromel
   (component C35
@@ -549,7 +549,7 @@
   (define c35-inst (C35))
 
   (test-case "Can make a vector"
-    (check-sig-equal? (instance-ref c35-inst 'y) (signal (pvector 10 20 30)) 1)))
+    (check-sig-equal? (instance-ref c35-inst 'y) (make-signal (pvector 10 20 30)) 1)))
 
 (begin-hydromel
   (component C36
@@ -560,10 +560,10 @@
                       i (range-expr (literal-expr 1) .. (literal-expr 3))))))
 
 (define c36-inst (C36))
-(instance-set! c36-inst 'x (signal 10 20 30))
+(instance-set! c36-inst 'x (make-signal 10 20 30))
 
 (test-case "Can make a vector comprehension"
-  (check-sig-equal? (instance-ref c36-inst 'y) (signal #(11 12 13) #(21 22 23) #(31 32 33)) 3))
+  (check-sig-equal? (instance-ref c36-inst 'y) (make-signal #(11 12 13) #(21 22 23) #(31 32 33)) 3))
 
 (begin-hydromel
   (component C37
@@ -574,10 +574,10 @@
                        i (range-expr (literal-expr 0) .. (literal-expr 3))))))
 
 (define c37-inst (C37))
-(instance-set! c37-inst 'x (signal 10 11 12))
+(instance-set! c37-inst 'x (make-signal 10 11 12))
 
 (test-case "Can make a slice comprehension"
-  (check-sig-equal? (instance-ref c37-inst 'y) (signal 5 13 3) 3))
+  (check-sig-equal? (instance-ref c37-inst 'y) (make-signal 5 13 3) 3))
 
 (begin-hydromel
   (interface I6
@@ -591,13 +591,13 @@
                        i (range-expr (literal-expr 3) .. (literal-expr 0))))))
 
 (define c38-inst (C38))
-(instance-set! c38-inst '(x 0 z) (signal 1 0 0))
-(instance-set! c38-inst '(x 1 z) (signal 1 1 0))
-(instance-set! c38-inst '(x 2 z) (signal 0 1 1))
-(instance-set! c38-inst '(x 3 z) (signal 0 0 1))
+(instance-set! c38-inst '(x 0 z) (make-signal 1 0 0))
+(instance-set! c38-inst '(x 1 z) (make-signal 1 1 0))
+(instance-set! c38-inst '(x 2 z) (make-signal 0 1 1))
+(instance-set! c38-inst '(x 3 z) (make-signal 0 0 1))
 
 (test-case "Can make a slice comprehension using an array composite port"
-  (check-sig-equal? (instance-ref c38-inst 'y) (signal 3 6 12) 3))
+  (check-sig-equal? (instance-ref c38-inst 'y) (make-signal 3 6 12) 3))
 
 (begin-hydromel
   (component C39
@@ -608,13 +608,13 @@
                       i (range-expr (literal-expr 3) .. (literal-expr 0))))))
 
 (define c39-inst (C39))
-(instance-set! c39-inst '(x 0 z) (signal 1 0 0))
-(instance-set! c39-inst '(x 1 z) (signal 1 1 0))
-(instance-set! c39-inst '(x 2 z) (signal 0 1 1))
-(instance-set! c39-inst '(x 3 z) (signal 0 0 1))
+(instance-set! c39-inst '(x 0 z) (make-signal 1 0 0))
+(instance-set! c39-inst '(x 1 z) (make-signal 1 1 0))
+(instance-set! c39-inst '(x 2 z) (make-signal 0 1 1))
+(instance-set! c39-inst '(x 3 z) (make-signal 0 0 1))
 
 (test-case "Can make an array comprehension using an array composite port"
-  (check-sig-equal? (instance-ref c39-inst 'y) (signal #(0 0 1 1) #(0 1 1 0) #(1 1 0 0)) 3))
+  (check-sig-equal? (instance-ref c39-inst 'y) (make-signal #(0 0 1 1) #(0 1 1 0) #(1 1 0 0)) 3))
 
 (begin-hydromel
   (component C40
@@ -628,13 +628,13 @@
                       j (range-expr (literal-expr 2) .. (literal-expr 0))))))
 
 (define c40-inst (C40))
-(instance-set! c40-inst '(x 0 z) (signal 1 0 0))
-(instance-set! c40-inst '(x 1 z) (signal 1 1 0))
-(instance-set! c40-inst '(x 2 z) (signal 0 1 1))
-(instance-set! c40-inst '(x 3 z) (signal 0 0 1))
+(instance-set! c40-inst '(x 0 z) (make-signal 1 0 0))
+(instance-set! c40-inst '(x 1 z) (make-signal 1 1 0))
+(instance-set! c40-inst '(x 2 z) (make-signal 0 1 1))
+(instance-set! c40-inst '(x 3 z) (make-signal 0 0 1))
 
 (test-case "Can make a 2D array comprehension using an array composite port"
-  (check-sig-equal? (instance-ref c40-inst 'y) (signal #(2 1 0 2 1 0 3 2 1 3 2 1) #(2 1 0 3 2 1 3 2 1 2 1 0) #(3 2 1 3 2 1 2 1 0 2 1 0)) 3))
+  (check-sig-equal? (instance-ref c40-inst 'y) (make-signal #(2 1 0 2 1 0 3 2 1 3 2 1) #(2 1 0 3 2 1 3 2 1 2 1 0) #(3 2 1 3 2 1 2 1 0 2 1 0)) 3))
 
 (begin-hydromel
   (component C43
@@ -648,13 +648,13 @@
                       j (range-expr (name-expr i)    .. (literal-expr 0))))))
 
 (define c43-inst (C43))
-(instance-set! c43-inst '(x 0 z) (signal 1 0 0))
-(instance-set! c43-inst '(x 1 z) (signal 1 1 0))
-(instance-set! c43-inst '(x 2 z) (signal 0 1 1))
-(instance-set! c43-inst '(x 3 z) (signal 0 0 1))
+(instance-set! c43-inst '(x 0 z) (make-signal 1 0 0))
+(instance-set! c43-inst '(x 1 z) (make-signal 1 1 0))
+(instance-set! c43-inst '(x 2 z) (make-signal 0 1 1))
+(instance-set! c43-inst '(x 3 z) (make-signal 0 0 1))
 
 (test-case "Can make a 2D array comprehension with index dependencies using an array composite port"
-  (check-sig-equal? (instance-ref c43-inst 'y) (signal #(3 2 1 0 2 1 0 2 1 1) #(3 2 1 0 3 2 1 2 1 0) #(4 3 2 1 3 2 1 1 0 0)) 3))
+  (check-sig-equal? (instance-ref c43-inst 'y) (make-signal #(3 2 1 0 2 1 0 2 1 1) #(3 2 1 0 3 2 1 2 1 0) #(4 3 2 1 3 2 1 1 0 0)) 3))
 
 (begin-hydromel
   (typedef word (call-expr unsigned (literal-expr 32)))
@@ -685,13 +685,13 @@
                                                     (name-expr c)))))
 
 (define c41-inst (C41))
-(instance-set! c41-inst 's (signal 0 1 2 3 4))
-(instance-set! c41-inst 'a (signal 10))
-(instance-set! c41-inst 'b (signal 20))
-(instance-set! c41-inst 'c (signal 30))
+(instance-set! c41-inst 's (make-signal 0 1 2 3 4))
+(instance-set! c41-inst 'a (make-signal 10))
+(instance-set! c41-inst 'b (make-signal 20))
+(instance-set! c41-inst 'c (make-signal 30))
 
 (test-case "Can use case expression"
-  (check-sig-equal? (instance-ref c41-inst 'y) (signal 10 20 10 20 30) 5))
+  (check-sig-equal? (instance-ref c41-inst 'y) (make-signal 10 20 10 20 30) 5))
 
 (begin-hydromel
   (component C44
@@ -706,17 +706,17 @@
 
 (define c44-inst (C44))
 
-(instance-set! c44-inst '(x 0 0 z) (signal 1 0 0))
-(instance-set! c44-inst '(x 0 1 z) (signal 1 1 0))
-(instance-set! c44-inst '(x 0 2 z) (signal 0 1 1))
-(instance-set! c44-inst '(x 1 0 z) (signal 0 0 1))
-(instance-set! c44-inst '(x 1 1 z) (signal 1 0 1))
-(instance-set! c44-inst '(x 1 2 z) (signal 1 1 1))
+(instance-set! c44-inst '(x 0 0 z) (make-signal 1 0 0))
+(instance-set! c44-inst '(x 0 1 z) (make-signal 1 1 0))
+(instance-set! c44-inst '(x 0 2 z) (make-signal 0 1 1))
+(instance-set! c44-inst '(x 1 0 z) (make-signal 0 0 1))
+(instance-set! c44-inst '(x 1 1 z) (make-signal 1 0 1))
+(instance-set! c44-inst '(x 1 2 z) (make-signal 1 1 1))
 
 (test-case "Can use multidimensional composite ports"
-  (check-sig-equal? (instance-ref c44-inst '(y 0 0 z)) (signal 0 1 1) 3)
-  (check-sig-equal? (instance-ref c44-inst '(y 0 1 z)) (signal 0 0 1) 3)
-  (check-sig-equal? (instance-ref c44-inst '(y 0 2 z)) (signal 1 0 0) 3)
-  (check-sig-equal? (instance-ref c44-inst '(y 1 0 z)) (signal 1 1 0) 3)
-  (check-sig-equal? (instance-ref c44-inst '(y 1 1 z)) (signal 0 1 0) 3)
-  (check-sig-equal? (instance-ref c44-inst '(y 1 2 z)) (signal 0 0 0) 3))
+  (check-sig-equal? (instance-ref c44-inst '(y 0 0 z)) (make-signal 0 1 1) 3)
+  (check-sig-equal? (instance-ref c44-inst '(y 0 1 z)) (make-signal 0 0 1) 3)
+  (check-sig-equal? (instance-ref c44-inst '(y 0 2 z)) (make-signal 1 0 0) 3)
+  (check-sig-equal? (instance-ref c44-inst '(y 1 0 z)) (make-signal 1 1 0) 3)
+  (check-sig-equal? (instance-ref c44-inst '(y 1 1 z)) (make-signal 0 1 0) 3)
+  (check-sig-equal? (instance-ref c44-inst '(y 1 2 z)) (make-signal 0 0 0) 3))

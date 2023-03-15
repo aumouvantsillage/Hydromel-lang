@@ -12,13 +12,13 @@
 
 (define inst (counter 3))
 
-(instance-set! inst 'clear  (signal 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0))
-(instance-set! inst 'up     (signal 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0))
-(instance-set! inst 'down   (signal 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 0 0 0))
+(instance-set! inst 'clear  (make-signal 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0))
+(instance-set! inst 'up     (make-signal 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0))
+(instance-set! inst 'down   (make-signal 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 0 0 0))
 
-(test-signal   inst 'value  (list   0 1 2 3 0 1 2 2 2 1 0 3 2 1 0 3 3 0))
-(test-signal   inst 'top    (list   0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 1 1 0))
-(test-signal   inst 'bottom (list   1 0 0 0 1 0 0 0 0 0 1 0 0 0 1 0 0 1))
+(test-signal   inst 'value  (list        0 1 2 3 0 1 2 2 2 1 0 3 2 1 0 3 3 0))
+(test-signal   inst 'top    (list        0 0 0 1 0 0 0 0 0 0 0 1 0 0 0 1 1 0))
+(test-signal   inst 'bottom (list        1 0 0 0 1 0 0 0 0 0 1 0 0 0 1 0 0 1))
 
 (define duration 19)
 

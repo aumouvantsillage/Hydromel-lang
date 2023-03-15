@@ -12,11 +12,11 @@
 
 (define inst (register_bank (unsigned 8) 4))
 
-(instance-set! inst 'write (signal 0  1  0  0  1  0  0  1  0  0  1  0  0  0  0  0))
-(instance-set! inst 'addr  (signal 0  0  0  1  1  1  2  2  2  3  3  3  0  1  2  3))
-(instance-set! inst 'd     (signal 99 10 99 99 20 99 99 30 99 99 40 99 99 99 99 99))
+(instance-set! inst 'write (make-signal 0  1  0  0  1  0  0  1  0  0  1  0  0  0  0  0))
+(instance-set! inst 'addr  (make-signal 0  0  0  1  1  1  2  2  2  3  3  3  0  1  2  3))
+(instance-set! inst 'd     (make-signal 99 10 99 99 20 99 99 30 99 99 40 99 99 99 99 99))
 
-(test-signal   inst 'q     (list   0  0  10 0  0  20 0  0  30 0  0  40 10 20 30 40))
+(test-signal   inst 'q     (list        0  0  10 0  0  20 0  0  30 0  0  40 10 20 30 40))
 
 (define duration 16)
 
