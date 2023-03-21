@@ -254,24 +254,15 @@
     [(unsigned-type n)         (format "unsigned(~a)" n)]
     [(array-type n v)          (format "array(~a, ~a)" n (type->string v))]
     ; TODO Print union of symbols as enumeration
-    [(union-type ts)           (format "union(~a)" (for/fold ([acc ""])
-                                                             ([it (in-list ts)])
-                                                     (define s (type->string it))
-                                                     (if (positive? (length acc))
-                                                       (string-append acc ", " s)
-                                                       s)))]
-    [(tuple-type ts)           (format "tuple(~a)" (for/fold ([acc ""])
-                                                             ([it (in-list ts)])
-                                                     (define s (type->string it))
-                                                     (if (> (length acc) 0)
-                                                       (string-append acc ", " s)
-                                                       s)))]
-    [(record-type fs)          (format "record(~a)" (for/fold ([acc ""])
-                                                              ([(k v) (in-dict fs)])
-                                                      (define s (format "~a: ~a" k (type->string v)))
-                                                      (if (> (length acc) 0)
-                                                        (string-append acc ", " s)
-                                                        s)))]
+    [(union-type ts)           (if (andmap symbol-type? ts)
+                                 (format "enumeration(~a)" (string-join (for/list ([it (in-list ts)])
+                                                                          (format "~~~a" (symbol-type-value it)))
+                                                                        ", "))
+                                 (format "union(~a)" (string-join (map type->string ts) ", ")))]
+    [(tuple-type ts)           (format "tuple(~a)" (string-join (map type->string ts) ", "))]
+    [(record-type fs)          (format "record(~a)" (string-join (for/list ([(k v) (in-dict fs)])
+                                                                   (format "~a: ~a" k (type->string v)))
+                                                                 ", "))]
     [(symbol-type s)           (format "symbol(~a)" s)]
     [(subtype-type (any-type)) "type"]
     [(subtype-type u)          (format "subtype(~a)" (type->string u))]
