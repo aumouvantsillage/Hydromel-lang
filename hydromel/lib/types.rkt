@@ -253,12 +253,10 @@
     [(signed-type n)           (format "signed(~a)" n)]
     [(unsigned-type n)         (format "unsigned(~a)" n)]
     [(array-type n v)          (format "array(~a, ~a)" n (type->string v))]
-    ; TODO Print union of symbols as enumeration
-    [(union-type ts)           (if (andmap symbol-type? ts)
-                                 (format "enumeration(~a)" (string-join (for/list ([it (in-list ts)])
-                                                                          (format "~~~a" (symbol-type-value it)))
-                                                                        ", "))
-                                 (format "union(~a)" (string-join (map type->string ts) ", ")))]
+    [(union-type (list (symbol-type ss) ...)) (format "enumeration(~a)" (string-join (for/list ([it (in-list ss)])
+                                                                                       (format "~~~a" it))
+                                                                                     ", "))]
+    [(union-type ts)           (format "union(~a)" (string-join (map type->string ts) ", "))]
     [(tuple-type ts)           (format "tuple(~a)" (string-join (map type->string ts) ", "))]
     [(record-type fs)          (format "record(~a)" (string-join (for/list ([(k v) (in-dict fs)])
                                                                    (format "~a: ~a" k (type->string v)))
