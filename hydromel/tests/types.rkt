@@ -57,3 +57,35 @@
 ; TODO record
 ; TODO union
 ; TODO range? should be an array or tuple?
+
+(test-equal? "union(unsigned(32), signed(32)) -> signed(33)"
+             (minimize (union-type (list (unsigned-type 32) (signed-type 32)))) 
+             (signed-type 33))
+
+(test-equal? "union(unsigned(32), union(unsigned(16), signed(16)), signed(32)) -> signed(33)"
+             (minimize (union-type (list (unsigned-type 32)
+                                         (union-type (list (unsigned-type 16) (signed-type 16)))
+                                         (signed-type 32))))
+             (signed-type 33))
+
+(test-equal? "union(tuple(unsigned(32), signed(32)), tuple(unsigned(32)))"
+             (minimize (union-type (list (tuple-type (list (unsigned-type 32) (signed-type 32)))
+                                         (tuple-type (list (unsigned-type 32))))))
+             (tuple-type (list (unsigned-type 32))))
+
+(test-equal? "union(unsigned(32), signed(32), tuple(unsigned(32), signed(32)), tuple(unsigned(32))) -> union(signed(33), tuple(unsigned(32))"
+             (minimize (union-type (list (unsigned-type 32) 
+                                         (signed-type 32)
+                                         (tuple-type (list (unsigned-type 32) (signed-type 32)))
+                                         (tuple-type (list (unsigned-type 32)))))) 
+             (union-type (list (signed-type 33)
+                               (tuple-type (list (unsigned-type 32))))))
+
+(test-equal? "union(unsigned(32), tuple(unsigned(32), signed(32)), signed(32), tuple(unsigned(32))) -> union(signed(33), tuple(unsigned(32))"
+             (minimize (union-type (list (unsigned-type 32) 
+                                         (tuple-type (list (unsigned-type 32) (signed-type 32)))
+                                         (signed-type 32)
+                                         (tuple-type (list (unsigned-type 32)))))) 
+             (union-type (list (signed-type 33)
+                               (tuple-type (list (unsigned-type 32))))))
+

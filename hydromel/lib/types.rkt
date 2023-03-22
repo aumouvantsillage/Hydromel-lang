@@ -150,12 +150,49 @@
         [(list? x)          (tuple-type (map type-of x))]
         [else               (error "Cannot determine the type of literal" x)]))
 
+; Flatten the content of a union type.
+(define (union-type-flatten ts)
+  (for/fold ([res empty])
+            ([t (in-list ts)])
+    (match t 
+      [(union-type us) (append res (union-type-flatten us))]
+      [_               (cons t res)])))
+
+; Minimize the content of a union type.
+; For each iteration, this function finds the types in (rest lst)
+; that have a common supertype with (first lst).
+; All those types are removed from lst.
+; The common supertype is added to res.
+(define (union-type-minimize* res ts)
+  (match ts
+    ; If there is zero or one remaining type to process, return.
+    [(list)   res]
+    [(list u) (cons u res)]
+    ; If there are at least two remaining types,
+    ; find a common supertype between u and elements of us.
+    [(list u us ...)
+     (for/fold ([v  u]     ; The current common supertype.
+                [vs empty] ; The list of remaining types from us.
+                #:result (union-type-minimize* (cons v res) vs))
+               ([it us])
+      ; If v has no common supertype with the current type,
+      ; keep v and add the current type to the list of remaining types.
+      ; Otherwise, replace v with the common supertype.
+      (define c (common-supertype it v))
+      (if (union-type? c)
+        (values v (cons it vs))
+        (values c  vs)))]))
+
+(define (union-type-minimize ts)
+  (match (union-type-minimize* empty (union-type-flatten ts))
+    [(list u) u]
+    [us       (union-type us)]))
+
 ; Minimize a type t.
 (define (minimize t)
   (match t
     [(const-type _ _) (minimize (const-type-collapse t))]
-    ; TODO using foldl will not always produce a minimal supertype. Maybe sort/partition ts according to <:
-    [(union-type ts)  (foldl common-supertype (union-type empty) (map minimize ts))]
+    [(union-type ts)  (union-type-minimize ts)]
     [(array-type n t) (array-type n (minimize t))]
     [(tuple-type ts)  (tuple-type (map minimize ts))]
     [(record-type fs) (record-type (for/hash ([(k v) (in-dict fs)])
@@ -183,7 +220,8 @@
     ; The supertype of two collections is a collection that has the smallest size,
     ; or the common set of keys for records.
     [(list (array-type n v)  (array-type m w))  (array-type (min n m) (common-supertype v w))]
-    [(list (tuple-type ts)   (tuple-type us))   (tuple-type (map common-supertype ts us))]
+    [(list (tuple-type ts)   (tuple-type us))   (let ([l (min (length ts) (length us))])
+                                                  (tuple-type (map common-supertype (take ts l) (take us l))))]
     [(list (record-type ft)  (record-type fu))  (record-type (hash-intersect ft fu #:combine common-supertype))]
     ; When one operand is the empty union, the common supertype is the other.
     [(list (union-type '())  _)                 u]
