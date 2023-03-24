@@ -118,7 +118,7 @@
         (define fmt (if (= w 1)
                       "~a~a\n"
                       "b~a ~a\n"))
-        (fprintf out fmt (integer->bit-string w v) n)))
+        (fprintf out fmt (integer->bit-string v w) n)))
 
     ; Continue with the rest of the signals.
     (values

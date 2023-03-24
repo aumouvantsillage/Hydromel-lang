@@ -360,7 +360,7 @@
 ; their types are inserted by the checker.
 (define-function/cast _concat_
   (λ vts
-    (apply unsigned-concat*
+    (unsigned-concat*
       (let loop ([res empty] [rst vts])
         (match rst
           [(list rst^ ... v t)
