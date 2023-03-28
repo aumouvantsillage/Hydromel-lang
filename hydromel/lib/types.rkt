@@ -154,11 +154,10 @@
 
 ; Flatten the content of a union type.
 (define (union-type-flatten ts)
-  (for/fold ([res empty])
-            ([t (in-list ts)])
-    (match t 
-      [(union-type us) (append res (union-type-flatten us))]
-      [_               (cons t res)])))
+  (flatten (for/list ([it (in-list ts)])
+             (match it
+               [(union-type us) (union-type-flatten us)]
+               [_               it]))))
 
 ; Minimize the content of a union type.
 ; For each iteration, this function finds the types in (rest lst)
@@ -172,11 +171,12 @@
     [(list u) (cons u res)]
     ; If there are at least two remaining types,
     ; find a common supertype between u and elements of us.
-    [(list u us ...)
-     (for/fold ([v  u]     ; The current common supertype.
-                [vs empty] ; The list of remaining types from us.
-                #:result (union-type-minimize* (cons v res) vs))
-               ([it us])
+    ; Proceed from the end to preserve the order in enumerations.
+    [(list us ... u)
+     (for/foldr ([v  u]     ; The current common supertype.
+                 [vs empty] ; The list of remaining types from us.
+                 #:result (union-type-minimize* (cons v res) vs))
+                ([it (in-list us)])
       ; If v has no common supertype with the current type,
       ; keep v and add the current type to the list of remaining types.
       ; Otherwise, replace v with the common supertype.

@@ -6,8 +6,7 @@
 
 (require
   threading
-  syntax/parse/define
-  (for-syntax racket/syntax))
+  syntax/parse/define)
 
 (provide
   min-unsigned-width min-signed-width
@@ -18,101 +17,102 @@
   signed   signed-slice   signed-concat   signed-concat*
   integer->bit-string)
 
-; Returns the minimum bit width to store the integer `v`
-; as an unsigned integer value.
-(define (min-unsigned-width v)
-  (cond [(positive? v) (integer-length v)]
-        [else          (min-signed-width v)]))
+; Returns the minimum bit width to store the integer `val`
+; as an unsigned integer value. If `val` ≤ 0, return the
+; minimum width of `val` as a signed integer.
+(define (min-unsigned-width val)
+  (if (positive? val)
+    (integer-length   val)
+    (min-signed-width val)))
 
-; Returns the minimum bit width to store the integer `v`
+; Returns the minimum bit width to store the integer `val`
 ; as a signed integer value.
-(define (min-signed-width v)
-  (add1 (integer-length v)))
+(define (min-signed-width val)
+  (add1 (integer-length val)))
 
-; Returns the minimum unsigned value with `w` bits.
-(define (min-unsigned-value w)
+; Returns the minimum unsigned value with `width` bits.
+(define (min-unsigned-value width)
   0)
 
-; Returns the maximum unsigned value with `w` bits.
-(define (max-unsigned-value w)
-  (sub1 (arithmetic-shift 1 w)))
+; Returns the maximum unsigned value with `width` bits.
+(define (max-unsigned-value width)
+  (sub1 (arithmetic-shift 1 width)))
 
-; Returns the minimum signed value with `w` bits.
-(define (min-signed-value w)
-  (arithmetic-shift -1 (sub1 w)))
+; Returns the minimum signed value with `width` bits.
+(define (min-signed-value width)
+  (arithmetic-shift -1 (sub1 width)))
 
-; Returns the maximum signed value with `w` bits.
-(define (max-signed-value w)
-  (sub1 (arithmetic-shift 1 (sub1 w))))
+; Returns the maximum signed value with `width` bits.
+(define (max-signed-value width)
+  (sub1 (arithmetic-shift 1 (sub1 width))))
 
 ; Returns a slice of a value.
 ; `left` is the index of the most significant bit to keep in the result.
 ; `right` is the index of the least significant bit to keep in the result.
 ; This function does not sign-extend the result.
-(define (unsigned-slice v left [right left])
-  (bitwise-bit-field v right (add1 left)))
+(define (unsigned-slice val left [right left])
+  (bitwise-bit-field val right (add1 left)))
 
-; Returns a value with the `w` rightmost bits of `v`.
+; Returns a value with the `width` rightmost bits of `val`.
 ; This function does not sign-extend the result.
-(define (unsigned v w)
-  (unsigned-slice v (sub1 w) 0))
+(define (unsigned val width)
+  (unsigned-slice val (sub1 width) 0))
 
 ; Returns a sign-extended slice of a value.
 ; `left` is the index of the most significant bit to keep in the result.
 ; `right` is the index of the least significant bit to keep in the result.
-(define (signed-slice v left [right left])
-  (define s (unsigned-slice v left right))
-  (if (bitwise-bit-set? v left)
-    (bitwise-ior s (arithmetic-shift -1 (- left right)))
-    s))
+(define (signed-slice val left [right left])
+  (define uslice (unsigned-slice val left right))
+  (if (bitwise-bit-set? val left)
+    (bitwise-ior uslice (arithmetic-shift -1 (- left right)))
+    uslice))
 
-; Returns a value with the `w` rightmost bits of `v`.
+; Returns a value with the `width` rightmost bits of `val`.
 ; This function sign-extends the result.
-(define (signed v w)
-  (signed-slice v (sub1 w) 0))
+(define (signed val width)
+  (signed-slice val (sub1 width) 0))
 
-; Modifies a slive of `v`.
+; Returns a value with a modified slice.
 ; `left` is the index of the most significant bit to change.
 ; `right` is the index of the least significant bit to change.
-; `subst` is the value to copy into the specified slice of `v`.
-; If the slice width is `w`, only the `w` least significant bits of `subst` are copied.
-(define (set-slice v left right subst)
+; `subst` is the value to copy into the specified slice of `val`.
+; If the slice width is `width`, only the `width` least significant bits of `subst` are copied.
+(define (set-slice val left right subst)
   (define mask (bitwise-ior (arithmetic-shift -1 (add1 left))
                             (sub1 (arithmetic-shift 1 right))))
-  (bitwise-ior (bitwise-and v mask)
+  (bitwise-ior (bitwise-and val mask)
                (bitwise-and (arithmetic-shift subst right) (bitwise-not mask))))
 
-; Concatenate a sequence of slices.
-; Do not sign-extend the result.
-(define (unsigned-concat* . items)
-  (for/fold ([res 0])
-            ([it (in-list items)])
-    (match-define (list v l r) it)
+; Common implementation of unsigned- and signed-concat* functions.
+(define (concat init-val items)
+  (for/fold ([res init-val])
+            ([it  (in-list items)])
+    (match-define (list val left right) it)
     (~> res
-        (arithmetic-shift (add1 (- l r)))
-        (bitwise-ior (unsigned-slice v l r)))))
+        (arithmetic-shift (add1 (- left right)))
+        (bitwise-ior (unsigned-slice val left right)))))
+
+; Concatenate a list of slices.
+; Do not sign-extend the result.
+(define (unsigned-concat* items)
+  (concat 0 items))
 
 ; Helper macro to concatenate a sequence of slices.
 ; Do not sign-extend the result.
-(define-syntax-parse-rule (unsigned-concat [v l r] ...)
-  (unsigned-concat* [list v l r] ...))
+(define-syntax-parse-rule (unsigned-concat [val left right] ...)
+  (unsigned-concat* (list [list val left right] ...)))
 
 ; Concatenate a sequence of slices.
 ; Sign-extend the result.
-(define (signed-concat* . items)
-  (match-define (list v0 l0 r0) (first items))
-  (for/fold ([res (signed-slice v0 l0 r0)])
-            ([it (in-list (rest items))])
-    (match-define (list v l r) it)
-    (~> res
-        (arithmetic-shift (add1 (- l r)))
-        (bitwise-ior (unsigned-slice v l r)))))
+(define (signed-concat* items)
+  (match-define (list val left right) (first items))
+  (concat (signed-slice val left right) (rest items)))
 
 ; Helper macro to concatenate a sequence of slices into a sign-extended value.
-(define-syntax-parse-rule (signed-concat [v l r] ...)
-  (signed-concat* [list v l r] ...))
+(define-syntax-parse-rule (signed-concat [val left right] ...)
+  (signed-concat* (list [list val left right] ...)))
 
 ; Convert an integer into a binary string of the given width.
-(define (integer->bit-string size v)
-  (list->string (for/list ([n (in-range (sub1 size) -1 -1)])
-                  (if (bitwise-bit-set? v n) #\1 #\0))))
+(define (integer->bit-string val width)
+  (list->string (for/list ([idx (in-range (sub1 width) -1 -1)])
+                  (if (bitwise-bit-set? val idx) #\1 #\0))))
