@@ -132,10 +132,10 @@
   bitwise-and
   (λ (ta tb)
     (assert-<: 0 ta integer* tb integer*)
-    (match (list (minimize ta) (minimize tb))
-      [(list (signed-type            na) (signed-type           nb)) (signed-type   (max na nb))]
-      [(list (unsigned-type          na) (abstract-integer-type nb)) (unsigned-type (max na nb))]
-      [(list (abstract-integer-type  na) (unsigned-type         nb)) (unsigned-type (max na nb))])))
+    (match* ((minimize ta) (minimize tb))
+      [((signed-type            na) (signed-type           nb)) (signed-type   (max na nb))]
+      [((unsigned-type          na) (abstract-integer-type nb)) (unsigned-type (max na nb))]
+      [((abstract-integer-type  na) (unsigned-type         nb)) (unsigned-type (max na nb))])))
 
 ; Operator `or` maps to the Racket function `bitwise-ior`.
 ; When both operands are unsigned, the result is unsigned.
@@ -145,10 +145,10 @@
   bitwise-ior
   (λ (ta tb)
     (assert-<: 0 ta integer* tb integer*)
-    (match (list (minimize ta) (minimize tb))
-      [(list (unsigned-type         na) (unsigned-type          nb)) (unsigned-type (max na nb))]
-      [(list (signed-type           na) (abstract-integer-type  nb)) (signed-type   (max na nb))]
-      [(list (abstract-integer-type na) (signed-type            nb)) (signed-type   (max na nb))])))
+    (match* ((minimize ta) (minimize tb))
+      [((unsigned-type         na) (unsigned-type          nb)) (unsigned-type (max na nb))]
+      [((signed-type           na) (abstract-integer-type  nb)) (signed-type   (max na nb))]
+      [((abstract-integer-type na) (signed-type            nb)) (signed-type   (max na nb))])))
 
 ; Operator `xor` maps to the Racket function `bitwise-xor`.
 ; When both operands are unsigned, the result is unsigned.
@@ -159,11 +159,11 @@
   bitwise-xor
   (λ (ta tb)
     (assert-<: 0 ta integer* tb integer*)
-    (match (list (minimize ta) (minimize tb))
-      [(list (unsigned-type na) (unsigned-type nb)) (unsigned-type (max na nb))]
-      [(list (signed-type   na) (unsigned-type nb)) (signed-type   (max na (add1 nb)))]
-      [(list (unsigned-type na) (signed-type   nb)) (signed-type   (max (add1 na) nb))]
-      [(list (signed-type   na) (signed-type   nb)) (signed-type   (max na nb))])))
+    (match* ((minimize ta) (minimize tb))
+      [((unsigned-type na) (unsigned-type nb)) (unsigned-type (max na nb))]
+      [((signed-type   na) (unsigned-type nb)) (signed-type   (max na (add1 nb)))]
+      [((unsigned-type na) (signed-type   nb)) (signed-type   (max (add1 na) nb))]
+      [((signed-type   na) (signed-type   nb)) (signed-type   (max na nb))])))
 
 ; ------------------------------------------------------------------------------
 ; Arithmetic operations.
@@ -249,10 +249,10 @@
   *
   (λ (ta tb)
     (assert-<: 0 ta integer* tb integer*)
-    (match (list (minimize ta) (minimize tb))
-      [(list (unsigned-type         na) (unsigned-type         nb)) (unsigned-type (+ na nb))]
-      [(list (abstract-integer-type na) (signed-type           nb)) (signed-type   (+ na nb))]
-      [(list (signed-type           na) (abstract-integer-type nb)) (signed-type   (+ na nb))])))
+    (match* ((minimize ta) (minimize tb))
+      [((unsigned-type         na) (unsigned-type         nb)) (unsigned-type (+ na nb))]
+      [((abstract-integer-type na) (signed-type           nb)) (signed-type   (+ na nb))]
+      [((signed-type           na) (abstract-integer-type nb)) (signed-type   (+ na nb))])))
 
 ; Operator `/` maps to the Racket function `quotient`.
 ; When the divisor is unsigned, the result has the same type as the dividend.
@@ -261,9 +261,9 @@
   quotient
   (λ (ta tb)
     (assert-<: 0 ta integer* tb integer*)
-    (match (list (minimize ta) (minimize tb))
-      [(list ta^                        (unsigned-type _)) ta^]
-      [(list (abstract-integer-type na) (signed-type   _)) (signed-type (add1 na))])))
+    (match* ((minimize ta) (minimize tb))
+      [(ta^                        (unsigned-type _)) ta^]
+      [((abstract-integer-type na) (signed-type   _)) (signed-type (add1 na))])))
 
 ; Unary operator `-` maps to the Racket function `-` applied to one operand.
 ; The result is always signed and is one bit wider than the operand.

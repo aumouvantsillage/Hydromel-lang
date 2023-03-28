@@ -206,82 +206,82 @@
 ; Return the upper bound of two types.
 ; The result is not minimized.
 (define (common-supertype t u)
-  (match (list t u)
-    [(list (const-type _ _)  _)                 (common-supertype (const-type-collapse t) u)]
-    [(list _                 (const-type _ _))  (common-supertype t (const-type-collapse u))]
+  (match* (t u)
+    [((const-type _ _)  _)                 (common-supertype (const-type-collapse t) u)]
+    [(_                 (const-type _ _))  (common-supertype t (const-type-collapse u))]
     ; For integer types, return an integer type with
     ; appropriate signedness and the required width.
-    [(list (unsigned-type m) (unsigned-type n)) (unsigned-type (max m n))]
-    [(list (signed-type   m) (signed-type   n)) (signed-type   (max m n))]
-    [(list (unsigned-type m) (signed-type   n)) (signed-type   (max (add1 m) n))]
-    [(list (signed-type   m) (unsigned-type n)) (signed-type   (max m (add1 n)))]
+    [((unsigned-type m) (unsigned-type n)) (unsigned-type (max m n))]
+    [((signed-type   m) (signed-type   n)) (signed-type   (max m n))]
+    [((unsigned-type m) (signed-type   n)) (signed-type   (max (add1 m) n))]
+    [((signed-type   m) (unsigned-type n)) (signed-type   (max m (add1 n)))]
     ; Equal symbol types are their common supertype.
     ; We do not return the empty symbol type if q and r are different
     ; because it would break enumerations.
-    [(list (symbol-type s)   (symbol-type s))   t]
+    [((symbol-type s)   (symbol-type s))   t]
     ; The supertype of two collections is a collection that has the smallest size,
     ; or the common set of keys for records.
-    [(list (array-type n v)  (array-type m w))  (array-type (min n m) (common-supertype v w))]
-    [(list (tuple-type ts)   (tuple-type us))   (let ([l (min (length ts) (length us))])
-                                                  (tuple-type (map common-supertype (take ts l) (take us l))))]
-    [(list (record-type ft)  (record-type fu))  (record-type (hash-intersect ft fu #:combine common-supertype))]
+    [((array-type n v)  (array-type m w))  (array-type (min n m) (common-supertype v w))]
+    [((tuple-type ts)   (tuple-type us))   (let ([l (min (length ts) (length us))])
+                                             (tuple-type (map common-supertype (take ts l) (take us l))))]
+    [((record-type ft)  (record-type fu))  (record-type (hash-intersect ft fu #:combine common-supertype))]
     ; When one operand is the empty union, the common supertype is the other.
-    [(list (union-type '())  _)                 u]
-    [(list _                 (union-type '()))  t]
+    [((union-type '())  _)                 u]
+    [(_                 (union-type '()))  t]
     ; The common supertype of two unions is a union with their alternatives concatenated.
     ; We want to preserve the ordering here.
     ; We do not attempt to deduplicate the entries in ts and us:
     ; this should be the role of minimize.
-    [(list (union-type ts)   (union-type us))   (union-type (append us ts))]
-    [(list (union-type ts)   _)                 (union-type (cons   u  ts))]
-    [(list _                 (union-type us))   (union-type (append us (list t)))]
+    [((union-type ts)   (union-type us))   (union-type (append us ts))]
+    [((union-type ts)   _)                 (union-type (cons   u  ts))]
+    [(_                 (union-type us))   (union-type (append us (list t)))]
     ; If a common supertype could not be found, return a union of t and u.
-    [_                                          (union-type (list u t))]))
+    [(_                 _)                 (union-type (list u t))]))
 
 ; Check whether a type `t` is a subtype of a type `u`
 (define (<: t u)
-  (match (list t u)
+  (match* (t u)
     ; All types are subtypes of any.
-    [(list _                         (any-type))         #t]
+    [(_                         (any-type))         #t]
     ; Unwrap const types.
-    [(list _                         (const-type _ _))   (<: t (const-type-collapse u))]
-    [(list (const-type _ _)          _)                  (<: (const-type-collapse t) u)]
+    [(_                         (const-type _ _))   (<: t (const-type-collapse u))]
+    [((const-type _ _)          _)                  (<: (const-type-collapse t) u)]
     ; All integer types are subtypes of the unbounded signed type.
     ; All unsigned types are subtypes of the unbounded unsigned type.
-    [(list (abstract-integer-type _) (signed-type   #f)) #t]
-    [(list (unsigned-type         _) (unsigned-type #f)) #t]
+    [((abstract-integer-type _) (signed-type   #f)) #t]
+    [((unsigned-type         _) (unsigned-type #f)) #t]
     ; A shorter integer type is a subtype of a longer integer type.
     ; If they have the same signedness, they can be of the same length.
     ; A signed type cannot be a subtype of an unsigned type.
-    [(list (signed-type   n)         (signed-type   m))  (<= n m)]
-    [(list (unsigned-type n)         (unsigned-type m))  (<= n m)]
-    [(list (unsigned-type n)         (signed-type   m))  (<  n m)]
+    [((signed-type   n)         (signed-type   m))  (<= n m)]
+    [((unsigned-type n)         (unsigned-type m))  (<= n m)]
+    [((unsigned-type n)         (signed-type   m))  (<  n m)]
     ; A symbol type can only be a subtype of the empty symbol or itself.
-    [(list (symbol-type s)           (symbol-type #f))   #t]
-    [(list (symbol-type s)           (symbol-type s))    #t]
+    [((symbol-type s)           (symbol-type #f))   #t]
+    [((symbol-type s)           (symbol-type s))    #t]
     ; An array type t is a subtype of an array type u if t is at least as long as u
     ; and if the element type of t is a subtype of the element type of u.
-    [(list (array-type n v)          (array-type m w))   (and (>= n m) (<: v w))]
+    [((array-type n v)          (array-type m w))   (and (>= n m) (<: v w))]
     ; A tuple type t is a subtype of a tuple type u if t is at least as long as u
     ; and corresponding element types in t are subtypes of the element types in u.
-    [(list (tuple-type ts)           (tuple-type us))    (and (>= (length ts) (length us))
-                                                              (for/and ([it (in-list ts)]
-                                                                        [iu (in-list us)])
-                                                                (<: it iu)))]
+    [((tuple-type ts)           (tuple-type us))    (and (>= (length ts) (length us))
+                                                         (for/and ([it (in-list ts)]
+                                                                   [iu (in-list us)])
+                                                           (<: it iu)))]
     ; A union type t is a subtype of a type u if all its alternatives are subtypes of u.
     ; A type t is a subtype of a union type u if t is a subtype of at least one alternative of u.
-    [(list (union-type ts)           _)                  (for/and ([it (in-list ts)])
-                                                           (<: it u))]
-    [(list _                         (union-type us))    (for/or ([it (in-list us)])
-                                                           (<: t it))]
+    [((union-type ts)           _)                  (for/and ([it (in-list ts)])
+                                                      (<: it u))]
+    [(_                         (union-type us))    (for/or ([it (in-list us)])
+                                                      (<: t it))]
     ; A record type t is a subtype of a record type u if all field names in u
     ; exist in t, and field types in t are subtypes of the corresponding field types in u.
-    [(list (record-type tkv)         (record-type ukv))  (for/and ([(k v) (in-dict ukv)])
-                                                           (and (dict-has-key? tkv k)
-                                                                (<: (dict-ref tkv k) v)))]
+    [((record-type tkv)         (record-type ukv))  (for/and ([(k v) (in-dict ukv)])
+                                                      (and (dict-has-key? tkv k)
+                                                           (<: (dict-ref tkv k) v)))]
     ; Subtypes are covariant.
-    [(list (subtype-type ta)         (subtype-type tb))  (<: ta tb)]
-    [_                                                   #f]))
+    [((subtype-type ta)         (subtype-type tb))  (<: ta tb)]
+    [(_                         _)                  #f]))
 
 ; Convert a type `t` into a human-readable string representation.
 (define (type->string t)
