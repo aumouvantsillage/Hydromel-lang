@@ -12,9 +12,7 @@
 
 (define (test-signal inst path lst)
   (define path-lst (if (list? path) path (list path)))
-  (define path-str (string-join (for/list ([p (in-list path-lst)])
-                                  (format "~a" p))
-                                "."))
+  (define path-str (string-join (map ~a path-lst) "."))
   (test-equal? path-str
     (signal-take (instance-ref inst path) (length lst))
     lst))
