@@ -167,7 +167,7 @@
 (define (union-type-minimize* res ts)
   (match ts
     ; If there is zero or one remaining type to process, return.
-    [(list)   res]
+    ['()      res]
     [(list u) (cons u res)]
     ; If there are at least two remaining types,
     ; find a common supertype between u and elements of us.
