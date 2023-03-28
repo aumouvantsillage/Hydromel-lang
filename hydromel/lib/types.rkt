@@ -66,6 +66,8 @@
 
 ; A `union` type allows to specify a list of alternative types that can be
 ; consumed or produced in a given context.
+; FIXME: as a conversion function, a `union` type will recurse forever
+; if it cannot be minimized to a concrete type.
 (struct union-type abstract-type (alt-types)
   #:transparent
   #:property prop:procedure (λ (t v) ((minimize t) v)))
