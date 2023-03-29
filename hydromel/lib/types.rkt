@@ -330,3 +330,4 @@
 (define (assert-const pos . ts)
   (for ([(t n) (in-indexed ts)] #:unless (const-type? t))
     (raise-semantic-error "Expected constant value" (current-typecheck-stx) (+ pos n))))
+

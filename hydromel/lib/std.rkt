@@ -133,9 +133,9 @@
   (λ (ta tb)
     (assert-<: 0 ta integer* tb integer*)
     (match* ((minimize ta) (minimize tb))
-      [((signed-type            na) (signed-type           nb)) (signed-type   (max na nb))]
-      [((unsigned-type          na) (abstract-integer-type nb)) (unsigned-type (max na nb))]
-      [((abstract-integer-type  na) (unsigned-type         nb)) (unsigned-type (max na nb))])))
+      [((signed-type           na) (signed-type           nb)) (signed-type   (max na nb))]
+      [((unsigned-type         na) (abstract-integer-type nb)) (unsigned-type (max na nb))]
+      [((abstract-integer-type na) (unsigned-type         nb)) (unsigned-type (max na nb))])))
 
 ; Operator `or` maps to the Racket function `bitwise-ior`.
 ; When both operands are unsigned, the result is unsigned.
@@ -146,9 +146,9 @@
   (λ (ta tb)
     (assert-<: 0 ta integer* tb integer*)
     (match* ((minimize ta) (minimize tb))
-      [((unsigned-type         na) (unsigned-type          nb)) (unsigned-type (max na nb))]
-      [((signed-type           na) (abstract-integer-type  nb)) (signed-type   (max na nb))]
-      [((abstract-integer-type na) (signed-type            nb)) (signed-type   (max na nb))])))
+      [((unsigned-type         na) (unsigned-type         nb)) (unsigned-type (max na nb))]
+      [((signed-type           na) (abstract-integer-type nb)) (signed-type   (max na nb))]
+      [((abstract-integer-type na) (signed-type           nb)) (signed-type   (max na nb))])))
 
 ; Operator `xor` maps to the Racket function `bitwise-xor`.
 ; When both operands are unsigned, the result is unsigned.
@@ -175,10 +175,10 @@
   min-unsigned-width
   (λ (t)
     (assert-<: 0 t integer*)
-    (~>> t
-         minimize
-         abstract-integer-type-width
-         type-of)))
+    (~> t
+        minimize
+        abstract-integer-type-width
+        type-of)))
 
 ; Returns the minimum width to encode a given number as an signed integer.
 ; See function `min-signed-width` in numeric.rkt.
