@@ -43,14 +43,13 @@
 ; This function is used in generated conditional statements.
 ; It is not available from Hydromel source code.
 (define-function int->bool
-  (λ (a)
-    (not (zero? a)))
-  (λ (ta)
-    (assert-<: 0 ta integer*)
+  (λ (val)
+    (not (zero? val)))
+  (λ (typ)
+    (assert-<: 0 typ integer*)
     boolean*))
 
-; The Hydromel if statement is implemented as the _if_ macro
-; that expands to `cond`.
+; The Hydromel if statement is implemented as the _if_ macro that expands to `cond`.
 (declare-function _if_)
 
 (define-syntax-parse-rule (_if_ (~seq cnd thn) ... els)
@@ -60,56 +59,64 @@
 
 (define-function/return-type _if_ _if_/return-type)
 
-(define (_if_/return-type . ts)
-  (match ts
-    [(list tc tt te ...)
-     (match tc
-       ; If the first condition is static and true, return the type of the first "then" clause.
-       [(const-type v _)
-        (if (int->bool v)
-          tt
-          (apply _if_/return-type te))]
-       ; If the first condition is not static, return a union of the type of the first "then" clause
-       ; and the type of the rest.
-       [_
-        (union-type (list tt (apply _if_/return-type te)))])]
-    [(list te) te]))
+(define (_if_/return-type . typs)
+  (match typs
+    ; If the first condition is static and true, return the type of the first "then" clause.
+    [(list (const-type val _) tthn _ ...) #:when (int->bool val) tthn]
+    ; If the first condition is static and false, return the type of the "else" clause.
+    [(list (const-type _ _) _ tels ...) (apply _if_/return-type tels)]
+    ; If the first condition is not static, return a union of the type of the first "then" clause
+    ; and the type of the rest.
+    [(list _ tthn tels ...) (union-type (list tthn (apply _if_/return-type tels)))]
+    ; When only the type of the last "else" clause remains, return it.
+    [(list tels) tels]))
 
-; The Hydromel case statement is implemented as the _case_ macro
-; that expands to `cond`.
+; The Hydromel case statement is implemented as the _case_ macro that expands to `cond`.
 (declare-function _case_)
 
-(define-syntax-parse-rule (_case_ expr (~seq ch thn) ... (~optional els))
+(define-syntax-parse-rule (_case_ expr (~seq vals thn) ... (~optional els))
+  ; If the "else" clause is missing, an error will be reported when no other case matches.
   ; TODO raise runtime error with source information
   #:with els^ (or (attribute els) #'(error "Value did not not match any choice"))
   (let ([v expr])
-    (cond [(member v ch) thn]
+    (cond [(member v vals) thn]
           ...
           [else els^])))
 
 (define-function/return-type _case_
-  (λ (tx . ts)
-    (match tx
+  (λ (texpr . rst)
+    (match texpr
       ; If the expression is static, inspect the cases for static choices.
-      [(const-type v _)
-       (_case_/return-type v ts)]
+      [(const-type val _)
+       (match (_case_/return-type val rst)
+         [(union-type '()) (raise-semantic-error "Value did not match any choice" (current-typecheck-stx) 0)]
+         [typ typ])]
       ; If the expression is not static, return a union of all target clauses.
       [_
-       (define last-n (sub1 (length ts)))
-       (union-type (for/list ([(t n) (in-indexed ts)]
-                              #:when (or (odd? n) (= n last-n)))
-                     t))])))
+       (define last-idx (sub1 (length rst)))
+       (union-type (for/list ([(typ idx) (in-indexed rst)]
+                              #:when (or (odd? idx) (= idx last-idx)))
+                     typ))])))
 
-(define (_case_/return-type v ts)
-  (match ts
-    [(list tc tt te ...)
-     ; If the expression value matches a static choice, return the corresponding type.
-     (define tc^ (filter const-type? (tuple-type-elt-types tc)))
-     (if (member v (map const-type-value tc^))
-       tt
-       (_case_/return-type v te))]
-    [(list te) te]
-    ['() (raise-semantic-error "Value did not match any choice" (current-typecheck-stx) 0)]))
+(define (_case_/return-type val rst)
+  (match rst
+    ; Match the current value against the static choices in the first case.
+    [(list (tuple-type tvals) tthn rst^ ...)
+     (define tcst (filter const-type? tvals))
+     ; If the value matches a static choice, return the corresponding type.
+     (if (member val (map const-type-value tcst))
+       tthn
+       ; Else, compute the result type of the following cases.
+       (let ([trst (_case_/return-type val rst^)])
+         ; If there is at least one non-static choice in the current case,
+         ; also keep the current type.
+         (if (> (length tvals) (length tcst))
+            (union-type (list tthn trst))
+            trst)))]
+    ; When only the type of the last "else" clause remains, return it.
+    [(list tels) tels]
+    ; If there is no "else" clause and `val` did not match any choice, return an empty union.
+    ['() union*]))
 
 ; ------------------------------------------------------------------------------
 ; Boolean and bitwise operations.
