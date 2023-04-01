@@ -74,14 +74,21 @@
 ; The resulting function will set the current syntax object for type-checking
 ; errors. It will also convert the result of `fn` to a `const-type` if all
 ; arguments are constants.
-(define (make-return-type-function cast? name fn)
-  (λ (stx . args)
-    (define t (parameterize ([current-typecheck-stx stx])
-                (apply fn args)))
-    (if (andmap const-type? args)
-      (let ([v (apply name (map const-type-value args))])
-        (make-const-type (if cast? (t v) v)))
-      t)))
+(define (make-return-type-function cast? fn rt-fn)
+  (λ (stx . typs)
+    ; If all arguments are constant, compute the function return value.
+    (define res (match typs 
+                  [(list (const-type args _) ...) (apply fn args)]
+                  [_                              (void)]))
+    ; If all arguments are constant and no cast is needed,
+    ; we don't need to compute the return type.
+    (if (nor (void? res) cast?)
+      (make-const-type res)
+      (parameterize ([current-typecheck-stx stx])
+        (define rt (apply rt-fn typs))
+        (if (void? res)
+          rt
+          (make-const-type (rt res)))))))
 
 ; Wrap a return type function `fn` for a function declared previously with
 ; `declare-function`. The resulting function will set the current syntax object
