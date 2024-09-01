@@ -5,13 +5,11 @@
 #lang racket
 
 (require
-  threading
   (only-in "numeric.rkt" integer->bit-string)
   (only-in "types.rkt" minimize abstract-integer-type array-type)
   (only-in data/collection nth)
   "signal.rkt"
-  "slot.rkt"
-  "instance.rkt")
+  "slot.rkt")
 
 (provide instance-dump-vcd)
 

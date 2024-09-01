@@ -274,7 +274,7 @@
                            (syntax-e (meta/composite-port-intf-name expr-port)))
              (raise-semantic-error "Right-hand side and left-hand side of assignment have different interfaces" #'s))
            ; Here we pass s.target and s.expr because they will be checked again.
-           (check-composite-assignment stx #'s.target #'s.expr target-port))
+           (check-composite-assignment this-syntax #'s.target #'s.expr target-port))
          ; If the left-hand side is a signal, generate an assignment statement.
          (q/l (assignment target #,(check-assigned-expr #'expr))))]
 
@@ -364,7 +364,7 @@
          [(meta/constant _ #t)
           (s/l (name-expr s.name $constant))]
 
-         [else stx])]
+         [_ this-syntax])]
 
       [s:stx/comprehension
        #:with (iter-expr ...) (map check (attribute s.iter-expr))
@@ -482,7 +482,7 @@
        (unless (equal? mode (if (flip? stx) 'in 'out))
          (raise-semantic-error "Port cannot be assigned" parent-stx stx))]
 
-      [(meta/composite-port _ intf-name flip? splice?)
+      [(meta/composite-port _ _ _ _)
        (void)]
 
       [_
@@ -613,6 +613,6 @@
              (if (equal? mode (if (flip? #'target^) 'in 'out))
                (syntax/loc stx (assignment target^ expr^))
                (syntax/loc stx (assignment expr^   target^))))]
-          [(meta/composite-port _ intf-name _ _)
+          [(meta/composite-port _ _ _ _)
            (check-composite-assignment stx #'target^ #'expr^ intf-port)])))
     (syntax/loc stx (begin stmt ...))))

@@ -24,7 +24,7 @@ Top and bottom types
 The constructors `any` and `none` are defined with the following subtyping rules:
 
 * All types are subtypes of `any`.
-* `none` is a subtype of all types. It is define as a `union` with an empty list of alternatives.
+* `none` is a subtype of all types. It is defined as a `union` with an empty list of alternatives.
 
 The type of types
 -----------------
@@ -117,9 +117,7 @@ The `const` constructor is used internally to represent the type of a value that
 It is used primarily when the return type of a function depends on the values of some arguments, such as in bit shifts, concatenation or slicing operations. In most cases, `typeof(x) = T` but there are situations where we want to enforce a more general type for `x`, so that `typeof(x) <: T`.
 For instance, the result of a cast `unsigned(4)|3|` is of type `const(3, unsigned(4))` to specify that the value 3 must be processed as a 4-bit wide integer.
 
-During type checking, `const(x, T) <: T`.
-
-`const` types are *collapsed* to ordinary types using these rules:
+During type checking, `const` types are *collapsed* to ordinary types using these rules:
 
 * `collapse(const(x, integer)) = signed(signed_width(x))`
 * `collapse(const(x, natural)) = unsigned(unsigned_width(x))`

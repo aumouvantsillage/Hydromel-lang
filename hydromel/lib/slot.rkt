@@ -4,8 +4,6 @@
 
 #lang racket
 
-(require syntax/parse/define)
-
 (provide
   (struct-out slot)
   make-slot

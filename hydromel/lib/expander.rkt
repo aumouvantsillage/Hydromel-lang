@@ -16,11 +16,9 @@
   "function.rkt"
   "errors.rkt"
   (for-syntax
-    racket/match
     racket/syntax
     racket/function
     racket/dict
-    racket/list
     syntax/stx))
 
 (provide
@@ -121,7 +119,7 @@
       (λ (param-name ...)
         (assert-const 0 param-name ...)
         (assert-<:    0 (~@ param-name param-type) ...)
-        ; TODO Is is relevant to return a const-type?
+        ; TODO Is it relevant to return a const-type?
         (make-const-type (name (const-type-value param-name) ...))))))
 
 ; A constant infers its type immediately before computing its value.
@@ -142,7 +140,6 @@
   ; Module-level constant.
   [(_ name expr)
    #:with name^ (format-id #'name "~a$constant" #'name)
-   #:with cste this-syntax
    #:with cste^ (quasisyntax/loc this-syntax (constant name^ expr))
    #'(begin
        (provide name name^)
@@ -544,4 +541,4 @@
                indexed-array-expr array-expr cast-expr assign-expr record-type-expr
                array-assoc-expr array-assoc slice-assoc-expr slice-assoc record-expr
                tuple-expr
-  "should not be used outside of begin-tiny-hdl")
+  "should not be used outside of begin-hydromel")

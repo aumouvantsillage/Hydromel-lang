@@ -66,11 +66,13 @@
 
 ; A `union` type allows to specify a list of alternative types that can be
 ; consumed or produced in a given context.
-; FIXME: as a conversion function, a `union` type will recurse forever
-; if it cannot be minimized to a concrete type.
+; A `union` type can be used as a conversion function only if it can be
+; minimized to a concrete type.
 (struct union-type abstract-type (alt-types)
   #:transparent
-  #:property prop:procedure (λ (t v) ((minimize t) v)))
+  #:property prop:procedure (λ (t v) (match (minimize t)
+                                       [(union-type _) (error "Union type could not be reduced to a concrete type" (type->string t))]
+                                       [u (u v)])))
 
 ; An `array` type has a fixed size and a single element type.
 ; Multidimensional arrays are implemented as arrays of arrays.
@@ -140,7 +142,7 @@
 ; Get the type of a given value x.
 (define (type-of x)
   (cond [(symbol? x)        (symbol-type x)]
-        [(abstract-type? x) (subtype-type (any-type))]
+        [(abstract-type? x) (subtype-type (any-type))]  ; FIXME why not (subtype-type x)
         [(integer? x)       (if (>= x 0)
                               (unsigned-type (min-unsigned-width x))
                               (signed-type   (min-signed-width   x)))]
@@ -183,7 +185,7 @@
       (define c (common-supertype it v))
       (if (union-type? c)
         (values v (cons it vs))
-        (values c  vs)))]))
+        (values c vs)))]))
 
 (define (union-type-minimize ts)
   (match (union-type-minimize* empty (union-type-flatten ts))
@@ -255,7 +257,7 @@
   [((unsigned-type n)         (unsigned-type m))  (<= n m)]
   [((unsigned-type n)         (signed-type   m))  (<  n m)]
   ; A symbol type can only be a subtype of the empty symbol or itself.
-  [((symbol-type s)           (symbol-type #f))   #t]
+  [((symbol-type _)           (symbol-type #f))   #t]
   [((symbol-type s)           (symbol-type s))    #t]
   ; An array type t is a subtype of an array type u if t is at least as long as u
   ; and if the element type of t is a subtype of the element type of u.
