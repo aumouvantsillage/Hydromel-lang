@@ -110,7 +110,8 @@
     (define param-name (make-slot #'param arg-name (const-type arg-name t) (thunk (make-const-type arg-name))))
     (type-check param-name)))
 
-(define-syntax-parse-rule (typedef name (~and param ((~literal parameter) param-name param-type)) ... expr)
+(define-syntax-parse-rule (typedef name param ... expr)
+  #:with ((_ param-name param-type) ...) #'(param ...)
   (begin
     (assert-type t param param-type) ...
     (provide name)

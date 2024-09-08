@@ -24,7 +24,11 @@
 (test-signal inst 'p_valid p_valid-exp)
 (test-signal inst 'p_data  p_data-exp)
 
+(define duration (length c_valid-in))
+
+(instance-dump inst duration)
+
 (define-runtime-path vcd-file "fifo1-1.vcd")
 
-(instance-dump-vcd inst (length c_valid-in) "10 ns"
+(instance-dump-vcd inst duration "10 ns"
   (open-output-file vcd-file #:exists 'replace))

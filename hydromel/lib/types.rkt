@@ -210,7 +210,12 @@
 (define/match (common-supertype t u)
   [((const-type _ _)  _)                 (common-supertype (const-type-collapse t) u)]
   [(_                 (const-type _ _))  (common-supertype t (const-type-collapse u))]
-  ; For integer types, return an integer type with
+  ; Unbounded integer types.
+  [((unsigned-type #f)        (unsigned-type         _))  t]
+  [((unsigned-type _)         (unsigned-type         #f)) u]
+  [((signed-type   #f)        (abstract-integer-type _))  t]
+  [((abstract-integer-type _) (signed-type           #f)) u]
+  ; For bounded integer types, return an integer type with
   ; appropriate signedness and the required width.
   [((unsigned-type m) (unsigned-type n)) (unsigned-type (max m n))]
   [((signed-type   m) (signed-type   n)) (signed-type   (max m n))]
